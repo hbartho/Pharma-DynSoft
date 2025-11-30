@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,10 +7,11 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
-
+from datetime import datetime, timezone, timedelta
+from passlib.context import CryptContext
+import jwt
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -19,52 +21,530 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# JWT configuration
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+
 # Create the main app without a prefix
 app = FastAPI()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
+# Pydantic Models
+class User(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
+    email: str
+    name: str
+    role: str  # admin, pharmacien, caissier
+    tenant_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+    role: str
+    tenant_id: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
+
+class Product(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    barcode: Optional[str] = None
+    description: Optional[str] = None
+    price: float
+    stock: int
+    min_stock: int = 10
+    category: Optional[str] = None
+    tenant_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProductCreate(BaseModel):
+    name: str
+    barcode: Optional[str] = None
+    description: Optional[str] = None
+    price: float
+    stock: int
+    min_stock: int = 10
+    category: Optional[str] = None
+
+class StockMovement(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    product_id: str
+    type: str  # in, out
+    quantity: int
+    reason: Optional[str] = None
+    tenant_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StockMovementCreate(BaseModel):
+    product_id: str
+    type: str
+    quantity: int
+    reason: Optional[str] = None
+
+class Sale(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: Optional[str] = None
+    items: List[Dict[str, Any]]
+    total: float
+    payment_method: str
+    tenant_id: str
+    user_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SaleCreate(BaseModel):
+    customer_id: Optional[str] = None
+    items: List[Dict[str, Any]]
+    total: float
+    payment_method: str
+
+class Customer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    tenant_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CustomerCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+
+class Supplier(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    tenant_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SupplierCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+
+class Prescription(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str
+    doctor_name: str
+    medications: List[Dict[str, Any]]
+    notes: Optional[str] = None
+    status: str  # pending, fulfilled
+    tenant_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PrescriptionCreate(BaseModel):
+    customer_id: str
+    doctor_name: str
+    medications: List[Dict[str, Any]]
+    notes: Optional[str] = None
+    status: str = "pending"
+
+class SyncLog(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str
+    action: str
+    payload: Dict[str, Any]
+    tenant_id: str
+    user_id: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    synced: bool = False
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class SyncData(BaseModel):
+    changes: List[Dict[str, Any]]
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+# Helper functions
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        tenant_id: str = payload.get("tenant_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        return {"user_id": user_id, "tenant_id": tenant_id}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Auth Routes
+@api_router.post("/auth/register", response_model=User)
+async def register(user_data: UserCreate):
+    existing_user = await db.users.find_one({"email": user_data.email, "tenant_id": user_data.tenant_id})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
+    user_dict = user_data.model_dump()
+    hashed_password = hash_password(user_dict.pop("password"))
+    user_obj = User(**user_dict)
     
-    return status_checks
+    doc = user_obj.model_dump()
+    doc['password'] = hashed_password
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.users.insert_one(doc)
+    return user_obj
+
+@api_router.post("/auth/login", response_model=Token)
+async def login(credentials: UserLogin):
+    user = await db.users.find_one({"email": credentials.email})
+    if not user or not verify_password(credentials.password, user['password']):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    
+    access_token = create_access_token(data={"sub": user['id'], "tenant_id": user['tenant_id']})
+    
+    user.pop('password')
+    if isinstance(user['created_at'], str):
+        user['created_at'] = datetime.fromisoformat(user['created_at'])
+    
+    return Token(access_token=access_token, token_type="bearer", user=User(**user))
+
+# Product Routes
+@api_router.post("/products", response_model=Product)
+async def create_product(product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
+    product_dict = product_data.model_dump()
+    product_dict['tenant_id'] = current_user['tenant_id']
+    product_obj = Product(**product_dict)
+    
+    doc = product_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    
+    await db.products.insert_one(doc)
+    return product_obj
+
+@api_router.get("/products", response_model=List[Product])
+async def get_products(current_user: dict = Depends(get_current_user)):
+    products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    for product in products:
+        if isinstance(product['created_at'], str):
+            product['created_at'] = datetime.fromisoformat(product['created_at'])
+        if isinstance(product['updated_at'], str):
+            product['updated_at'] = datetime.fromisoformat(product['updated_at'])
+    return products
+
+@api_router.get("/products/search")
+async def search_products(q: str, current_user: dict = Depends(get_current_user)):
+    products = await db.products.find({
+        "tenant_id": current_user['tenant_id'],
+        "$or": [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"barcode": {"$regex": q, "$options": "i"}}
+        ]
+    }, {"_id": 0}).to_list(50)
+    for product in products:
+        if isinstance(product.get('created_at'), str):
+            product['created_at'] = datetime.fromisoformat(product['created_at'])
+        if isinstance(product.get('updated_at'), str):
+            product['updated_at'] = datetime.fromisoformat(product['updated_at'])
+    return products
+
+@api_router.get("/products/{product_id}", response_model=Product)
+async def get_product(product_id: str, current_user: dict = Depends(get_current_user)):
+    product = await db.products.find_one({"id": product_id, "tenant_id": current_user['tenant_id']}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if isinstance(product['created_at'], str):
+        product['created_at'] = datetime.fromisoformat(product['created_at'])
+    if isinstance(product['updated_at'], str):
+        product['updated_at'] = datetime.fromisoformat(product['updated_at'])
+    return Product(**product)
+
+@api_router.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: str, product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.products.find_one({"id": product_id, "tenant_id": current_user['tenant_id']})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    update_data = product_data.model_dump()
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.products.update_one({"id": product_id}, {"$set": update_data})
+    
+    updated_product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if isinstance(updated_product['created_at'], str):
+        updated_product['created_at'] = datetime.fromisoformat(updated_product['created_at'])
+    if isinstance(updated_product['updated_at'], str):
+        updated_product['updated_at'] = datetime.fromisoformat(updated_product['updated_at'])
+    return Product(**updated_product)
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.products.delete_one({"id": product_id, "tenant_id": current_user['tenant_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted successfully"}
+
+# Stock Movement Routes
+@api_router.post("/stock", response_model=StockMovement)
+async def create_stock_movement(movement_data: StockMovementCreate, current_user: dict = Depends(get_current_user)):
+    movement_dict = movement_data.model_dump()
+    movement_dict['tenant_id'] = current_user['tenant_id']
+    movement_obj = StockMovement(**movement_dict)
+    
+    product = await db.products.find_one({"id": movement_data.product_id, "tenant_id": current_user['tenant_id']})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    if movement_data.type == "in":
+        new_stock = product['stock'] + movement_data.quantity
+    else:
+        new_stock = product['stock'] - movement_data.quantity
+        if new_stock < 0:
+            raise HTTPException(status_code=400, detail="Insufficient stock")
+    
+    await db.products.update_one({"id": movement_data.product_id}, {"$set": {"stock": new_stock}})
+    
+    doc = movement_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.stock_movements.insert_one(doc)
+    return movement_obj
+
+@api_router.get("/stock", response_model=List[StockMovement])
+async def get_stock_movements(current_user: dict = Depends(get_current_user)):
+    movements = await db.stock_movements.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for movement in movements:
+        if isinstance(movement['created_at'], str):
+            movement['created_at'] = datetime.fromisoformat(movement['created_at'])
+    return movements
+
+@api_router.get("/stock/alerts")
+async def get_stock_alerts(current_user: dict = Depends(get_current_user)):
+    products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    alerts = [p for p in products if p['stock'] <= p['min_stock']]
+    return alerts
+
+# Sale Routes
+@api_router.post("/sales", response_model=Sale)
+async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(get_current_user)):
+    sale_dict = sale_data.model_dump()
+    sale_dict['tenant_id'] = current_user['tenant_id']
+    sale_dict['user_id'] = current_user['user_id']
+    sale_obj = Sale(**sale_dict)
+    
+    for item in sale_data.items:
+        product = await db.products.find_one({"id": item['product_id'], "tenant_id": current_user['tenant_id']})
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+        
+        new_stock = product['stock'] - item['quantity']
+        if new_stock < 0:
+            raise HTTPException(status_code=400, detail=f"Insufficient stock for {product['name']}")
+        
+        await db.products.update_one({"id": item['product_id']}, {"$set": {"stock": new_stock}})
+    
+    doc = sale_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.sales.insert_one(doc)
+    return sale_obj
+
+@api_router.get("/sales", response_model=List[Sale])
+async def get_sales(current_user: dict = Depends(get_current_user)):
+    sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for sale in sales:
+        if isinstance(sale['created_at'], str):
+            sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+    return sales
+
+# Customer Routes
+@api_router.post("/customers", response_model=Customer)
+async def create_customer(customer_data: CustomerCreate, current_user: dict = Depends(get_current_user)):
+    customer_dict = customer_data.model_dump()
+    customer_dict['tenant_id'] = current_user['tenant_id']
+    customer_obj = Customer(**customer_dict)
+    
+    doc = customer_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.customers.insert_one(doc)
+    return customer_obj
+
+@api_router.get("/customers", response_model=List[Customer])
+async def get_customers(current_user: dict = Depends(get_current_user)):
+    customers = await db.customers.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    for customer in customers:
+        if isinstance(customer['created_at'], str):
+            customer['created_at'] = datetime.fromisoformat(customer['created_at'])
+    return customers
+
+# Supplier Routes
+@api_router.post("/suppliers", response_model=Supplier)
+async def create_supplier(supplier_data: SupplierCreate, current_user: dict = Depends(get_current_user)):
+    supplier_dict = supplier_data.model_dump()
+    supplier_dict['tenant_id'] = current_user['tenant_id']
+    supplier_obj = Supplier(**supplier_dict)
+    
+    doc = supplier_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.suppliers.insert_one(doc)
+    return supplier_obj
+
+@api_router.get("/suppliers", response_model=List[Supplier])
+async def get_suppliers(current_user: dict = Depends(get_current_user)):
+    suppliers = await db.suppliers.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    for supplier in suppliers:
+        if isinstance(supplier['created_at'], str):
+            supplier['created_at'] = datetime.fromisoformat(supplier['created_at'])
+    return suppliers
+
+# Prescription Routes
+@api_router.post("/prescriptions", response_model=Prescription)
+async def create_prescription(prescription_data: PrescriptionCreate, current_user: dict = Depends(get_current_user)):
+    prescription_dict = prescription_data.model_dump()
+    prescription_dict['tenant_id'] = current_user['tenant_id']
+    prescription_obj = Prescription(**prescription_dict)
+    
+    doc = prescription_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.prescriptions.insert_one(doc)
+    return prescription_obj
+
+@api_router.get("/prescriptions", response_model=List[Prescription])
+async def get_prescriptions(current_user: dict = Depends(get_current_user)):
+    prescriptions = await db.prescriptions.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    for prescription in prescriptions:
+        if isinstance(prescription['created_at'], str):
+            prescription['created_at'] = datetime.fromisoformat(prescription['created_at'])
+    return prescriptions
+
+@api_router.put("/prescriptions/{prescription_id}")
+async def update_prescription_status(prescription_id: str, status: str, current_user: dict = Depends(get_current_user)):
+    result = await db.prescriptions.update_one(
+        {"id": prescription_id, "tenant_id": current_user['tenant_id']},
+        {"$set": {"status": status}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    return {"message": "Prescription updated successfully"}
+
+# Sync Routes
+@api_router.post("/sync/push")
+async def sync_push(sync_data: SyncData, current_user: dict = Depends(get_current_user)):
+    for change in sync_data.changes:
+        change['tenant_id'] = current_user['tenant_id']
+        change['user_id'] = current_user['user_id']
+        change['synced'] = True
+        change['timestamp'] = datetime.now(timezone.utc).isoformat()
+        
+        if change['type'] == 'product':
+            if change['action'] == 'create':
+                await db.products.insert_one(change['payload'])
+            elif change['action'] == 'update':
+                await db.products.update_one({"id": change['payload']['id']}, {"$set": change['payload']})
+            elif change['action'] == 'delete':
+                await db.products.delete_one({"id": change['payload']['id']})
+        
+        elif change['type'] == 'sale':
+            if change['action'] == 'create':
+                await db.sales.insert_one(change['payload'])
+        
+        await db.sync_logs.insert_one(change)
+    
+    return {"message": f"Synced {len(sync_data.changes)} changes"}
+
+@api_router.get("/sync/pull")
+async def sync_pull(since: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {"tenant_id": current_user['tenant_id']}
+    if since:
+        query['updated_at'] = {"$gt": since}
+    
+    products = await db.products.find(query, {"_id": 0}).to_list(1000)
+    sales = await db.sales.find(query, {"_id": 0}).to_list(1000)
+    customers = await db.customers.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    
+    return {
+        "products": products,
+        "sales": sales,
+        "customers": customers
+    }
+
+# Reports Routes
+@api_router.get("/reports/dashboard")
+async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    
+    today_sales = [s for s in sales if datetime.fromisoformat(s['created_at']) >= today]
+    today_revenue = sum(s['total'] for s in today_sales)
+    
+    products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    low_stock_count = len([p for p in products if p['stock'] <= p['min_stock']])
+    
+    prescriptions = await db.prescriptions.find({"tenant_id": current_user['tenant_id'], "status": "pending"}, {"_id": 0}).to_list(1000)
+    
+    return {
+        "today_sales_count": len(today_sales),
+        "today_revenue": today_revenue,
+        "total_products": len(products),
+        "low_stock_count": low_stock_count,
+        "pending_prescriptions": len(prescriptions)
+    }
+
+@api_router.get("/reports/sales")
+async def get_sales_report(days: int = 7, current_user: dict = Depends(get_current_user)):
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    
+    sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(10000)
+    
+    filtered_sales = [s for s in sales if datetime.fromisoformat(s['created_at']) >= start_date]
+    
+    daily_stats = {}
+    for sale in filtered_sales:
+        sale_date = datetime.fromisoformat(sale['created_at']).date().isoformat()
+        if sale_date not in daily_stats:
+            daily_stats[sale_date] = {"count": 0, "revenue": 0}
+        daily_stats[sale_date]['count'] += 1
+        daily_stats[sale_date]['revenue'] += sale['total']
+    
+    return {
+        "period_days": days,
+        "total_sales": len(filtered_sales),
+        "total_revenue": sum(s['total'] for s in filtered_sales),
+        "daily_stats": daily_stats
+    }
 
 # Include the router in the main app
 app.include_router(api_router)
