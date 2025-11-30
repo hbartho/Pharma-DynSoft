@@ -75,6 +75,7 @@ const Products = () => {
         if (isOnline) {
           const response = await api.post('/products', productData);
           newProduct = response.data;
+          await addItem('products', newProduct);
         } else {
           newProduct = { ...productData, id: Date.now().toString() };
           await addItem('products', newProduct);
@@ -83,9 +84,9 @@ const Products = () => {
         toast.success('Produit ajouté');
       }
 
-      loadProducts();
       setShowDialog(false);
       resetForm();
+      await loadProducts();
     } catch (error) {
       console.error('Error saving product:', error);
       toast.error('Erreur lors de l\'enregistrement');
