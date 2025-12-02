@@ -150,6 +150,12 @@ const Register = () => {
               </Link>
             </p>
           </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-500" style={{ fontFamily: 'Inter, sans-serif' }}>
+              Made by <span className="font-medium text-teal-700">DynSoftware</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
