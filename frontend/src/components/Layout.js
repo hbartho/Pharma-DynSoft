@@ -118,8 +118,13 @@ const Layout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+      <main className="flex-1 overflow-auto flex flex-col">
+        <div className="flex-1 p-8">{children}</div>
+        <footer className="py-4 px-8 border-t border-slate-200 bg-white">
+          <p className="text-center text-sm text-slate-500" style={{ fontFamily: 'Inter, sans-serif' }}>
+            Made by <span className="font-medium text-teal-700">DynSoftware</span>
+          </p>
+        </footer>
       </main>
     </div>
   );
