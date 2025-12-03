@@ -237,13 +237,24 @@ const Prescriptions = () => {
               Gestion des ordonnances médicales
             </p>
           </div>
-          <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button data-testid="add-prescription-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
-                <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
-                Nouvelle ordonnance
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => loadData(true)}
+              disabled={loading}
+              className="rounded-full"
+              data-testid="refresh-prescriptions-button"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.5} />
+              Actualiser
+            </Button>
+            <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button data-testid="add-prescription-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
+                  <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                  Nouvelle ordonnance
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
