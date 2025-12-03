@@ -180,10 +180,6 @@ const Prescriptions = () => {
     setShowDialog(true);
   };
 
-  const handleDeleteClick = (prescription) => {
-    setDeletingPrescription(prescription);
-  };
-
   const handleDeleteConfirm = async (prescription) => {
     if (!prescription) return;
     
