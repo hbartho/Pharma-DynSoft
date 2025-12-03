@@ -165,18 +165,16 @@ const Prescriptions = () => {
     try {
       if (isOnline) {
         await api.delete(`/prescriptions/${prescriptionId}`);
-        // Suppression locale immédiate pour mettre à jour l'UI
-        setPrescriptions(prev => prev.filter(p => p.id !== prescriptionId));
+        toast.success('Ordonnance supprimée');
+        
+        // Force un refresh complet depuis le serveur
+        await loadData(true);
       } else {
         await deleteFromDB('prescriptions', prescriptionId);
         await addLocalChange('prescription', 'delete', { id: prescriptionId });
         setPrescriptions(prev => prev.filter(p => p.id !== prescriptionId));
+        toast.success('Ordonnance supprimée');
       }
-      toast.success('Ordonnance supprimée');
-      // Recharger les données depuis le serveur pour être sûr
-      setTimeout(() => {
-        loadData();
-      }, 500);
     } catch (error) {
       console.error('Error deleting prescription:', error);
       toast.error(`Erreur lors de la suppression: ${error.response?.data?.detail || error.message}`);
