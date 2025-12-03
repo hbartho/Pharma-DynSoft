@@ -341,7 +341,7 @@ const Prescriptions = () => {
               </form>
             </DialogContent>
           </Dialog>
-          </div>
+        </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
