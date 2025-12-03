@@ -59,8 +59,22 @@ const Products = () => {
   const loadProducts = async (forceRefresh = false) => {
     try {
       if (isOnline) {
-        const response = await api.get('/products');
+        // Forcer un nouveau fetch sans cache si demandé
+        const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : {};
+        
+        const response = await api.get('/products', { headers });
         setProducts(response.data);
+        
+        // Clear IndexedDB before updating if forced refresh
+        if (forceRefresh) {
+          try {
+            const db = await getDB();
+            await db.clear('products');
+          } catch (error) {
+            console.warn('Could not clear IndexedDB:', error);
+          }
+        }
+        
         // Save to IndexedDB
         for (const product of response.data) {
           await addItem('products', product);
