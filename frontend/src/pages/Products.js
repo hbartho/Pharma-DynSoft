@@ -151,12 +151,16 @@ const Products = () => {
     try {
       if (isOnline) {
         await api.delete(`/products/${productId}`);
+        toast.success('Produit supprimé');
+        
+        // Refresh automatique complet pour la suppression
+        await refreshData();
       } else {
         await deleteFromDB('products', productId);
         await addLocalChange('product', 'delete', { id: productId });
+        toast.success('Produit supprimé');
+        await loadProducts();
       }
-      toast.success('Produit supprimé');
-      loadProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
       toast.error('Erreur lors de la suppression');
