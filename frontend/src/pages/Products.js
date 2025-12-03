@@ -146,19 +146,19 @@ const Products = () => {
     }
   };
 
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer ce produit?')) return;
+  const handleDeleteConfirm = async (product) => {
+    if (!product) return;
     
     try {
       if (isOnline) {
-        await api.delete(`/products/${productId}`);
+        await api.delete(`/products/${product.id}`);
         toast.success('Produit supprimé');
         
         // Refresh automatique complet pour la suppression
         await refreshData();
       } else {
-        await deleteFromDB('products', productId);
-        await addLocalChange('product', 'delete', { id: productId });
+        await deleteFromDB('products', product.id);
+        await addLocalChange('product', 'delete', { id: product.id });
         toast.success('Produit supprimé');
         await loadProducts();
       }
