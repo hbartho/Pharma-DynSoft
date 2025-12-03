@@ -66,7 +66,7 @@ const Register = () => {
             <h2 className="text-3xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Créer un compte
             </h2>
-            <p className="text-slate-600">Commencez avec PharmaFlow</p>
+            <p className="text-slate-600">Commencez avec DynSoft Pharma</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="register-form">
