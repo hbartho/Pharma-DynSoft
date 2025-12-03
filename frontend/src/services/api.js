@@ -6,6 +6,11 @@ const API = `${BACKEND_URL}/api`;
 
 const api = axios.create({
   baseURL: API,
+  headers: {
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }
 });
 
 // Request interceptor to add token
