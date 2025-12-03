@@ -130,10 +130,10 @@ const Prescriptions = () => {
         await addLocalChange('prescription', 'delete', { id: prescriptionId });
       }
       toast.success('Ordonnance supprimée');
-      loadData();
+      await loadData();
     } catch (error) {
       console.error('Error deleting prescription:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(`Erreur lors de la suppression: ${error.response?.data?.detail || error.message}`);
     }
   };
 
