@@ -33,7 +33,30 @@ const Products = () => {
     loadProducts();
   }, []);
 
-  const loadProducts = async () => {
+  const refreshData = async () => {
+    try {
+      // Clear browser cache for API calls
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      // Clear IndexedDB
+      try {
+        const db = await getDB();
+        await db.clear('products');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      
+      // Force reload data with no-cache headers
+      await loadProducts(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  const loadProducts = async (forceRefresh = false) => {
     try {
       if (isOnline) {
         const response = await api.get('/products');
