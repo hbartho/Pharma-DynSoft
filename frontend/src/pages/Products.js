@@ -148,22 +148,29 @@ const Products = () => {
     }
   };
 
-  const handleDeleteConfirm = async (product) => {
-    if (!product) return;
+  const handleDelete = (product) => {
+    setProductToDelete(product);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
     
     try {
       if (isOnline) {
-        await api.delete(`/products/${product.id}`);
+        await api.delete(`/products/${productToDelete.id}`);
         toast.success('Produit supprimé');
         
         // Refresh automatique complet pour la suppression
         await refreshData();
       } else {
-        await deleteFromDB('products', product.id);
-        await addLocalChange('product', 'delete', { id: product.id });
+        await deleteFromDB('products', productToDelete.id);
+        await addLocalChange('product', 'delete', { id: productToDelete.id });
         toast.success('Produit supprimé');
         await loadProducts();
       }
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
     } catch (error) {
       console.error('Error deleting product:', error);
       toast.error('Erreur lors de la suppression');
