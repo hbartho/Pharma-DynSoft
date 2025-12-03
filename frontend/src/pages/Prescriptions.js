@@ -15,6 +15,7 @@ const Prescriptions = () => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
+  const [editingPrescription, setEditingPrescription] = useState(null);
   const [formData, setFormData] = useState({
     customer_id: '',
     doctor_name: '',
