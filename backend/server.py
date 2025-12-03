@@ -449,7 +449,7 @@ async def get_prescriptions(current_user: dict = Depends(get_current_user)):
             prescription['created_at'] = datetime.fromisoformat(prescription['created_at'])
     return prescriptions
 
-@api_router.put("/prescriptions/{prescription_id}")
+@api_router.put("/prescriptions/{prescription_id}/status")
 async def update_prescription_status(prescription_id: str, status: str, current_user: dict = Depends(get_current_user)):
     result = await db.prescriptions.update_one(
         {"id": prescription_id, "tenant_id": current_user['tenant_id']},
