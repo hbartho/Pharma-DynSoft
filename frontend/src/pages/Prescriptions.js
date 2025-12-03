@@ -32,6 +32,7 @@ const Prescriptions = () => {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       if (isOnline) {
         const [prescriptionsRes, customersRes] = await Promise.all([
           api.get('/prescriptions'),
@@ -39,6 +40,14 @@ const Prescriptions = () => {
         ]);
         setPrescriptions(prescriptionsRes.data);
         setCustomers(customersRes.data);
+        
+        // Mettre à jour IndexedDB avec les nouvelles données
+        for (const prescription of prescriptionsRes.data) {
+          await addItem('prescriptions', prescription);
+        }
+        for (const customer of customersRes.data) {
+          await addItem('customers', customer);
+        }
       } else {
         const [localPrescriptions, localCustomers] = await Promise.all([
           getAllItems('prescriptions'),
@@ -49,6 +58,9 @@ const Prescriptions = () => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
     }
   };
 
