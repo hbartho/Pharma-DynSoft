@@ -30,14 +30,29 @@ const Prescriptions = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
       setLoading(true);
       if (isOnline) {
+        // Forcer un nouveau fetch sans cache
+        const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : {};
+        
         const [prescriptionsRes, customersRes] = await Promise.all([
-          api.get('/prescriptions'),
-          api.get('/customers'),
+          api.get('/prescriptions', { headers }),
+          api.get('/customers', { headers }),
         ]);
+        
+        // Vider IndexedDB avant de mettre à jour
+        if (forceRefresh) {
+          try {
+            const db = await getDB();
+            await db.clear('prescriptions');
+            await db.clear('customers');
+          } catch (error) {
+            console.warn('Could not clear IndexedDB:', error);
+          }
+        }
+        
         setPrescriptions(prescriptionsRes.data);
         setCustomers(customersRes.data);
         
