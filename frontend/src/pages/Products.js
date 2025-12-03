@@ -400,7 +400,7 @@ const Products = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDelete(product.id)}
+                  onClick={() => handleDelete(product)}
                   data-testid={`delete-product-${product.id}`}
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
