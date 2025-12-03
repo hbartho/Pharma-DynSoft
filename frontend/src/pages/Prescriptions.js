@@ -127,21 +127,11 @@ const Prescriptions = () => {
     try {
       if (isOnline) {
         await api.put(`/prescriptions/${prescriptionId}/status?status=fulfilled`);
-        // Mise à jour immédiate dans l'état local
-        setPrescriptions(prev => 
-          prev.map(p => 
-            p.id === prescriptionId 
-              ? { ...p, status: 'fulfilled' }
-              : p
-          )
-        );
+        toast.success('Ordonnance marquée comme traitée');
+        
+        // Force un refresh complet depuis le serveur
+        await loadData(true);
       }
-      toast.success('Ordonnance marquée comme traitée');
-      
-      // Recharger après un court délai
-      setTimeout(() => {
-        loadData();
-      }, 300);
     } catch (error) {
       console.error('Error updating prescription:', error);
       toast.error('Erreur lors de la mise à jour');
