@@ -421,16 +421,45 @@ const Prescriptions = () => {
                         <Edit className="w-4 h-4 mr-1" strokeWidth={1.5} />
                         Éditer
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(prescription.id)}
-                        data-testid={`delete-prescription-${prescription.id}`}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 mr-2"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" strokeWidth={1.5} />
-                        Supprimer
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid={`delete-prescription-${prescription.id}`}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 mr-2"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" strokeWidth={1.5} />
+                            Supprimer
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+                              Supprimer l'ordonnance
+                            </AlertDialogTitle>
+                            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
+                              Êtes-vous sûr de vouloir supprimer cette ordonnance ? Cette action est irréversible.
+                              <br />
+                              <br />
+                              <span className="font-medium">Patient :</span> {getCustomerName(prescription.customer_id)}<br />
+                              <span className="font-medium">Médecin :</span> Dr. {prescription.doctor_name}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                setDeletingPrescription(prescription);
+                                handleDeleteConfirm();
+                              }}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <Button
                         size="sm"
                         onClick={() => markAsFulfilled(prescription.id)}
