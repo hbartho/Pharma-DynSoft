@@ -155,12 +155,12 @@ const Prescriptions = () => {
         await addLocalChange('prescription', 'update', updatedPrescription);
       }
       toast.success('Ordonnance mise à jour avec succès');
-      loadData();
+      await loadData();
       setShowDialog(false);
       resetForm();
     } catch (error) {
       console.error('Error updating prescription:', error);
-      toast.error('Erreur lors de la mise à jour de l\'ordonnance');
+      toast.error(`Erreur lors de la mise à jour: ${error.response?.data?.detail || error.message}`);
     }
   };
 
