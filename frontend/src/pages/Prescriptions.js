@@ -192,7 +192,7 @@ const Prescriptions = () => {
               Gestion des ordonnances médicales
             </p>
           </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button data-testid="add-prescription-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
                 <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
@@ -201,7 +201,9 @@ const Prescriptions = () => {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Nouvelle ordonnance</DialogTitle>
+                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {editingPrescription ? 'Éditer l\'ordonnance' : 'Nouvelle ordonnance'}
+                </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4" data-testid="prescription-form">
                 <div>
