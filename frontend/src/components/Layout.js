@@ -45,7 +45,7 @@ const Layout = ({ children }) => {
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-200">
           <h1 className="text-2xl font-bold text-teal-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            PharmaFlow
+            DynSoft Pharma
           </h1>
           <p className="text-sm text-slate-500 mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
             {user?.name} ({user?.role})
