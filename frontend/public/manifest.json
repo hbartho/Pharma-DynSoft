@@ -1,6 +1,6 @@
 {
-  "short_name": "PharmaFlow",
-  "name": "PharmaFlow - Gestion de Pharmacie",
+  "short_name": "DynSoft Pharma",
+  "name": "DynSoft Pharma - Gestion de Pharmacie",
   "description": "Application de gestion de pharmacie avec fonctionnement offline",
   "icons": [
     {
