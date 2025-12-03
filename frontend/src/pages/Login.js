@@ -47,7 +47,7 @@ const Login = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-teal-900/90 to-emerald-900/90"></div>
         <div className="relative z-10 flex flex-col justify-center px-16 text-white">
           <h1 className="text-5xl font-bold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            PharmaFlow
+            DynSoft Pharma
           </h1>
           <p className="text-xl text-teal-50">
             Gestion moderne de pharmacie avec fonctionnement offline
