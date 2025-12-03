@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '../components/ui/pagination';
 import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
 import api from '../services/api';
-import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange } from '../services/indexedDB';
+import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import { toast } from 'sonner';
 
