@@ -104,29 +104,41 @@ const Products = () => {
       if (editingProduct) {
         if (isOnline) {
           await api.put(`/products/${editingProduct.id}`, productData);
+          toast.success('Produit mis à jour');
+          setShowDialog(false);
+          resetForm();
+          
+          // Refresh automatique complet pour l'édition
+          await refreshData();
         } else {
           productData.id = editingProduct.id;
           await updateItem('products', productData);
           await addLocalChange('product', 'update', productData);
+          toast.success('Produit mis à jour');
+          setShowDialog(false);
+          resetForm();
+          await loadProducts();
         }
-        toast.success('Produit mis à jour');
       } else {
-        let newProduct;
+        // Mode création d'un nouveau produit
         if (isOnline) {
-          const response = await api.post('/products', productData);
-          newProduct = response.data;
-          await addItem('products', newProduct);
+          await api.post('/products', productData);
+          toast.success('Produit ajouté');
+          setShowDialog(false);
+          resetForm();
+          
+          // Refresh automatique complet pour l'ajout
+          await refreshData();
         } else {
-          newProduct = { ...productData, id: Date.now().toString() };
+          const newProduct = { ...productData, id: Date.now().toString() };
           await addItem('products', newProduct);
           await addLocalChange('product', 'create', newProduct);
+          toast.success('Produit ajouté');
+          setShowDialog(false);
+          resetForm();
+          await loadProducts();
         }
-        toast.success('Produit ajouté');
       }
-
-      setShowDialog(false);
-      resetForm();
-      await loadProducts();
     } catch (error) {
       console.error('Error saving product:', error);
       toast.error('Erreur lors de l\'enregistrement');
