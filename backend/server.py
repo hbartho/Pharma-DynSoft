@@ -459,6 +459,29 @@ async def update_prescription_status(prescription_id: str, status: str, current_
         raise HTTPException(status_code=404, detail="Prescription not found")
     return {"message": "Prescription updated successfully"}
 
+@api_router.put("/prescriptions/{prescription_id}/edit", response_model=Prescription)
+async def edit_prescription(prescription_id: str, prescription_data: PrescriptionCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.prescriptions.find_one({"id": prescription_id, "tenant_id": current_user['tenant_id']})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    
+    update_data = prescription_data.model_dump()
+    update_data['tenant_id'] = current_user['tenant_id']
+    
+    await db.prescriptions.update_one({"id": prescription_id}, {"$set": update_data})
+    
+    updated_prescription = await db.prescriptions.find_one({"id": prescription_id}, {"_id": 0})
+    if isinstance(updated_prescription['created_at'], str):
+        updated_prescription['created_at'] = datetime.fromisoformat(updated_prescription['created_at'])
+    return Prescription(**updated_prescription)
+
+@api_router.delete("/prescriptions/{prescription_id}")
+async def delete_prescription(prescription_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.prescriptions.delete_one({"id": prescription_id, "tenant_id": current_user['tenant_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    return {"message": "Prescription deleted successfully"}
+
 # Sync Routes
 @api_router.post("/sync/push")
 async def sync_push(sync_data: SyncData, current_user: dict = Depends(get_current_user)):
