@@ -128,19 +128,24 @@ const Prescriptions = () => {
         return;
       }
 
-      // Mode création
+      // Mode création d'une nouvelle ordonnance
       const prescriptionData = { ...formData, status: 'pending' };
       if (isOnline) {
-        const response = await api.post('/prescriptions', prescriptionData);
-        await addItem('prescriptions', response.data);
+        await api.post('/prescriptions', prescriptionData);
+        toast.success('Ordonnance ajoutée avec succès');
+        setShowDialog(false);
+        resetForm();
+        
+        // Refresh automatique complet (même mécanisme que l'édition)
+        await refreshData();
       } else {
         const newPrescription = { ...prescriptionData, id: Date.now().toString() };
         await addItem('prescriptions', newPrescription);
+        toast.success('Ordonnance ajoutée avec succès');
+        setShowDialog(false);
+        resetForm();
+        await loadData();
       }
-      toast.success('Ordonnance ajoutée avec succès');
-      loadData();
-      setShowDialog(false);
-      resetForm();
     } catch (error) {
       console.error('Error creating prescription:', error);
       toast.error('Erreur lors de l\'ajout de l\'ordonnance');
