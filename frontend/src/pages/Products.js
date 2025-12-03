@@ -16,6 +16,8 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage] = useState(9);
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
