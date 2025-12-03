@@ -205,18 +205,16 @@ const Prescriptions = () => {
 
     try {
       const prescriptionData = { ...formData };
-      console.log('Updating prescription with data:', prescriptionData);
       
       if (isOnline) {
         await api.put(`/prescriptions/${editingPrescription.id}/edit`, prescriptionData);
-        console.log('Update successful');
         
         toast.success('Ordonnance mise à jour avec succès');
         setShowDialog(false);
         resetForm();
         
-        // Force un refresh complet depuis le serveur
-        await loadData(true);
+        // Refresh automatique complet
+        await refreshData();
       } else {
         const updatedPrescription = { ...editingPrescription, ...prescriptionData };
         await updateItem('prescriptions', updatedPrescription);
@@ -225,7 +223,7 @@ const Prescriptions = () => {
         toast.success('Ordonnance mise à jour avec succès');
         setShowDialog(false);
         resetForm();
-        loadData();
+        await loadData();
       }
     } catch (error) {
       console.error('Error updating prescription:', error);
