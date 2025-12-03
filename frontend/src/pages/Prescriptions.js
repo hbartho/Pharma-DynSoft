@@ -180,25 +180,31 @@ const Prescriptions = () => {
     setShowDialog(true);
   };
 
-  const handleDelete = async (prescriptionId) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer cette ordonnance?')) return;
+  const handleDeleteClick = (prescription) => {
+    setDeletingPrescription(prescription);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingPrescription) return;
     
     try {
       if (isOnline) {
-        await api.delete(`/prescriptions/${prescriptionId}`);
+        await api.delete(`/prescriptions/${deletingPrescription.id}`);
         toast.success('Ordonnance supprimée');
         
         // Refresh automatique complet (même mécanisme que l'édition)
         await refreshData();
       } else {
-        await deleteFromDB('prescriptions', prescriptionId);
-        await addLocalChange('prescription', 'delete', { id: prescriptionId });
-        setPrescriptions(prev => prev.filter(p => p.id !== prescriptionId));
+        await deleteFromDB('prescriptions', deletingPrescription.id);
+        await addLocalChange('prescription', 'delete', { id: deletingPrescription.id });
+        setPrescriptions(prev => prev.filter(p => p.id !== deletingPrescription.id));
         toast.success('Ordonnance supprimée');
       }
     } catch (error) {
       console.error('Error deleting prescription:', error);
       toast.error(`Erreur lors de la suppression: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setDeletingPrescription(null);
     }
   };
 
