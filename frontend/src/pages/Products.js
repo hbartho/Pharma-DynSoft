@@ -146,6 +146,24 @@ const Products = () => {
     p.barcode?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Calculs de pagination
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const endIndex = startIndex + productsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Fonction pour changer de page
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    // Scroll vers le haut quand on change de page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Reset à la page 1 quand on recherche
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   return (
     <Layout>
       <div className="space-y-6" data-testid="products-page">
