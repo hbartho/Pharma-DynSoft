@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Plus, FileText, CheckCircle, Edit, Trash2, X } from 'lucide-react';
 import api from '../services/api';
-import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange } from '../services/indexedDB';
+import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import { toast } from 'sonner';
 
