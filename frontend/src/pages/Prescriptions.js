@@ -181,7 +181,7 @@ const Prescriptions = () => {
         await api.delete(`/prescriptions/${prescriptionId}`);
         toast.success('Ordonnance supprimée');
         
-        // Refresh automatique complet
+        // Refresh automatique complet (même mécanisme que l'édition)
         await refreshData();
       } else {
         await deleteFromDB('prescriptions', prescriptionId);
