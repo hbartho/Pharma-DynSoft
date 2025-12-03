@@ -18,6 +18,7 @@ const Prescriptions = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [editingPrescription, setEditingPrescription] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [deletingPrescription, setDeletingPrescription] = useState(null);
   const [formData, setFormData] = useState({
     customer_id: '',
     doctor_name: '',
