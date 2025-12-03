@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 
-const DB_NAME = 'PharmaFlowDB';
+const DB_NAME = 'DynSoftPharmaDB';
 const DB_VERSION = 1;
 
 let dbInstance = null;
