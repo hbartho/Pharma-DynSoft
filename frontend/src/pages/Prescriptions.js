@@ -194,31 +194,25 @@ const Prescriptions = () => {
       console.log('Updating prescription with data:', prescriptionData);
       
       if (isOnline) {
-        const response = await api.put(`/prescriptions/${editingPrescription.id}/edit`, prescriptionData);
-        console.log('Update response:', response.data);
+        await api.put(`/prescriptions/${editingPrescription.id}/edit`, prescriptionData);
+        console.log('Update successful');
         
-        // Mise à jour immédiate dans l'état local
-        setPrescriptions(prev => 
-          prev.map(p => 
-            p.id === editingPrescription.id 
-              ? { ...p, ...prescriptionData, updated_at: new Date().toISOString() }
-              : p
-          )
-        );
+        toast.success('Ordonnance mise à jour avec succès');
+        setShowDialog(false);
+        resetForm();
+        
+        // Force un refresh complet depuis le serveur
+        await loadData(true);
       } else {
         const updatedPrescription = { ...editingPrescription, ...prescriptionData };
         await updateItem('prescriptions', updatedPrescription);
         await addLocalChange('prescription', 'update', updatedPrescription);
-      }
-      
-      toast.success('Ordonnance mise à jour avec succès');
-      setShowDialog(false);
-      resetForm();
-      
-      // Recharger les données pour être sûr après un petit délai
-      setTimeout(() => {
+        
+        toast.success('Ordonnance mise à jour avec succès');
+        setShowDialog(false);
+        resetForm();
         loadData();
-      }, 300);
+      }
     } catch (error) {
       console.error('Error updating prescription:', error);
       toast.error(`Erreur lors de la mise à jour: ${error.response?.data?.detail || error.message}`);
