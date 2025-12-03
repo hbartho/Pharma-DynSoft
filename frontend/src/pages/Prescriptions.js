@@ -330,15 +330,37 @@ const Prescriptions = () => {
                     {prescription.status === 'fulfilled' ? 'Traitée' : 'En attente'}
                   </span>
                   {prescription.status === 'pending' && (
-                    <Button
-                      size="sm"
-                      onClick={() => markAsFulfilled(prescription.id)}
-                      data-testid={`fulfill-prescription-${prescription.id}`}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" strokeWidth={1.5} />
-                      Marquer comme traitée
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(prescription)}
+                        data-testid={`edit-prescription-${prescription.id}`}
+                        className="mr-1"
+                      >
+                        <Edit className="w-4 h-4 mr-1" strokeWidth={1.5} />
+                        Éditer
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(prescription.id)}
+                        data-testid={`delete-prescription-${prescription.id}`}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 mr-2"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" strokeWidth={1.5} />
+                        Supprimer
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => markAsFulfilled(prescription.id)}
+                        data-testid={`fulfill-prescription-${prescription.id}`}
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" strokeWidth={1.5} />
+                        Marquer comme traitée
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
