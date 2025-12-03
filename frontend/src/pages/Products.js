@@ -348,6 +348,77 @@ const Products = () => {
           ))}
         </div>
 
+        {/* Informations de pagination */}
+        {filteredProducts.length > 0 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+              Affichage de {startIndex + 1} à {Math.min(endIndex, filteredProducts.length)} sur {filteredProducts.length} produits
+            </p>
+            <div className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+              Page {currentPage} sur {totalPages}
+            </div>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                const showPage = 
+                  pageNumber === 1 || 
+                  pageNumber === totalPages || 
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1);
+                
+                if (!showPage && pageNumber === 2 && currentPage > 4) {
+                  return (
+                    <PaginationItem key="ellipsis1">
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                
+                if (!showPage && pageNumber === totalPages - 1 && currentPage < totalPages - 3) {
+                  return (
+                    <PaginationItem key="ellipsis2">
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                
+                if (!showPage) return null;
+                
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(pageNumber)}
+                      isActive={currentPage === pageNumber}
+                      className="cursor-pointer"
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+
         {filteredProducts.length === 0 && (
           <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
             <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5} />
