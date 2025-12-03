@@ -491,6 +491,39 @@ const Products = () => {
           </div>
         )}
       </div>
+
+      {/* Dialogue de confirmation de suppression */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
+              Êtes-vous sûr de vouloir supprimer le produit "{productToDelete?.name}" ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setProductToDelete(null);
+              }}
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
