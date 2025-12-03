@@ -62,7 +62,7 @@ const Login = () => {
             <h2 className="text-3xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Connexion
             </h2>
-            <p className="text-slate-600">Accédez à votre compte Pharma</p>
+            <p className="text-slate-600">Accédez à votre compte DynSoft Pharma</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" data-testid="login-form">
