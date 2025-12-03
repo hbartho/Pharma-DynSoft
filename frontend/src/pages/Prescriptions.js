@@ -153,8 +153,8 @@ const Prescriptions = () => {
         await api.put(`/prescriptions/${prescriptionId}/status?status=fulfilled`);
         toast.success('Ordonnance marquée comme traitée');
         
-        // Force un refresh complet depuis le serveur
-        await loadData(true);
+        // Refresh automatique complet
+        await refreshData();
       }
     } catch (error) {
       console.error('Error updating prescription:', error);
