@@ -500,7 +500,7 @@ const Products = () => {
               Confirmer la suppression
             </AlertDialogTitle>
             <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
-              Êtes-vous sûr de vouloir supprimer le produit "{productToDelete?.name}" ?
+              Êtes-vous sûr de vouloir supprimer le produit &ldquo;{productToDelete?.name}&rdquo; ?
               Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
