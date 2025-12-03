@@ -30,6 +30,30 @@ const Prescriptions = () => {
     loadData();
   }, []);
 
+  const refreshData = async () => {
+    try {
+      // Clear browser cache for API calls
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      // Clear IndexedDB
+      try {
+        const db = await getDB();
+        await db.clear('prescriptions');
+        await db.clear('customers');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      
+      // Force reload data with no-cache headers
+      await loadData(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
   const loadData = async (forceRefresh = false) => {
     try {
       setLoading(true);
