@@ -98,10 +98,10 @@ const Prescriptions = () => {
   const markAsFulfilled = async (prescriptionId) => {
     try {
       if (isOnline) {
-        await api.put(`/prescriptions/${prescriptionId}?status=fulfilled`);
+        await api.put(`/prescriptions/${prescriptionId}/status?status=fulfilled`);
       }
       toast.success('Ordonnance marquée comme traitée');
-      loadData();
+      await loadData();
     } catch (error) {
       console.error('Error updating prescription:', error);
       toast.error('Erreur lors de la mise à jour');
