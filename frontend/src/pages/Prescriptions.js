@@ -166,17 +166,34 @@ const Prescriptions = () => {
 
     try {
       const prescriptionData = { ...formData };
+      console.log('Updating prescription with data:', prescriptionData);
+      
       if (isOnline) {
-        await api.put(`/prescriptions/${editingPrescription.id}/edit`, prescriptionData);
+        const response = await api.put(`/prescriptions/${editingPrescription.id}/edit`, prescriptionData);
+        console.log('Update response:', response.data);
+        
+        // Mise à jour immédiate dans l'état local
+        setPrescriptions(prev => 
+          prev.map(p => 
+            p.id === editingPrescription.id 
+              ? { ...p, ...prescriptionData, updated_at: new Date().toISOString() }
+              : p
+          )
+        );
       } else {
         const updatedPrescription = { ...editingPrescription, ...prescriptionData };
         await updateItem('prescriptions', updatedPrescription);
         await addLocalChange('prescription', 'update', updatedPrescription);
       }
+      
       toast.success('Ordonnance mise à jour avec succès');
-      await loadData();
       setShowDialog(false);
       resetForm();
+      
+      // Recharger les données pour être sûr après un petit délai
+      setTimeout(() => {
+        loadData();
+      }, 300);
     } catch (error) {
       console.error('Error updating prescription:', error);
       toast.error(`Erreur lors de la mise à jour: ${error.response?.data?.detail || error.message}`);
