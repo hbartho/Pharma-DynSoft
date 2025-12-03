@@ -101,6 +101,73 @@ const Prescriptions = () => {
     }
   };
 
+  const handleEdit = (prescription) => {
+    setEditingPrescription(prescription);
+    setFormData({
+      customer_id: prescription.customer_id,
+      doctor_name: prescription.doctor_name,
+      medications: [...prescription.medications],
+      notes: prescription.notes || '',
+    });
+    setShowDialog(true);
+  };
+
+  const handleDelete = async (prescriptionId) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer cette ordonnance?')) return;
+    
+    try {
+      if (isOnline) {
+        await api.delete(`/prescriptions/${prescriptionId}`);
+      } else {
+        await deleteFromDB('prescriptions', prescriptionId);
+        await addLocalChange('prescription', 'delete', { id: prescriptionId });
+      }
+      toast.success('Ordonnance supprimée');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting prescription:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (formData.medications.length === 0) {
+      toast.error('Veuillez ajouter au moins un médicament');
+      return;
+    }
+
+    try {
+      const prescriptionData = { ...formData };
+      if (isOnline) {
+        await api.put(`/prescriptions/${editingPrescription.id}/edit`, prescriptionData);
+      } else {
+        const updatedPrescription = { ...editingPrescription, ...prescriptionData };
+        await updateItem('prescriptions', updatedPrescription);
+        await addLocalChange('prescription', 'update', updatedPrescription);
+      }
+      toast.success('Ordonnance mise à jour avec succès');
+      loadData();
+      setShowDialog(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error updating prescription:', error);
+      toast.error('Erreur lors de la mise à jour de l\'ordonnance');
+    }
+  };
+
+  const resetForm = () => {
+    setEditingPrescription(null);
+    setFormData({ customer_id: '', doctor_name: '', medications: [], notes: '' });
+    setMedInput({ name: '', dosage: '', quantity: '' });
+  };
+
+  const removeMedication = (index) => {
+    const updatedMedications = formData.medications.filter((_, i) => i !== index);
+    setFormData({ ...formData, medications: updatedMedications });
+  };
+
   const getCustomerName = (customerId) => {
     const customer = customers.find((c) => c.id === customerId);
     return customer?.name || 'Inconnu';
