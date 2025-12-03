@@ -70,6 +70,13 @@ const Prescriptions = () => {
     }
 
     try {
+      if (editingPrescription) {
+        // Mode édition
+        await handleEditSubmit(e);
+        return;
+      }
+
+      // Mode création
       const prescriptionData = { ...formData, status: 'pending' };
       if (isOnline) {
         const response = await api.post('/prescriptions', prescriptionData);
@@ -81,7 +88,7 @@ const Prescriptions = () => {
       toast.success('Ordonnance ajoutée avec succès');
       loadData();
       setShowDialog(false);
-      setFormData({ customer_id: '', doctor_name: '', medications: [], notes: '' });
+      resetForm();
     } catch (error) {
       console.error('Error creating prescription:', error);
       toast.error('Erreur lors de l\'ajout de l\'ordonnance');
