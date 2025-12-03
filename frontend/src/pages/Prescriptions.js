@@ -266,6 +266,13 @@ const Prescriptions = () => {
                         <span className="text-sm">
                           {med.name} - {med.dosage} - {med.quantity}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => removeMedication(index)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <X className="w-4 h-4" strokeWidth={1.5} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -279,11 +286,11 @@ const Prescriptions = () => {
                   />
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                  <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                     Annuler
                   </Button>
                   <Button type="submit" data-testid="prescription-submit-button" className="bg-teal-700 hover:bg-teal-800">
-                    Ajouter
+                    {editingPrescription ? 'Mettre à jour' : 'Ajouter'}
                   </Button>
                 </div>
               </form>
