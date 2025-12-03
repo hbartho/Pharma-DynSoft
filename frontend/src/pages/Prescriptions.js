@@ -447,10 +447,7 @@ const Prescriptions = () => {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Annuler</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => {
-                                setDeletingPrescription(prescription);
-                                handleDeleteConfirm();
-                              }}
+                              onClick={() => handleDeleteConfirm(prescription)}
                               className="bg-red-600 hover:bg-red-700"
                             >
                               Supprimer
