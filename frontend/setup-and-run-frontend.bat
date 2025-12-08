@@ -1,7 +1,7 @@
 @echo off
 echo ========================================
 echo Configuration et demarrage automatique
-echo Frontend DynSoft Pharma
+echo Frontend DynSoft Pharma (avec npm)
 echo ========================================
 echo.
 
@@ -16,25 +16,23 @@ if %errorlevel% neq 0 (
 
 echo [1/4] Node.js detecte
 node --version
+npm --version
 echo.
 
-REM Étape 2 : Vérifier si yarn est installé
-yarn --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [2/4] Yarn n'est pas installe. Installation en cours...
-    npm install -g yarn
-    if %errorlevel% neq 0 (
-        echo ATTENTION: Installation de Yarn echouee
-        echo On utilisera npm avec --legacy-peer-deps
-        set USE_NPM=1
-    ) else (
-        echo Yarn installe avec succes
-        set USE_NPM=0
+REM Étape 2 : Nettoyer les anciennes installations (optionnel)
+if exist node_modules (
+    echo [2/4] Nettoyage des anciennes dependances...
+    choice /C YN /M "Voulez-vous supprimer node_modules existant"
+    if errorlevel 2 goto skip_clean
+    if errorlevel 1 (
+        echo Suppression de node_modules...
+        rmdir /s /q node_modules 2>nul
+        del package-lock.json 2>nul
+        echo Nettoyage termine
     )
+    :skip_clean
 ) else (
-    echo [2/4] Yarn detecte
-    yarn --version
-    set USE_NPM=0
+    echo [2/4] Aucun node_modules existant
 )
 echo.
 
@@ -43,32 +41,26 @@ if not exist .env (
     echo [3/4] Creation du fichier .env...
     echo REACT_APP_BACKEND_URL=http://localhost:8001 > .env
     echo Fichier .env cree avec succes
+    echo.
 ) else (
     echo [3/4] Fichier .env deja present
     type .env
+    echo.
 )
-echo.
 
-REM Étape 4 : Installer les dépendances
-echo [4/4] Installation des dependances...
+REM Étape 4 : Installer les dépendances avec npm
+echo [4/4] Installation des dependances avec npm...
 echo Cela peut prendre quelques minutes...
 echo.
 
-if "%USE_NPM%"=="1" (
-    echo Utilisation de npm avec --legacy-peer-deps...
-    npm install --legacy-peer-deps
-) else (
-    echo Utilisation de Yarn...
-    yarn install
-)
+npm install --legacy-peer-deps
 
 if %errorlevel% neq 0 (
     echo.
     echo ERREUR: Installation des dependances echouee
     echo.
     echo Essayez manuellement:
-    echo   yarn install
-    echo ou
+    echo   npm cache clean --force
     echo   npm install --legacy-peer-deps
     pause
     exit /b 1
@@ -86,6 +78,10 @@ echo Identifiants de demo:
 echo   - Email: demo@pharmaflow.com
 echo   - Mot de passe: demo123
 echo.
+echo REMARQUE:
+echo   Assurez-vous que le backend est demarré sur le port 8001
+echo   avant d'utiliser l'application.
+echo.
 echo Appuyez sur CTRL+C pour arreter le serveur
 echo.
 echo ========================================
@@ -93,9 +89,5 @@ echo Demarrage du serveur...
 echo ========================================
 echo.
 
-REM Démarrer le serveur
-if "%USE_NPM%"=="1" (
-    npm start
-) else (
-    yarn start
-)
+REM Démarrer le serveur avec npm
+npm start
