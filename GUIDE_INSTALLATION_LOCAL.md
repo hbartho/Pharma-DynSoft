@@ -447,6 +447,34 @@ source venv/bin/activate  # ou venv\Scripts\activate sur Windows
 pip install -r requirements.txt
 ```
 
+#### Problème spécifique Windows : Erreur de compilation `jq`
+
+**Symptôme :** 
+```
+ERROR: Failed building wheel for jq
+error: [WinError 2] Le fichier spécifié est introuvable
+```
+
+**Cause :** Le package `jq` nécessite des outils de compilation C/C++ qui ne sont pas installés sur Windows.
+
+**Solutions :**
+
+**Option 1 - Utiliser requirements-windows.txt (Recommandé) :**
+```bash
+pip install -r requirements-windows.txt
+```
+
+**Option 2 - Installer Visual C++ Build Tools :**
+1. Téléchargez : https://visualstudio.microsoft.com/visual-cpp-build-tools/
+2. Installez "Desktop development with C++"
+3. Redémarrez votre PC
+4. Relancez `pip install -r requirements.txt`
+
+**Option 3 - Retirer jq manuellement :**
+1. Ouvrez `requirements.txt`
+2. Supprimez la ligne `jq==1.10.0`
+3. Relancez `pip install -r requirements.txt`
+
 **Solutions frontend :**
 ```bash
 # Supprimer node_modules et lock files
