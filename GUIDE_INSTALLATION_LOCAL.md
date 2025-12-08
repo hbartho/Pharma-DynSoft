@@ -119,6 +119,14 @@ Vous devriez voir `(venv)` apparaître au début de votre ligne de commande.
 pip install -r requirements.txt
 ```
 
+**⚠️ Note pour les utilisateurs Windows :**
+
+Si vous rencontrez une erreur avec le package `jq` (erreur de compilation C/C++), utilisez le fichier optimisé pour Windows :
+
+```bash
+pip install -r requirements-windows.txt
+```
+
 Cette commande installe toutes les bibliothèques nécessaires :
 - FastAPI
 - Motor (driver MongoDB asynchrone)
