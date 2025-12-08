@@ -142,6 +142,7 @@ Ouvrez le fichier `/app/backend/.env` et vérifiez qu'il contient :
 ```env
 MONGO_URL=mongodb://localhost:27017/pharma_db
 SECRET_KEY=your-secret-key-here-change-in-production
+DB_NAME=pharma_db
 ```
 
 **Notes importantes :**
