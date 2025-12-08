@@ -50,6 +50,7 @@ if not exist .env (
     echo [5/5] Creation du fichier .env...
     echo MONGO_URL=mongodb://localhost:27017/pharma_db > .env
     echo SECRET_KEY=dev-secret-key-change-this-in-production >> .env
+    echo DB_NAME=pharma_db >> .env
     echo Fichier .env cree avec succes
     echo.
 ) else (
