@@ -349,7 +349,7 @@ async def delete_product(product_id: str, current_user: dict = Depends(require_r
 
 # Stock Movement Routes
 @api_router.post("/stock", response_model=StockMovement)
-async def create_stock_movement(movement_data: StockMovementCreate, current_user: dict = Depends(get_current_user)):
+async def create_stock_movement(movement_data: StockMovementCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     movement_dict = movement_data.model_dump()
     movement_dict['tenant_id'] = current_user['tenant_id']
     movement_obj = StockMovement(**movement_dict)
@@ -373,7 +373,7 @@ async def create_stock_movement(movement_data: StockMovementCreate, current_user
     return movement_obj
 
 @api_router.get("/stock", response_model=List[StockMovement])
-async def get_stock_movements(current_user: dict = Depends(get_current_user)):
+async def get_stock_movements(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     movements = await db.stock_movements.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
     for movement in movements:
         if isinstance(movement['created_at'], str):
@@ -381,7 +381,7 @@ async def get_stock_movements(current_user: dict = Depends(get_current_user)):
     return movements
 
 @api_router.get("/stock/alerts")
-async def get_stock_alerts(current_user: dict = Depends(get_current_user)):
+async def get_stock_alerts(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
     alerts = [p for p in products if p['stock'] <= p['min_stock']]
     return alerts
