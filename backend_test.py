@@ -64,6 +64,24 @@ class PharmaFlowAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
+    def test_login(self):
+        """Test login with demo credentials"""
+        print("\n=== AUTHENTICATION TESTS ===")
+        success, response = self.run_test(
+            "Login with demo credentials",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "demo@pharmaflow.com", "password": "demo123"}
+        )
+        if success and 'access_token' in response:
+            self.token = response['access_token']
+            self.user_data = response.get('user', {})
+            print(f"   Token obtained: {self.token[:20]}...")
+            print(f"   User: {self.user_data.get('name', 'Unknown')}")
+            return True
+        return False
+
     def test_authentication_security(self):
         """Test authentication security with invalid token"""
         print("\n=== AUTHENTICATION SECURITY TESTS ===")
