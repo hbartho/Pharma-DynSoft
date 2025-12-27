@@ -88,9 +88,12 @@ class PharmaFlowAPITester:
         )
         if success and 'access_token' in response:
             self.token = response['access_token']
+            self.tokens['admin'] = response['access_token']
             self.user_data = response.get('user', {})
+            self.users['admin'] = response.get('user', {})
             print(f"   Token obtained: {self.token[:20]}...")
             print(f"   User: {self.user_data.get('name', 'Unknown')}")
+            print(f"   Role: {self.user_data.get('role', 'Unknown')}")
             return True
         return False
 
