@@ -243,12 +243,15 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.0"
-  test_sequence: 2
+  version: "1.1"
+  test_sequence: 3
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "User Management - Backend CRUD"
+    - "User Management - Frontend page"
+    - "Role-based access control"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -260,3 +263,5 @@ agent_communication:
     message: "✅ BACKEND CRUD FOURNISSEURS TESTÉ AVEC SUCCÈS - Tous les endpoints backend fonctionnent parfaitement: GET /api/suppliers (liste), POST /api/suppliers (création), PUT /api/suppliers/{id} (mise à jour), DELETE /api/suppliers/{id} (suppression). Authentification JWT validée. Tests avec données réelles réussis. Sécurité vérifiée (tokens invalides rejetés). Flow complet CRUD testé: création → lecture → mise à jour → suppression → vérification. Taux de réussite: 91.7% (11/12 tests). Seul point mineur: FastAPI retourne 403 au lieu de 401 pour requêtes sans token (comportement normal). BACKEND PRÊT POUR PRODUCTION."
   - agent: "testing"
     message: "✅ FRONTEND FOURNISSEURS TESTÉ AVEC SUCCÈS - Interface utilisateur complètement fonctionnelle. Tests réalisés: connexion (demo@pharmaflow.com), navigation vers Fournisseurs, création de fournisseur avec formulaire complet, recherche en temps réel, édition avec données pré-remplies, suppression avec dialogue de confirmation. Tous les scénarios de test demandés validés. UI responsive, toasts fonctionnels, gestion d'états vides. Seul point mineur: overlay modal peut parfois intercepter clics mais n'affecte pas la fonctionnalité core. FRONTEND PRÊT POUR PRODUCTION."
+  - agent: "main"
+    message: "NOUVELLE FONCTIONNALITÉ: Implémentation des rôles utilisateurs (admin, pharmacien, caissier). Backend: ajouté endpoints CRUD pour gestion utilisateurs (GET/POST/PUT/DELETE /api/users), ajouté role dans JWT token, ajouté require_role et require_admin decorators pour contrôle d'accès. Frontend: créé page Users.js avec CRUD complet, modifié Layout.js pour masquer menus selon rôle, modifié App.js avec RoleProtectedRoute. Permissions: Admin=tout, Pharmacien=produits/ordonnances/fournisseurs/ventes/clients/rapports, Caissier=ventes/clients/dashboard. Credentials: email=demo@pharmaflow.com, password=demo123"
