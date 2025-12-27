@@ -109,7 +109,8 @@ const Customers = () => {
           resetForm();
           await refreshData();
         } else {
-          const newCustomer = { ...formData, id: Date.now().toString() };
+          const newCustomerId = crypto.randomUUID();
+          const newCustomer = { ...formData, id: newCustomerId };
           await addItem('customers', newCustomer);
           toast.success('Client ajouté (hors ligne)');
           setShowDialog(false);
