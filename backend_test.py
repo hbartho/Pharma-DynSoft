@@ -1142,9 +1142,77 @@ class PharmaFlowAPITester:
                     failed_tests.append(test_names[i])
             print(f"❌ Failed tests: {', '.join(failed_tests)}")
         
+    def run_customers_sales_crud_tests(self):
+        """Run comprehensive Customers and Sales CRUD tests as per requirements"""
+        print("🚀 Starting Customers and Sales CRUD Tests (DynSoft Pharma)")
+        print(f"Base URL: {self.base_url}")
+        print("Testing credentials: demo@pharmaflow.com / demo123")
+        print("\n🎯 Test complet des pages Clients et Ventes avec CRUD pour DynSoft Pharma")
+        
+        # Authentication is required
+        if not self.test_login():
+            print("❌ Login failed, stopping tests")
+            return False
+        
+        # Verify admin role for full testing
+        if self.user_data.get('role') != 'admin':
+            print(f"⚠️ Warning: Not admin role, got: {self.user_data.get('role')}")
+            print("Some tests may be limited")
+        
+        print(f"✅ Logged in as: {self.user_data.get('name')} ({self.user_data.get('role')})")
+        
+        # Run comprehensive tests
+        tests_success = []
+        
+        # 1. Customers CRUD Tests
+        print("\n" + "="*60)
+        print("🧑‍🤝‍🧑 BACKEND TESTS - CLIENTS (CUSTOMERS)")
+        print("="*60)
+        tests_success.append(self.test_customers_crud_comprehensive())
+        
+        # 2. Sales CRUD Tests  
+        print("\n" + "="*60)
+        print("💰 BACKEND TESTS - VENTES (SALES)")
+        print("="*60)
+        sales_success = self.test_sales_crud_comprehensive()
+        tests_success.append(bool(sales_success))
+        
+        # 3. Sales Access Control Tests
+        print("\n" + "="*60)
+        print("🔒 CONTRÔLE D'ACCÈS VENTES (SALES ACCESS CONTROL)")
+        print("="*60)
+        tests_success.append(self.test_sales_access_control())
+        
+        # Print results
+        print(f"\n📊 Customers & Sales Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        all_tests_passed = all(tests_success)
+        
+        if all_tests_passed:
+            print("\n✅ ALL CUSTOMERS & SALES CRUD TESTS PASSED")
+            print("✅ Customers CRUD (GET, POST, PUT, DELETE): WORKING")
+            print("✅ Sales CRUD (GET, POST, GET by ID): WORKING") 
+            print("✅ Sales deletion (Admin only with stock restore): WORKING")
+            print("✅ Access control (Non-admin blocked from deletion): WORKING")
+        else:
+            print("\n❌ Some customers & sales tests failed")
+            failed_tests = []
+            test_names = [
+                "Customers CRUD operations",
+                "Sales CRUD operations", 
+                "Sales access control"
+            ]
+            for i, success in enumerate(tests_success):
+                if not success:
+                    failed_tests.append(test_names[i])
+            print(f"❌ Failed tests: {', '.join(failed_tests)}")
+        
+        # Cleanup
+        self.cleanup_created_items()
+        
         return all_tests_passed
-
-def main():
     tester = PharmaFlowAPITester()
     
     # Check command line arguments
