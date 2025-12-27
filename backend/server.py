@@ -438,6 +438,37 @@ async def get_customers(current_user: dict = Depends(get_current_user)):
             customer['created_at'] = datetime.fromisoformat(customer['created_at'])
     return customers
 
+@api_router.get("/customers/{customer_id}", response_model=Customer)
+async def get_customer(customer_id: str, current_user: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": customer_id, "tenant_id": current_user['tenant_id']}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    if isinstance(customer['created_at'], str):
+        customer['created_at'] = datetime.fromisoformat(customer['created_at'])
+    return Customer(**customer)
+
+@api_router.put("/customers/{customer_id}", response_model=Customer)
+async def update_customer(customer_id: str, customer_data: CustomerCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.customers.find_one({"id": customer_id, "tenant_id": current_user['tenant_id']})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    update_data = customer_data.model_dump()
+    
+    await db.customers.update_one({"id": customer_id}, {"$set": update_data})
+    
+    updated_customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if isinstance(updated_customer['created_at'], str):
+        updated_customer['created_at'] = datetime.fromisoformat(updated_customer['created_at'])
+    return Customer(**updated_customer)
+
+@api_router.delete("/customers/{customer_id}")
+async def delete_customer(customer_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.customers.delete_one({"id": customer_id, "tenant_id": current_user['tenant_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return {"message": "Customer deleted successfully"}
+
 # Supplier Routes
 @api_router.post("/suppliers", response_model=Supplier)
 async def create_supplier(supplier_data: SupplierCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
