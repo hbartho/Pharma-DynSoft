@@ -385,6 +385,9 @@ class PharmaFlowAPITester:
             print("❌ Login failed, stopping tests")
             return False
         
+        # Test authentication security
+        self.test_authentication_security()
+        
         # Run all endpoint tests
         self.test_products_endpoints()
         self.test_customers_endpoints()
