@@ -64,23 +64,32 @@ class PharmaFlowAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
-    def test_login(self):
-        """Test login with demo credentials"""
-        print("\n=== AUTHENTICATION TESTS ===")
-        success, response = self.run_test(
-            "Login with demo credentials",
-            "POST",
-            "auth/login",
-            200,
-            data={"email": "demo@pharmaflow.com", "password": "demo123"}
-        )
-        if success and 'access_token' in response:
-            self.token = response['access_token']
-            self.user_data = response.get('user', {})
-            print(f"   Token obtained: {self.token[:20]}...")
-            print(f"   User: {self.user_data.get('name', 'Unknown')}")
-            return True
-        return False
+    def test_authentication_security(self):
+        """Test authentication security with invalid token"""
+        print("\n=== AUTHENTICATION SECURITY TESTS ===")
+        
+        # Store current valid token
+        valid_token = self.token
+        
+        # Test with invalid token
+        self.token = "invalid_token_12345"
+        success, response = self.run_test("Test invalid token", "GET", "suppliers", 401)
+        if success:
+            print("   ✅ Invalid token correctly rejected with 401")
+        else:
+            print("   ❌ Invalid token should return 401")
+        
+        # Test with no token
+        self.token = None
+        success, response = self.run_test("Test no token", "GET", "suppliers", 401)
+        if success:
+            print("   ✅ No token correctly rejected with 401")
+        else:
+            print("   ❌ No token should return 401")
+        
+        # Restore valid token
+        self.token = valid_token
+        print("   ✅ Valid token restored")
 
     def test_products_endpoints(self):
         """Test all product-related endpoints"""
