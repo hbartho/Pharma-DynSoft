@@ -80,9 +80,9 @@ const AppRoutes = () => {
       <Route
         path="/products"
         element={
-          <ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
             <Products />
-          </ProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
@@ -104,25 +104,33 @@ const AppRoutes = () => {
       <Route
         path="/suppliers"
         element={
-          <ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
             <Suppliers />
-          </ProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/prescriptions"
         element={
-          <ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
             <Prescriptions />
-          </ProtectedRoute>
+          </RoleProtectedRoute>
         }
       />
       <Route
         path="/reports"
         element={
-          <ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
             <Reports />
-          </ProtectedRoute>
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <RoleProtectedRoute allowedRoles={['admin']}>
+            <Users />
+          </RoleProtectedRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" />} />
