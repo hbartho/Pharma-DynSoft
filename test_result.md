@@ -101,3 +101,136 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Application de gestion de pharmacie DynSoft Pharma avec fonctionnalités CRUD complètes pour Fournisseurs"
+
+backend:
+  - task: "GET /api/suppliers - Liste des fournisseurs"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint déjà existant, à tester"
+  
+  - task: "POST /api/suppliers - Création de fournisseur"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint déjà existant, à tester"
+  
+  - task: "PUT /api/suppliers/{id} - Mise à jour de fournisseur"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Nouvel endpoint ajouté pour édition"
+  
+  - task: "DELETE /api/suppliers/{id} - Suppression de fournisseur"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Nouvel endpoint ajouté pour suppression"
+
+frontend:
+  - task: "Page Fournisseurs - Affichage liste"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Suppliers.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Vérifié via screenshot - affiche correctement les fournisseurs"
+  
+  - task: "Page Fournisseurs - Ajout fournisseur"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Suppliers.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Formulaire avec dialogue existant, à tester"
+  
+  - task: "Page Fournisseurs - Édition fournisseur"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Suppliers.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Vérifié via screenshot - dialogue d'édition s'ouvre avec données pré-remplies"
+  
+  - task: "Page Fournisseurs - Suppression avec confirmation"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Suppliers.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Vérifié via screenshot - dialogue de confirmation s'affiche"
+  
+  - task: "Page Fournisseurs - Recherche"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Suppliers.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Barre de recherche ajoutée, à tester"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "PUT /api/suppliers/{id} - Mise à jour de fournisseur"
+    - "DELETE /api/suppliers/{id} - Suppression de fournisseur"
+    - "Page Fournisseurs - Ajout fournisseur"
+    - "Page Fournisseurs - Édition fournisseur"
+    - "Page Fournisseurs - Suppression avec confirmation"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "J'ai implémenté les fonctionnalités CRUD complètes pour les fournisseurs. Backend: ajouté PUT et DELETE endpoints. Frontend: ajouté boutons Éditer/Supprimer, dialogues correspondants, recherche. Les screenshots montrent que les dialogues s'ouvrent correctement. Merci de tester le flow complet CRUD: ajouter un fournisseur, l'éditer, puis le supprimer. Credentials: email=demo@pharmaflow.com, password=demo123"
