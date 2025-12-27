@@ -1213,6 +1213,8 @@ class PharmaFlowAPITester:
         self.cleanup_created_items()
         
         return all_tests_passed
+
+def main():
     tester = PharmaFlowAPITester()
     
     # Check command line arguments
@@ -1221,8 +1223,10 @@ class PharmaFlowAPITester:
             success = tester.run_supplier_crud_tests_only()
         elif sys.argv[1] == "--users-only":
             success = tester.run_user_management_tests()
+        elif sys.argv[1] == "--customers-sales":
+            success = tester.run_customers_sales_crud_tests()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales]")
             return 1
     else:
         success = tester.run_all_tests()
