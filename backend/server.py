@@ -440,7 +440,7 @@ async def get_customers(current_user: dict = Depends(get_current_user)):
 
 # Supplier Routes
 @api_router.post("/suppliers", response_model=Supplier)
-async def create_supplier(supplier_data: SupplierCreate, current_user: dict = Depends(get_current_user)):
+async def create_supplier(supplier_data: SupplierCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     supplier_dict = supplier_data.model_dump()
     supplier_dict['tenant_id'] = current_user['tenant_id']
     supplier_obj = Supplier(**supplier_dict)
@@ -451,7 +451,7 @@ async def create_supplier(supplier_data: SupplierCreate, current_user: dict = De
     return supplier_obj
 
 @api_router.get("/suppliers", response_model=List[Supplier])
-async def get_suppliers(current_user: dict = Depends(get_current_user)):
+async def get_suppliers(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     suppliers = await db.suppliers.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
     for supplier in suppliers:
         if isinstance(supplier['created_at'], str):
@@ -459,7 +459,7 @@ async def get_suppliers(current_user: dict = Depends(get_current_user)):
     return suppliers
 
 @api_router.get("/suppliers/{supplier_id}", response_model=Supplier)
-async def get_supplier(supplier_id: str, current_user: dict = Depends(get_current_user)):
+async def get_supplier(supplier_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     supplier = await db.suppliers.find_one({"id": supplier_id, "tenant_id": current_user['tenant_id']}, {"_id": 0})
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -468,7 +468,7 @@ async def get_supplier(supplier_id: str, current_user: dict = Depends(get_curren
     return Supplier(**supplier)
 
 @api_router.put("/suppliers/{supplier_id}", response_model=Supplier)
-async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: dict = Depends(get_current_user)):
+async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     existing = await db.suppliers.find_one({"id": supplier_id, "tenant_id": current_user['tenant_id']})
     if not existing:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -483,7 +483,7 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
     return Supplier(**updated_supplier)
 
 @api_router.delete("/suppliers/{supplier_id}")
-async def delete_supplier(supplier_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_supplier(supplier_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     result = await db.suppliers.delete_one({"id": supplier_id, "tenant_id": current_user['tenant_id']})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Supplier not found")
