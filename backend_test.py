@@ -810,6 +810,72 @@ class PharmaFlowAPITester:
         
         return supplier_success
 
+    def run_user_management_tests(self):
+        """Run comprehensive user management and role-based access control tests"""
+        print("🚀 Starting User Management & Role-Based Access Control Tests")
+        print("🏥 DynSoft Pharma - Complete User & Role System Testing")
+        print(f"Base URL: {self.base_url}")
+        print("Testing credentials: demo@pharmaflow.com / demo123 (admin role)")
+        
+        # Authentication is required
+        if not self.test_login():
+            print("❌ Login failed, stopping tests")
+            return False
+        
+        # Verify admin role
+        if self.user_data.get('role') != 'admin':
+            print(f"❌ Expected admin role, got: {self.user_data.get('role')}")
+            return False
+        
+        print(f"✅ Logged in as admin: {self.user_data.get('name')}")
+        
+        # Run comprehensive user management tests
+        tests_success = []
+        
+        # 1. Authentication with role verification
+        tests_success.append(self.test_auth_with_role_verification())
+        
+        # 2. User management endpoints (Admin only)
+        tests_success.append(self.test_user_management_endpoints())
+        
+        # 3. Role-based access control
+        tests_success.append(self.test_role_based_access_control())
+        
+        # 4. Security tests
+        tests_success.append(self.test_security_scenarios())
+        
+        # Cleanup
+        self.cleanup_created_items()
+        
+        # Print results
+        print(f"\n📊 User Management Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        all_tests_passed = all(tests_success)
+        
+        if all_tests_passed:
+            print("✅ ALL USER MANAGEMENT & ROLE TESTS PASSED")
+            print("✅ Authentication with role verification: WORKING")
+            print("✅ User CRUD operations (Admin only): WORKING")
+            print("✅ Role-based access control: WORKING")
+            print("✅ Security controls: WORKING")
+        else:
+            print("❌ Some user management tests failed")
+            failed_tests = []
+            test_names = [
+                "Authentication with role verification",
+                "User management endpoints",
+                "Role-based access control", 
+                "Security scenarios"
+            ]
+            for i, success in enumerate(tests_success):
+                if not success:
+                    failed_tests.append(test_names[i])
+            print(f"❌ Failed tests: {', '.join(failed_tests)}")
+        
+        return all_tests_passed
+
 def main():
     tester = PharmaFlowAPITester()
     
