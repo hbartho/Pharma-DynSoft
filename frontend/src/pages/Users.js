@@ -212,7 +212,7 @@ const Users = () => {
                     />
                   </div>
                 )}
-                <div className="pb-16">
+                <div className="min-h-[120px]">
                   <Label htmlFor="role">Rôle *</Label>
                   <Select 
                     value={formData.role} 
@@ -233,7 +233,7 @@ const Users = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
                   <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                     Annuler
                   </Button>
