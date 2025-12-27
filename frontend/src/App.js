@@ -15,6 +15,7 @@ import Customers from './pages/Customers';
 import Suppliers from './pages/Suppliers';
 import Prescriptions from './pages/Prescriptions';
 import Reports from './pages/Reports';
+import Users from './pages/Users';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -33,6 +34,34 @@ const ProtectedRoute = ({ children }) => {
   }
 
   return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+// Role-based protected route
+const RoleProtectedRoute = ({ children, allowedRoles }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-700 mx-auto mb-4"></div>
+          <p className="text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+            Chargement...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return children;
 };
 
 const AppRoutes = () => {
