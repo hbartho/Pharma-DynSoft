@@ -510,10 +510,10 @@ async def get_prescriptions(current_user: dict = Depends(get_current_user)):
     return prescriptions
 
 @api_router.put("/prescriptions/{prescription_id}/status")
-async def update_prescription_status(prescription_id: str, status: str, current_user: dict = Depends(get_current_user)):
+async def update_prescription_status(prescription_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
     result = await db.prescriptions.update_one(
         {"id": prescription_id, "tenant_id": current_user['tenant_id']},
-        {"$set": {"status": status}}
+        {"$set": {"status": new_status}}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Prescription not found")
