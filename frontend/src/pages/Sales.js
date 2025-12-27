@@ -32,30 +32,6 @@ const Sales = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const refreshData = async () => {
-    try {
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-      
-      try {
-        const db = await getDB();
-        await db.clear('sales');
-      } catch (error) {
-        console.warn('Could not clear IndexedDB:', error);
-      }
-      
-      await loadData(true);
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    }
-  };
-
   const loadData = async (forceRefresh = false) => {
     try {
       if (isOnline) {
@@ -82,6 +58,31 @@ const Sales = () => {
       console.error('Error loading data:', error);
     }
   };
+
+  const refreshData = async () => {
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      try {
+        const db = await getDB();
+        await db.clear('sales');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      
+      await loadData(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addToCart = (product) => {
     if (product.stock <= 0) {
