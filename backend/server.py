@@ -273,7 +273,7 @@ async def login(credentials: UserLogin):
 
 # Product Routes
 @api_router.post("/products", response_model=Product)
-async def create_product(product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
+async def create_product(product_data: ProductCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     product_dict = product_data.model_dump()
     product_dict['tenant_id'] = current_user['tenant_id']
     product_obj = Product(**product_dict)
@@ -286,7 +286,7 @@ async def create_product(product_data: ProductCreate, current_user: dict = Depen
     return product_obj
 
 @api_router.get("/products", response_model=List[Product])
-async def get_products(current_user: dict = Depends(get_current_user)):
+async def get_products(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
     for product in products:
         if isinstance(product['created_at'], str):
@@ -296,7 +296,7 @@ async def get_products(current_user: dict = Depends(get_current_user)):
     return products
 
 @api_router.get("/products/search")
-async def search_products(q: str, current_user: dict = Depends(get_current_user)):
+async def search_products(q: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     products = await db.products.find({
         "tenant_id": current_user['tenant_id'],
         "$or": [
@@ -312,7 +312,7 @@ async def search_products(q: str, current_user: dict = Depends(get_current_user)
     return products
 
 @api_router.get("/products/{product_id}", response_model=Product)
-async def get_product(product_id: str, current_user: dict = Depends(get_current_user)):
+async def get_product(product_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     product = await db.products.find_one({"id": product_id, "tenant_id": current_user['tenant_id']}, {"_id": 0})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -323,7 +323,7 @@ async def get_product(product_id: str, current_user: dict = Depends(get_current_
     return Product(**product)
 
 @api_router.put("/products/{product_id}", response_model=Product)
-async def update_product(product_id: str, product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
+async def update_product(product_id: str, product_data: ProductCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     existing = await db.products.find_one({"id": product_id, "tenant_id": current_user['tenant_id']})
     if not existing:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -341,7 +341,7 @@ async def update_product(product_id: str, product_data: ProductCreate, current_u
     return Product(**updated_product)
 
 @api_router.delete("/products/{product_id}")
-async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_product(product_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     result = await db.products.delete_one({"id": product_id, "tenant_id": current_user['tenant_id']})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
