@@ -363,13 +363,12 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.2"
-  test_sequence: 4
+  version: "1.3"
+  test_sequence: 5
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Contrôle d'accès par rôle - Caissier"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
