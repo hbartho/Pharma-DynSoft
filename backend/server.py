@@ -418,6 +418,34 @@ async def get_sales(current_user: dict = Depends(get_current_user)):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
     return sales
 
+@api_router.get("/sales/{sale_id}", response_model=Sale)
+async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
+    sale = await db.sales.find_one({"id": sale_id, "tenant_id": current_user['tenant_id']}, {"_id": 0})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    if isinstance(sale['created_at'], str):
+        sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+    return Sale(**sale)
+
+@api_router.delete("/sales/{sale_id}")
+async def delete_sale(sale_id: str, current_user: dict = Depends(require_role(["admin"]))):
+    """Delete a sale (Admin only) - restores stock"""
+    sale = await db.sales.find_one({"id": sale_id, "tenant_id": current_user['tenant_id']})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Restore stock for each item
+    for item in sale.get('items', []):
+        product = await db.products.find_one({"id": item['product_id'], "tenant_id": current_user['tenant_id']})
+        if product:
+            new_stock = product['stock'] + item['quantity']
+            await db.products.update_one({"id": item['product_id']}, {"$set": {"stock": new_stock}})
+    
+    result = await db.sales.delete_one({"id": sale_id, "tenant_id": current_user['tenant_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    return {"message": "Sale deleted and stock restored successfully"}
+
 # Customer Routes
 @api_router.post("/customers", response_model=Customer)
 async def create_customer(customer_data: CustomerCreate, current_user: dict = Depends(get_current_user)):
