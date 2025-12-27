@@ -491,7 +491,7 @@ async def delete_supplier(supplier_id: str, current_user: dict = Depends(require
 
 # Prescription Routes
 @api_router.post("/prescriptions", response_model=Prescription)
-async def create_prescription(prescription_data: PrescriptionCreate, current_user: dict = Depends(get_current_user)):
+async def create_prescription(prescription_data: PrescriptionCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     prescription_dict = prescription_data.model_dump()
     prescription_dict['tenant_id'] = current_user['tenant_id']
     prescription_obj = Prescription(**prescription_dict)
@@ -502,7 +502,7 @@ async def create_prescription(prescription_data: PrescriptionCreate, current_use
     return prescription_obj
 
 @api_router.get("/prescriptions", response_model=List[Prescription])
-async def get_prescriptions(current_user: dict = Depends(get_current_user)):
+async def get_prescriptions(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     prescriptions = await db.prescriptions.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
     for prescription in prescriptions:
         if isinstance(prescription['created_at'], str):
@@ -510,7 +510,7 @@ async def get_prescriptions(current_user: dict = Depends(get_current_user)):
     return prescriptions
 
 @api_router.put("/prescriptions/{prescription_id}/status")
-async def update_prescription_status(prescription_id: str, new_status: str, current_user: dict = Depends(get_current_user)):
+async def update_prescription_status(prescription_id: str, new_status: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     result = await db.prescriptions.update_one(
         {"id": prescription_id, "tenant_id": current_user['tenant_id']},
         {"$set": {"status": new_status}}
@@ -520,7 +520,7 @@ async def update_prescription_status(prescription_id: str, new_status: str, curr
     return {"message": "Prescription updated successfully"}
 
 @api_router.put("/prescriptions/{prescription_id}/edit", response_model=Prescription)
-async def edit_prescription(prescription_id: str, prescription_data: PrescriptionCreate, current_user: dict = Depends(get_current_user)):
+async def edit_prescription(prescription_id: str, prescription_data: PrescriptionCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     existing = await db.prescriptions.find_one({"id": prescription_id, "tenant_id": current_user['tenant_id']})
     if not existing:
         raise HTTPException(status_code=404, detail="Prescription not found")
@@ -536,7 +536,7 @@ async def edit_prescription(prescription_id: str, prescription_data: Prescriptio
     return Prescription(**updated_prescription)
 
 @api_router.delete("/prescriptions/{prescription_id}")
-async def delete_prescription(prescription_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_prescription(prescription_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     result = await db.prescriptions.delete_one({"id": prescription_id, "tenant_id": current_user['tenant_id']})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Prescription not found")
