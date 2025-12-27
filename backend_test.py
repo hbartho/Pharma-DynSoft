@@ -408,34 +408,16 @@ class PharmaFlowAPITester:
         
         return self.tests_passed == self.tests_run
 
-    def run_supplier_crud_tests_only(self):
-        """Run only supplier CRUD tests as per requirements"""
-        print("🚀 Starting Supplier CRUD Tests (DynSoft Pharma)")
-        print(f"Base URL: {self.base_url}")
-        print("Testing credentials: demo@pharmaflow.com / demo123")
-        
-        # Authentication is required
-        if not self.test_login():
-            print("❌ Login failed, stopping tests")
-            return False
-        
-        # Test authentication security
-        self.test_authentication_security()
-        
-        # Run supplier tests only
-        supplier_success = self.test_suppliers_endpoints()
-        
-        # Print results
-        print(f"\n📊 Supplier Test Results: {self.tests_passed}/{self.tests_run} passed")
-        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
-        print(f"Success rate: {success_rate:.1f}%")
-        
-        if supplier_success:
-            print("✅ All supplier CRUD operations working correctly")
-        else:
-            print("❌ Some supplier CRUD operations failed")
-        
-        return supplier_success
+def main():
+    tester = PharmaFlowAPITester()
+    
+    # Check if we should run only supplier tests
+    if len(sys.argv) > 1 and sys.argv[1] == "--suppliers-only":
+        success = tester.run_supplier_crud_tests_only()
+    else:
+        success = tester.run_all_tests()
+    
+    return 0 if success else 1
 
 if __name__ == "__main__":
     sys.exit(main())
