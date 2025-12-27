@@ -212,7 +212,7 @@ const Users = () => {
                     />
                   </div>
                 )}
-                <div className="min-h-[140px]">
+                <div className="min-h-[160px]">
                   <Label htmlFor="role">Rôle *</Label>
                   <Select 
                     value={formData.role} 
