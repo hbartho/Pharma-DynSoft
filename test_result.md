@@ -465,6 +465,174 @@ backend:
         agent: "testing"
         comment: "✅ TESTÉ - Sécurité fonctionne: rôles invalides rejetés (400), admin ne peut pas supprimer son propre compte (400), tokens invalides rejetés (401). Minor: FastAPI retourne 403 au lieu de 401 pour requêtes sans token (comportement normal HTTPBearer)."
 
+backend:
+  - task: "GET /api/customers - Liste des clients"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint customers GET déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Endpoint fonctionne correctement. Retourne la liste des clients avec authentification JWT. Test avec credentials demo@pharmaflow.com réussi. Trouvé 2 clients initialement."
+
+  - task: "POST /api/customers - Création de client"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint customers POST déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Création de client réussie avec données: name='Test Client CRUD', phone='+33 6 00 00 00 00', email='testcrud@client.fr', address='1 Rue Test, Paris'. Retourne ID UUID et données complètes."
+
+  - task: "GET /api/customers/{id} - Obtenir client spécifique"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint customers GET by ID déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Récupération de client spécifique réussie. Endpoint retourne les données complètes du client créé avec email 'testcrud@client.fr' correspondant."
+
+  - task: "PUT /api/customers/{id} - Mise à jour de client"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint customers PUT ajouté pour édition"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Mise à jour réussie. Changement du nom de 'Test Client CRUD' vers 'Test Client Modifié' confirmé. Endpoint retourne les données mises à jour."
+
+  - task: "DELETE /api/customers/{id} - Suppression de client"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint customers DELETE ajouté pour suppression"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Suppression réussie. Client supprimé de la base de données. Tentative d'accès après suppression retourne correctement 404. Compteur de clients revenu à l'état initial (2)."
+
+  - task: "GET /api/sales - Liste des ventes"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint sales GET déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Endpoint fonctionne correctement. Retourne la liste des ventes avec authentification JWT. Test avec credentials demo@pharmaflow.com réussi. Trouvé 2-3 ventes initialement."
+
+  - task: "POST /api/sales - Création de vente"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint sales POST déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Création de vente réussie avec produit test. Total: 31.0€, méthode paiement: carte, 1 item. Déduction automatique du stock produit fonctionnelle."
+
+  - task: "GET /api/sales/{id} - Obtenir vente spécifique"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint sales GET by ID déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Récupération de vente spécifique réussie. Endpoint retourne les données complètes de la vente créée avec total correspondant (31.0€)."
+
+  - task: "DELETE /api/sales/{id} - Suppression vente (Admin only)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Endpoint sales DELETE ajouté pour suppression admin avec restauration stock"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Suppression admin réussie avec restauration stock. Stock produit restauré de 96 à 98 (+2 items vendus). Vente supprimée retourne 404. Message: 'Sale deleted and stock restored successfully'."
+
+  - task: "Contrôle d'accès suppression ventes - Non-admin bloqué"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Contrôle d'accès pour suppression ventes (admin only)"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Utilisateur non-admin (pharmacien) correctement bloqué pour suppression vente avec erreur 403. Contrôle d'accès fonctionnel."
+
+  - task: "Contrôle d'accès suppression ventes - Admin autorisé"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Contrôle d'accès pour suppression ventes (admin autorisé)"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Utilisateur admin peut supprimer ventes avec succès. Restauration automatique du stock vérifiée. Contrôle d'accès admin fonctionnel."
+
 agent_communication:
   - agent: "main"
     message: "NOUVELLE FONCTIONNALITÉ: Pages Clients et Ventes avec CRUD complet. Backend: ajouté PUT/DELETE pour customers et sales (DELETE sales = admin only avec restauration stock). Frontend: Customers.js avec édition/suppression/recherche, Sales.js avec vue détails, suppression admin, recherche, icônes paiement. Credentials: email=demo@pharmaflow.com, password=demo123"
+  - agent: "testing"
+    message: "✅ TESTS CLIENTS ET VENTES COMPLETS RÉUSSIS - Tous les endpoints CRUD clients et ventes fonctionnent parfaitement. Contrôle d'accès admin pour suppression ventes vérifié. Stock automatiquement restauré lors suppression vente. 23/23 tests passés (100% succès). Credentials demo@pharmaflow.com/demo123 fonctionnels."
