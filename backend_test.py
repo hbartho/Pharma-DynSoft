@@ -734,6 +734,16 @@ class PharmaFlowAPITester:
         """Clean up created test items"""
         print("\n=== CLEANUP ===")
         
+        # Ensure we're using admin token for cleanup
+        if self.tokens['admin']:
+            self.token = self.tokens['admin']
+        
+        # Delete created users (admin only)
+        for user_id in self.created_items['users']:
+            success, response = self.run_test(f"Delete user {user_id}", "DELETE", f"users/{user_id}", 200)
+            if success:
+                print(f"   ✅ Deleted user {user_id}")
+        
         # Delete created products
         for product_id in self.created_items['products']:
             self.run_test(f"Delete product {product_id}", "DELETE", f"products/{product_id}", 200)
