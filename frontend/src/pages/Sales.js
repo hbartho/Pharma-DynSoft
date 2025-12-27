@@ -4,35 +4,66 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Plus, Search, ShoppingCart, Trash2, X } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
+import { Plus, Search, ShoppingCart, Trash2, X, Eye, CreditCard, Banknote, FileCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import api from '../services/api';
-import { addItem, getAllItems, addLocalChange } from '../services/indexedDB';
+import { addItem, getAllItems, addLocalChange, deleteItem as deleteFromDB, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
 const Sales = () => {
+  const { user } = useAuth();
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [saleToDelete, setSaleToDelete] = useState(null);
   const [cart, setCart] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [productSearch, setProductSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const { isOnline } = useOffline();
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const refreshData = async () => {
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      try {
+        const db = await getDB();
+        await db.clear('sales');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      
+      await loadData(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  const loadData = async (forceRefresh = false) => {
     try {
       if (isOnline) {
+        const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : {};
         const [salesRes, productsRes, customersRes] = await Promise.all([
-          api.get('/sales'),
-          api.get('/products'),
-          api.get('/customers'),
+          api.get('/sales', { headers }),
+          api.get('/products', { headers }).catch(() => ({ data: [] })),
+          api.get('/customers', { headers }),
         ]);
         setSales(salesRes.data);
         setProducts(productsRes.data);
@@ -53,8 +84,17 @@ const Sales = () => {
   };
 
   const addToCart = (product) => {
+    if (product.stock <= 0) {
+      toast.error('Produit en rupture de stock');
+      return;
+    }
+    
     const existing = cart.find((item) => item.product_id === product.id);
     if (existing) {
+      if (existing.quantity >= product.stock) {
+        toast.error('Stock insuffisant');
+        return;
+      }
       setCart(
         cart.map((item) =>
           item.product_id === product.id
@@ -63,7 +103,7 @@ const Sales = () => {
         )
       );
     } else {
-      setCart([...cart, { product_id: product.id, name: product.name, price: product.price, quantity: 1 }]);
+      setCart([...cart, { product_id: product.id, name: product.name, price: product.price, quantity: 1, max_stock: product.stock }]);
     }
     toast.success(`${product.name} ajouté au panier`);
   };
@@ -75,6 +115,11 @@ const Sales = () => {
   const updateQuantity = (productId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(productId);
+      return;
+    }
+    const item = cart.find(i => i.product_id === productId);
+    if (item && quantity > item.max_stock) {
+      toast.error('Stock insuffisant');
       return;
     }
     setCart(
@@ -98,8 +143,8 @@ const Sales = () => {
 
     try {
       const saleData = {
-        customer_id: selectedCustomer || null,
-        items: cart,
+        customer_id: selectedCustomer && selectedCustomer !== 'none' ? selectedCustomer : null,
+        items: cart.map(({ product_id, name, price, quantity }) => ({ product_id, name, price, quantity })),
         total: calculateTotal(),
         payment_method: paymentMethod,
       };
@@ -117,17 +162,79 @@ const Sales = () => {
       setCart([]);
       setSelectedCustomer('');
       setPaymentMethod('cash');
+      setProductSearch('');
       setShowDialog(false);
-      loadData();
+      await refreshData();
     } catch (error) {
       console.error('Error creating sale:', error);
-      toast.error('Erreur lors de l\'enregistrement de la vente');
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'enregistrement de la vente');
+    }
+  };
+
+  const handleViewDetails = (sale) => {
+    setSelectedSale(sale);
+    setShowDetailDialog(true);
+  };
+
+  const handleDeleteClick = (sale) => {
+    setSaleToDelete(sale);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!saleToDelete) return;
+    
+    try {
+      if (isOnline) {
+        await api.delete(`/sales/${saleToDelete.id}`);
+        toast.success('Vente supprimée et stock restauré');
+        await refreshData();
+      } else {
+        await deleteFromDB('sales', saleToDelete.id);
+        toast.success('Vente supprimée (hors ligne)');
+        await loadData();
+      }
+      setShowDeleteDialog(false);
+      setSaleToDelete(null);
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
+    }
+  };
+
+  const getCustomerName = (customerId) => {
+    if (!customerId) return 'Client anonyme';
+    const customer = customers.find(c => c.id === customerId);
+    return customer?.name || 'Client inconnu';
+  };
+
+  const getPaymentIcon = (method) => {
+    switch (method) {
+      case 'card': return <CreditCard className="w-4 h-4" />;
+      case 'check': return <FileCheck className="w-4 h-4" />;
+      default: return <Banknote className="w-4 h-4" />;
+    }
+  };
+
+  const getPaymentLabel = (method) => {
+    switch (method) {
+      case 'card': return 'Carte bancaire';
+      case 'check': return 'Chèque';
+      default: return 'Espèces';
     }
   };
 
   const filteredProducts = products.filter((p) =>
     p.name?.toLowerCase().includes(productSearch.toLowerCase())
   );
+
+  const filteredSales = sales.filter((s) => {
+    const customerName = getCustomerName(s.customer_id).toLowerCase();
+    const paymentLabel = getPaymentLabel(s.payment_method).toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return customerName.includes(query) || paymentLabel.includes(query) || 
+           s.total?.toString().includes(query);
+  });
 
   return (
     <Layout>
@@ -205,23 +312,31 @@ const Sales = () => {
                           key={product.id}
                           type="button"
                           onClick={() => addToCart(product)}
+                          disabled={product.stock <= 0}
                           data-testid={`add-to-cart-${product.id}`}
-                          className="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors flex justify-between items-center"
+                          className={`w-full text-left px-4 py-2 transition-colors flex justify-between items-center ${
+                            product.stock <= 0 ? 'bg-slate-100 cursor-not-allowed' : 'hover:bg-slate-50'
+                          }`}
                         >
                           <div>
                             <p className="font-medium text-slate-900">{product.name}</p>
-                            <p className="text-sm text-slate-500">Stock: {product.stock}</p>
+                            <p className={`text-sm ${product.stock <= 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                              Stock: {product.stock} {product.stock <= 0 && '(Rupture)'}
+                            </p>
                           </div>
                           <p className="font-medium text-teal-700">{product.price.toFixed(2)} €</p>
                         </button>
                       ))}
                     </div>
                   )}
+                  {productSearch && filteredProducts.length === 0 && (
+                    <p className="mt-2 text-sm text-slate-500">Aucun produit trouvé</p>
+                  )}
                 </div>
 
                 {/* Cart */}
                 <div>
-                  <Label>Panier</Label>
+                  <Label>Panier ({cart.length} article{cart.length > 1 ? 's' : ''})</Label>
                   <div className="mt-2 space-y-2" data-testid="cart-items">
                     {cart.length === 0 ? (
                       <p className="text-slate-500 text-center py-4">Le panier est vide</p>
@@ -235,6 +350,7 @@ const Sales = () => {
                           <Input
                             type="number"
                             min="1"
+                            max={item.max_stock}
                             value={item.quantity}
                             onChange={(e) => updateQuantity(item.product_id, e.target.value)}
                             className="w-20"
@@ -278,6 +394,18 @@ const Sales = () => {
           </Dialog>
         </div>
 
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
+          <Input
+            placeholder="Rechercher par client, mode de paiement..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            data-testid="sales-search-input"
+            className="pl-10"
+          />
+        </div>
+
         {/* Sales List */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
@@ -288,48 +416,163 @@ const Sales = () => {
                     Date
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    Client
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     Articles
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                    Mode de paiement
+                    Paiement
                   </th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     Total
                   </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {sales.map((sale) => (
+                {filteredSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors" data-testid={`sale-row-${sale.id}`}>
                     <td className="px-6 py-4 text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {new Date(sale.created_at).toLocaleString('fr-FR')}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900">
+                      {getCustomerName(sale.customer_id)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-900">
                       {sale.items?.length || 0} article(s)
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      {sale.payment_method === 'cash' && 'Espèces'}
-                      {sale.payment_method === 'card' && 'Carte bancaire'}
-                      {sale.payment_method === 'check' && 'Chèque'}
+                      <div className="flex items-center gap-2">
+                        {getPaymentIcon(sale.payment_method)}
+                        {getPaymentLabel(sale.payment_method)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-teal-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
                       {sale.total?.toFixed(2) || '0.00'} €
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(sale)}
+                          data-testid={`view-sale-${sale.id}`}
+                        >
+                          <Eye className="w-4 h-4" strokeWidth={1.5} />
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(sale)}
+                            data-testid={`delete-sale-${sale.id}`}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {sales.length === 0 && (
+          {filteredSales.length === 0 && (
             <div className="text-center py-12">
               <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5} />
               <p className="text-slate-500" style={{ fontFamily: 'Inter, sans-serif' }}>
-                Aucune vente enregistrée
+                {searchQuery ? 'Aucune vente trouvée' : 'Aucune vente enregistrée'}
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Dialog Détails de la vente */}
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Détails de la vente</DialogTitle>
+          </DialogHeader>
+          {selectedSale && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500">Date</p>
+                  <p className="font-medium">{new Date(selectedSale.created_at).toLocaleString('fr-FR')}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Client</p>
+                  <p className="font-medium">{getCustomerName(selectedSale.customer_id)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Paiement</p>
+                  <p className="font-medium flex items-center gap-2">
+                    {getPaymentIcon(selectedSale.payment_method)}
+                    {getPaymentLabel(selectedSale.payment_method)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Total</p>
+                  <p className="font-medium text-teal-700">{selectedSale.total?.toFixed(2)} €</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-slate-500 mb-2">Articles</p>
+                <div className="space-y-2">
+                  {selectedSale.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-slate-500">{item.price?.toFixed(2)} € × {item.quantity}</p>
+                      </div>
+                      <p className="font-medium">{(item.price * item.quantity).toFixed(2)} €</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de confirmation de suppression */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
+              Êtes-vous sûr de vouloir supprimer cette vente de {saleToDelete?.total?.toFixed(2)} € ?
+              Le stock des produits sera restauré. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setSaleToDelete(null);
+              }}
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
