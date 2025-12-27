@@ -179,6 +179,91 @@ class PharmaFlowAPITester:
             self.created_items['customers'].append(new_customer['id'])
             print(f"   Created customer ID: {new_customer['id']}")
 
+    def test_customers_crud_comprehensive(self):
+        """Test comprehensive CRUD operations for customers as per requirements"""
+        print("\n=== CUSTOMERS CRUD COMPREHENSIVE TESTS ===")
+        
+        # 1. GET /api/customers - Liste des clients
+        success, customers = self.run_test("GET /api/customers - Liste des clients", "GET", "customers", 200)
+        if success:
+            print(f"   ✅ Found {len(customers)} customers initially")
+            initial_count = len(customers)
+        else:
+            print("❌ Failed to get initial customers list")
+            return False
+        
+        # 2. POST /api/customers - Créer un nouveau client
+        customer_data = {
+            "name": "Test Client CRUD",
+            "phone": "+33 6 00 00 00 00",
+            "email": "testcrud@client.fr",
+            "address": "1 Rue Test, Paris"
+        }
+        success, new_customer = self.run_test("POST /api/customers - Créer nouveau client", "POST", "customers", 200, customer_data)
+        if success and 'id' in new_customer:
+            customer_id = new_customer['id']
+            self.created_items['customers'].append(customer_id)
+            print(f"   ✅ Created customer ID: {customer_id}")
+            print(f"   ✅ Customer name: {new_customer.get('name')}")
+            print(f"   ✅ Customer email: {new_customer.get('email')}")
+            print(f"   ✅ Customer phone: {new_customer.get('phone')}")
+            
+            # 3. GET /api/customers/{id} - Obtenir le client créé
+            success, specific_customer = self.run_test("GET /api/customers/{id} - Obtenir client créé", "GET", f"customers/{customer_id}", 200)
+            if success:
+                print(f"   ✅ Retrieved specific customer: {specific_customer.get('name')}")
+                if specific_customer.get('email') == "testcrud@client.fr":
+                    print(f"   ✅ Customer data matches: {specific_customer.get('email')}")
+                else:
+                    print(f"   ❌ Customer data mismatch")
+            
+            # 4. PUT /api/customers/{id} - Modifier le client (changer le nom en "Test Client Modifié")
+            update_data = {
+                "name": "Test Client Modifié",
+                "phone": "+33 6 00 00 00 00",
+                "email": "testcrud@client.fr",
+                "address": "1 Rue Test, Paris"
+            }
+            success, updated_customer = self.run_test("PUT /api/customers/{id} - Modifier client", "PUT", f"customers/{customer_id}", 200, update_data)
+            if success:
+                print(f"   ✅ Updated customer name to: {updated_customer.get('name')}")
+                
+                # Verify the update
+                success, verify_update = self.run_test("Verify customer update", "GET", f"customers/{customer_id}", 200)
+                if success and verify_update.get('name') == "Test Client Modifié":
+                    print(f"   ✅ Update verified: {verify_update.get('name')}")
+                else:
+                    print(f"   ❌ Update verification failed")
+            
+            # 5. DELETE /api/customers/{id} - Supprimer le client
+            success, delete_response = self.run_test("DELETE /api/customers/{id} - Supprimer client", "DELETE", f"customers/{customer_id}", 200)
+            if success:
+                print(f"   ✅ Customer deleted successfully")
+                
+                # 6. Vérifier que le client n'existe plus
+                success, not_found = self.run_test("Verify customer deleted (should 404)", "GET", f"customers/{customer_id}", 404)
+                if success:
+                    print(f"   ✅ Deleted customer correctly returns 404")
+                else:
+                    print(f"   ❌ Deleted customer should return 404")
+                
+                # Verify customer count back to original
+                success, final_customers = self.run_test("Get customers after deletion", "GET", "customers", 200)
+                if success:
+                    if len(final_customers) == initial_count:
+                        print(f"   ✅ Customer count back to original: {len(final_customers)}")
+                    else:
+                        print(f"   ❌ Expected {initial_count} customers after deletion, found {len(final_customers)}")
+                
+                # Remove from cleanup list since already deleted
+                if customer_id in self.created_items['customers']:
+                    self.created_items['customers'].remove(customer_id)
+            
+            return True
+        else:
+            print("❌ Failed to create customer")
+            return False
+
     def test_suppliers_endpoints(self):
         """Test supplier CRUD endpoints comprehensively"""
         print("\n=== SUPPLIERS CRUD TESTS ===")
