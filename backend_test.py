@@ -138,25 +138,92 @@ class PharmaFlowAPITester:
             print(f"   Created customer ID: {new_customer['id']}")
 
     def test_suppliers_endpoints(self):
-        """Test supplier endpoints"""
-        print("\n=== SUPPLIERS TESTS ===")
+        """Test supplier CRUD endpoints comprehensively"""
+        print("\n=== SUPPLIERS CRUD TESTS ===")
         
-        # Get suppliers
+        # 1. Get suppliers (initial list)
         success, suppliers = self.run_test("Get suppliers", "GET", "suppliers", 200)
         if success:
-            print(f"   Found {len(suppliers)} suppliers")
+            print(f"   Found {len(suppliers)} suppliers initially")
+            initial_count = len(suppliers)
+        else:
+            print("❌ Failed to get initial suppliers list")
+            return False
         
-        # Create supplier
+        # 2. Create supplier with exact test data from requirements
         supplier_data = {
-            "name": "Laboratoire Test",
-            "phone": "0987654321",
-            "email": "contact@labtest.com",
-            "address": "456 Avenue des Tests, 69000 Lyon"
+            "name": "Test Fournisseur",
+            "phone": "+33 6 12 34 56 78",
+            "email": "test@fournisseur.com",
+            "address": "123 Rue Test, Paris"
         }
         success, new_supplier = self.run_test("Create supplier", "POST", "suppliers", 200, supplier_data)
         if success and 'id' in new_supplier:
-            self.created_items['suppliers'].append(new_supplier['id'])
-            print(f"   Created supplier ID: {new_supplier['id']}")
+            supplier_id = new_supplier['id']
+            self.created_items['suppliers'].append(supplier_id)
+            print(f"   ✅ Created supplier ID: {supplier_id}")
+            print(f"   ✅ Supplier name: {new_supplier.get('name')}")
+            print(f"   ✅ Supplier email: {new_supplier.get('email')}")
+            
+            # 3. Verify supplier appears in list
+            success, updated_suppliers = self.run_test("Get suppliers after creation", "GET", "suppliers", 200)
+            if success:
+                if len(updated_suppliers) == initial_count + 1:
+                    print(f"   ✅ Supplier count increased from {initial_count} to {len(updated_suppliers)}")
+                else:
+                    print(f"   ❌ Expected {initial_count + 1} suppliers, found {len(updated_suppliers)}")
+            
+            # 4. Get specific supplier
+            success, specific_supplier = self.run_test("Get specific supplier", "GET", f"suppliers/{supplier_id}", 200)
+            if success:
+                print(f"   ✅ Retrieved specific supplier: {specific_supplier.get('name')}")
+            
+            # 5. Update supplier (change name as per requirements)
+            update_data = {
+                "name": "Test Fournisseur Modifié",
+                "phone": "+33 6 12 34 56 78",
+                "email": "test@fournisseur.com",
+                "address": "123 Rue Test, Paris"
+            }
+            success, updated_supplier = self.run_test("Update supplier", "PUT", f"suppliers/{supplier_id}", 200, update_data)
+            if success:
+                print(f"   ✅ Updated supplier name to: {updated_supplier.get('name')}")
+                
+                # Verify the update
+                success, verify_update = self.run_test("Verify supplier update", "GET", f"suppliers/{supplier_id}", 200)
+                if success and verify_update.get('name') == "Test Fournisseur Modifié":
+                    print(f"   ✅ Update verified: {verify_update.get('name')}")
+                else:
+                    print(f"   ❌ Update verification failed")
+            
+            # 6. Delete supplier
+            success, delete_response = self.run_test("Delete supplier", "DELETE", f"suppliers/{supplier_id}", 200)
+            if success:
+                print(f"   ✅ Supplier deleted successfully")
+                
+                # 7. Verify supplier no longer exists
+                success, final_suppliers = self.run_test("Get suppliers after deletion", "GET", "suppliers", 200)
+                if success:
+                    if len(final_suppliers) == initial_count:
+                        print(f"   ✅ Supplier count back to original: {len(final_suppliers)}")
+                    else:
+                        print(f"   ❌ Expected {initial_count} suppliers after deletion, found {len(final_suppliers)}")
+                
+                # 8. Verify 404 when trying to get deleted supplier
+                success, not_found = self.run_test("Verify supplier deleted (should 404)", "GET", f"suppliers/{supplier_id}", 404)
+                if success:
+                    print(f"   ✅ Deleted supplier correctly returns 404")
+                else:
+                    print(f"   ❌ Deleted supplier should return 404")
+                
+                # Remove from cleanup list since already deleted
+                if supplier_id in self.created_items['suppliers']:
+                    self.created_items['suppliers'].remove(supplier_id)
+            
+            return True
+        else:
+            print("❌ Failed to create supplier")
+            return False
 
     def test_prescriptions_endpoints(self):
         """Test prescription endpoints"""
