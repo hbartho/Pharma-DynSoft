@@ -409,6 +409,189 @@ class PharmaFlowAPITester:
                 self.created_items['sales'].append(new_sale['id'])
                 print(f"   Created sale ID: {new_sale['id']}")
 
+    def test_sales_crud_comprehensive(self):
+        """Test comprehensive CRUD operations for sales as per requirements"""
+        print("\n=== SALES CRUD COMPREHENSIVE TESTS ===")
+        
+        # Ensure we have products for sales
+        if not self.created_items['products']:
+            print("   ⚠️ No products available, creating test product first...")
+            product_data = {
+                "name": "Test Médicament Vente",
+                "barcode": "SALE123456",
+                "description": "Médicament pour test de vente",
+                "price": 15.50,
+                "stock": 100,
+                "min_stock": 10,
+                "category": "Test"
+            }
+            success, new_product = self.run_test("Create product for sales test", "POST", "products", 200, product_data)
+            if success and 'id' in new_product:
+                self.created_items['products'].append(new_product['id'])
+                print(f"   ✅ Created test product ID: {new_product['id']}")
+            else:
+                print("   ❌ Failed to create test product, cannot test sales")
+                return False
+        
+        # 1. GET /api/sales - Liste des ventes
+        success, sales = self.run_test("GET /api/sales - Liste des ventes", "GET", "sales", 200)
+        if success:
+            print(f"   ✅ Found {len(sales)} sales initially")
+            initial_count = len(sales)
+        else:
+            print("❌ Failed to get initial sales list")
+            return False
+        
+        # 2. POST /api/sales - Créer une nouvelle vente (si produits disponibles)
+        sale_data = {
+            "customer_id": self.created_items['customers'][0] if self.created_items['customers'] else None,
+            "items": [
+                {
+                    "product_id": self.created_items['products'][0],
+                    "name": "Test Médicament Vente",
+                    "price": 15.50,
+                    "quantity": 2
+                }
+            ],
+            "total": 31.00,
+            "payment_method": "carte"
+        }
+        success, new_sale = self.run_test("POST /api/sales - Créer nouvelle vente", "POST", "sales", 200, sale_data)
+        if success and 'id' in new_sale:
+            sale_id = new_sale['id']
+            self.created_items['sales'].append(sale_id)
+            print(f"   ✅ Created sale ID: {sale_id}")
+            print(f"   ✅ Sale total: {new_sale.get('total')}")
+            print(f"   ✅ Payment method: {new_sale.get('payment_method')}")
+            print(f"   ✅ Items count: {len(new_sale.get('items', []))}")
+            
+            # 3. GET /api/sales/{id} - Obtenir une vente spécifique
+            success, specific_sale = self.run_test("GET /api/sales/{id} - Obtenir vente spécifique", "GET", f"sales/{sale_id}", 200)
+            if success:
+                print(f"   ✅ Retrieved specific sale: {specific_sale.get('id')}")
+                if specific_sale.get('total') == 31.00:
+                    print(f"   ✅ Sale data matches: total = {specific_sale.get('total')}")
+                else:
+                    print(f"   ❌ Sale data mismatch")
+            
+            return sale_id
+        else:
+            print("❌ Failed to create sale")
+            return False
+
+    def test_sales_access_control(self):
+        """Test sales access control - Admin vs non-admin deletion"""
+        print("\n=== SALES ACCESS CONTROL TESTS ===")
+        
+        # First create a sale to test deletion
+        sale_id = self.test_sales_crud_comprehensive()
+        if not sale_id:
+            print("❌ Cannot test access control without a sale")
+            return False
+        
+        # Create a non-admin user (pharmacien) if not exists
+        if not self.tokens.get('pharmacien'):
+            print("   Creating pharmacien user for access control test...")
+            if self.tokens['admin']:
+                self.token = self.tokens['admin']
+                pharmacien_data = {
+                    "name": "Test Pharmacien Access",
+                    "email": "pharmacien.access@test.fr",
+                    "password": "test123",
+                    "role": "pharmacien",
+                    "tenant_id": self.users['admin']['tenant_id']
+                }
+                
+                success, pharmacien_user = self.run_test(
+                    "Create pharmacien for access test",
+                    "POST",
+                    "users",
+                    200,
+                    data=pharmacien_data
+                )
+                
+                if success:
+                    self.created_items['users'].append(pharmacien_user['id'])
+                    
+                    # Login as pharmacien
+                    success, pharmacien_login = self.run_test(
+                        "Login as pharmacien for access test",
+                        "POST",
+                        "auth/login",
+                        200,
+                        data={"email": "pharmacien.access@test.fr", "password": "test123"}
+                    )
+                    
+                    if success:
+                        self.tokens['pharmacien'] = pharmacien_login['access_token']
+                        print(f"   ✅ Pharmacien token obtained for access test")
+        
+        # Test non-admin trying to delete sale (should get 403)
+        if self.tokens.get('pharmacien'):
+            print("\n--- Testing Non-Admin Access Control ---")
+            self.token = self.tokens['pharmacien']
+            
+            success, response = self.run_test(
+                "Non-admin tries DELETE /api/sales/{id} (should fail with 403)",
+                "DELETE",
+                f"sales/{sale_id}",
+                403
+            )
+            if success:
+                print("   ✅ Non-admin correctly denied access to delete sales (403)")
+            else:
+                print("   ❌ Non-admin should be denied access to delete sales")
+        
+        # Test admin can delete sale (should succeed and restore stock)
+        print("\n--- Testing Admin Access Control ---")
+        self.token = self.tokens['admin']
+        
+        # Get product stock before deletion to verify restoration
+        if self.created_items['products']:
+            product_id = self.created_items['products'][0]
+            success, product_before = self.run_test("Get product stock before sale deletion", "GET", f"products/{product_id}", 200)
+            if success:
+                stock_before = product_before.get('stock', 0)
+                print(f"   Product stock before deletion: {stock_before}")
+        
+        # Admin deletes sale (should restore stock)
+        success, delete_response = self.run_test(
+            "Admin DELETE /api/sales/{id} (should succeed and restore stock)",
+            "DELETE",
+            f"sales/{sale_id}",
+            200
+        )
+        if success:
+            print("   ✅ Admin successfully deleted sale")
+            print(f"   ✅ Response: {delete_response.get('message', 'No message')}")
+            
+            # Verify stock was restored
+            if self.created_items['products']:
+                success, product_after = self.run_test("Get product stock after sale deletion", "GET", f"products/{product_id}", 200)
+                if success:
+                    stock_after = product_after.get('stock', 0)
+                    print(f"   Product stock after deletion: {stock_after}")
+                    if stock_after == stock_before + 2:  # We sold 2 items
+                        print("   ✅ Stock correctly restored after sale deletion")
+                    else:
+                        print(f"   ❌ Stock not properly restored. Expected {stock_before + 2}, got {stock_after}")
+            
+            # Verify sale no longer exists
+            success, not_found = self.run_test("Verify sale deleted (should 404)", "GET", f"sales/{sale_id}", 404)
+            if success:
+                print(f"   ✅ Deleted sale correctly returns 404")
+            else:
+                print(f"   ❌ Deleted sale should return 404")
+            
+            # Remove from cleanup list since already deleted
+            if sale_id in self.created_items['sales']:
+                self.created_items['sales'].remove(sale_id)
+            
+            return True
+        else:
+            print("   ❌ Admin should be able to delete sales")
+            return False
+
     def test_stock_endpoints(self):
         """Test stock management endpoints"""
         print("\n=== STOCK TESTS ===")
