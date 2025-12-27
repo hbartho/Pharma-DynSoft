@@ -39,14 +39,16 @@ const Users = () => {
     tenant_id: '',
   });
 
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      loadUsers();
+    }
+  }, [user]);
+
   // Redirect if not admin
   if (user?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
 
   const loadUsers = async () => {
     try {
