@@ -256,6 +256,97 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+backend:
+  - task: "Authentication avec rôle dans JWT"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implémenté système d'authentification avec rôles dans JWT token"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Authentification avec rôle fonctionne parfaitement. JWT contient role, user_id et tenant_id. Endpoint /api/auth/me retourne informations utilisateur correctes. Login avec demo@pharmaflow.com réussi, rôle admin confirmé."
+
+  - task: "Endpoints gestion utilisateurs (Admin only)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Ajouté endpoints CRUD pour gestion utilisateurs avec contrôle admin"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Tous les endpoints de gestion utilisateurs fonctionnent: GET /api/users (liste), POST /api/users (création), GET /api/users/{id} (détail), PUT /api/users/{id} (mise à jour), DELETE /api/users/{id} (suppression). Contrôle admin vérifié. Création utilisateur 'Jean Pharmacien' réussie, modification et suppression testées."
+
+  - task: "Contrôle d'accès par rôle - Admin"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implémenté require_admin et require_role decorators"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Admin peut accéder à tous les endpoints de gestion utilisateurs. Contrôle d'accès admin fonctionne correctement."
+
+  - task: "Contrôle d'accès par rôle - Pharmacien"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pharmacien doit pouvoir accéder produits, fournisseurs, ordonnances, rapports, ventes, clients"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Pharmacien correctement bloqué pour gestion utilisateurs (403). Peut accéder produits, fournisseurs, ventes comme prévu. Permissions pharmacien fonctionnelles."
+
+  - task: "Contrôle d'accès par rôle - Caissier"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Caissier doit pouvoir accéder seulement ventes, clients et dashboard"
+      - working: false
+        agent: "testing"
+        comment: "❌ PROBLÈME CRITIQUE - Caissier peut accéder aux produits (GET /api/products retourne 200 au lieu de 403). Les endpoints produits n'ont pas de contrôle d'accès par rôle implémenté. Caissier peut accéder ventes et clients correctement."
+
+  - task: "Tests de sécurité utilisateurs"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Sécurité: rôles invalides, suppression compte admin, accès sans token"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Sécurité fonctionne: rôles invalides rejetés (400), admin ne peut pas supprimer son propre compte (400), tokens invalides rejetés (401). Minor: FastAPI retourne 403 au lieu de 401 pour requêtes sans token (comportement normal HTTPBearer)."
+
 agent_communication:
   - agent: "main"
     message: "J'ai implémenté les fonctionnalités CRUD complètes pour les fournisseurs. Backend: ajouté PUT et DELETE endpoints. Frontend: ajouté boutons Éditer/Supprimer, dialogues correspondants, recherche. Les screenshots montrent que les dialogues s'ouvrent correctement. Merci de tester le flow complet CRUD: ajouter un fournisseur, l'éditer, puis le supprimer. Credentials: email=demo@pharmaflow.com, password=demo123"
@@ -265,3 +356,5 @@ agent_communication:
     message: "✅ FRONTEND FOURNISSEURS TESTÉ AVEC SUCCÈS - Interface utilisateur complètement fonctionnelle. Tests réalisés: connexion (demo@pharmaflow.com), navigation vers Fournisseurs, création de fournisseur avec formulaire complet, recherche en temps réel, édition avec données pré-remplies, suppression avec dialogue de confirmation. Tous les scénarios de test demandés validés. UI responsive, toasts fonctionnels, gestion d'états vides. Seul point mineur: overlay modal peut parfois intercepter clics mais n'affecte pas la fonctionnalité core. FRONTEND PRÊT POUR PRODUCTION."
   - agent: "main"
     message: "NOUVELLE FONCTIONNALITÉ: Implémentation des rôles utilisateurs (admin, pharmacien, caissier). Backend: ajouté endpoints CRUD pour gestion utilisateurs (GET/POST/PUT/DELETE /api/users), ajouté role dans JWT token, ajouté require_role et require_admin decorators pour contrôle d'accès. Frontend: créé page Users.js avec CRUD complet, modifié Layout.js pour masquer menus selon rôle, modifié App.js avec RoleProtectedRoute. Permissions: Admin=tout, Pharmacien=produits/ordonnances/fournisseurs/ventes/clients/rapports, Caissier=ventes/clients/dashboard. Credentials: email=demo@pharmaflow.com, password=demo123"
+  - agent: "testing"
+    message: "✅ SYSTÈME GESTION UTILISATEURS ET RÔLES TESTÉ - Taux de réussite: 91.7% (22/24 tests). ✅ Authentification avec rôle dans JWT: FONCTIONNEL. ✅ Endpoints gestion utilisateurs (Admin only): FONCTIONNEL. ✅ Contrôle d'accès Admin/Pharmacien: FONCTIONNEL. ❌ PROBLÈME CRITIQUE: Caissier peut accéder aux produits (devrait être bloqué). Les endpoints /api/products n'ont pas de contrôle d'accès par rôle implémenté. ✅ Tests de sécurité: FONCTIONNELS. NÉCESSITE CORRECTION: Ajouter require_role(['admin', 'pharmacien']) aux endpoints produits."
