@@ -879,9 +879,15 @@ class PharmaFlowAPITester:
 def main():
     tester = PharmaFlowAPITester()
     
-    # Check if we should run only supplier tests
-    if len(sys.argv) > 1 and sys.argv[1] == "--suppliers-only":
-        success = tester.run_supplier_crud_tests_only()
+    # Check command line arguments
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--suppliers-only":
+            success = tester.run_supplier_crud_tests_only()
+        elif sys.argv[1] == "--users-only":
+            success = tester.run_user_management_tests()
+        else:
+            print("Usage: python backend_test.py [--suppliers-only|--users-only]")
+            return 1
     else:
         success = tester.run_all_tests()
     
