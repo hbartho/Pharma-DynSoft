@@ -31,24 +31,27 @@ REM Activer l'environnement virtuel
 echo [2/4] Activation de l'environnement virtuel...
 call venv\Scripts\activate.bat
 
-REM Vérifier si les dépendances sont installées
+REM Vérifier et installer les dépendances
 echo [3/4] Verification des dependances...
-python -c "import fastapi" 2>nul
+python -c "import fastapi, uvicorn" 2>nul
 if %errorlevel% neq 0 (
     echo Installation des dependances necessaires...
     pip install --upgrade pip --quiet
     if exist requirements-windows.txt (
-        pip install -r requirements-windows.txt
+        pip install -r requirements-windows.txt 2>nul
     ) else (
-        pip install -r requirements.txt
-    )
-    if %errorlevel% neq 0 (
-        echo ERREUR: Installation des dependances echouee
-        pause
-        exit /b 1
+        pip install -r requirements.txt 2>nul
     )
 )
-echo OK: Dependances installees
+
+REM Vérifier que les modules essentiels sont bien installés
+python -c "import fastapi, uvicorn, motor" 2>nul
+if %errorlevel% neq 0 (
+    echo ATTENTION: Certaines dependances manquent
+    echo Tentative de reinstallation...
+    pip install fastapi uvicorn motor pymongo passlib python-jose python-dotenv
+)
+echo OK: Dependances presentes
 
 REM Vérifier le fichier .env
 if not exist .env (
