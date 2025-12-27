@@ -15,6 +15,7 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  UserCog,
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -24,15 +25,41 @@ const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { isOnline, isSyncing, performSync, lastSyncTime } = useOffline();
 
-  const menuItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-    { path: '/products', icon: Package, label: 'Produits' },
-    { path: '/sales', icon: ShoppingCart, label: 'Ventes' },
-    { path: '/customers', icon: Users, label: 'Clients' },
-    { path: '/suppliers', icon: Truck, label: 'Fournisseurs' },
-    { path: '/prescriptions', icon: FileText, label: 'Ordonnances' },
-    { path: '/reports', icon: BarChart3, label: 'Rapports' },
+  // Define menu items with role restrictions
+  const allMenuItems = [
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', roles: ['admin', 'pharmacien', 'caissier'] },
+    { path: '/products', icon: Package, label: 'Produits', roles: ['admin', 'pharmacien'] },
+    { path: '/sales', icon: ShoppingCart, label: 'Ventes', roles: ['admin', 'pharmacien', 'caissier'] },
+    { path: '/customers', icon: Users, label: 'Clients', roles: ['admin', 'pharmacien', 'caissier'] },
+    { path: '/suppliers', icon: Truck, label: 'Fournisseurs', roles: ['admin', 'pharmacien'] },
+    { path: '/prescriptions', icon: FileText, label: 'Ordonnances', roles: ['admin', 'pharmacien'] },
+    { path: '/reports', icon: BarChart3, label: 'Rapports', roles: ['admin', 'pharmacien'] },
+    { path: '/users', icon: UserCog, label: 'Utilisateurs', roles: ['admin'] },
   ];
+
+  // Filter menu items based on user role
+  const menuItems = allMenuItems.filter(item => 
+    item.roles.includes(user?.role || 'caissier')
+  );
+
+  // Get role display info
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case 'admin': return 'Administrateur';
+      case 'pharmacien': return 'Pharmacien';
+      case 'caissier': return 'Caissier';
+      default: return role;
+    }
+  };
+
+  const getRoleColor = (role) => {
+    switch (role) {
+      case 'admin': return 'text-red-600 bg-red-50';
+      case 'pharmacien': return 'text-blue-600 bg-blue-50';
+      case 'caissier': return 'text-green-600 bg-green-50';
+      default: return 'text-slate-600 bg-slate-50';
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
