@@ -75,8 +75,11 @@ const Layout = ({ children }) => {
             DynSoft Pharma
           </h1>
           <p className="text-sm text-slate-500 mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
-            {user?.name} ({user?.role})
+            {user?.name}
           </p>
+          <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${getRoleColor(user?.role)}`}>
+            {getRoleLabel(user?.role)}
+          </span>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
