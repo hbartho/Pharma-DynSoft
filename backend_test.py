@@ -382,6 +382,354 @@ class PharmaFlowAPITester:
         }
         self.run_test("Sync push", "POST", "sync/push", 200, sync_data)
 
+    def test_auth_with_role_verification(self):
+        """Test authentication with role verification in JWT token"""
+        print("\n=== AUTHENTICATION WITH ROLE VERIFICATION ===")
+        
+        # Test login and verify JWT contains role
+        success, response = self.run_test(
+            "Login and verify JWT role",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "demo@pharmaflow.com", "password": "demo123"}
+        )
+        
+        if success and 'access_token' in response:
+            import jwt
+            try:
+                # Decode JWT to verify role is in payload (without verification for testing)
+                decoded = jwt.decode(response['access_token'], options={"verify_signature": False})
+                if 'role' in decoded:
+                    print(f"   ✅ JWT contains role: {decoded['role']}")
+                    print(f"   ✅ JWT contains user_id: {decoded.get('sub', 'N/A')}")
+                    print(f"   ✅ JWT contains tenant_id: {decoded.get('tenant_id', 'N/A')}")
+                else:
+                    print("   ❌ JWT does not contain role")
+                    return False
+            except Exception as e:
+                print(f"   ❌ Failed to decode JWT: {e}")
+                return False
+        
+        # Test /api/auth/me endpoint
+        success, user_info = self.run_test(
+            "Get current user info (/api/auth/me)",
+            "GET",
+            "auth/me",
+            200
+        )
+        
+        if success:
+            print(f"   ✅ User info retrieved: {user_info.get('name', 'N/A')}")
+            print(f"   ✅ User role: {user_info.get('role', 'N/A')}")
+            print(f"   ✅ User email: {user_info.get('email', 'N/A')}")
+            return True
+        else:
+            print("   ❌ Failed to get user info")
+            return False
+
+    def test_user_management_endpoints(self):
+        """Test user management endpoints (Admin only)"""
+        print("\n=== USER MANAGEMENT ENDPOINTS (ADMIN ONLY) ===")
+        
+        # Ensure we're using admin token
+        if not self.tokens['admin']:
+            print("   ❌ No admin token available")
+            return False
+        
+        self.token = self.tokens['admin']
+        
+        # 1. GET /api/users - List all users
+        success, users = self.run_test("GET /api/users - List all users", "GET", "users", 200)
+        if success:
+            print(f"   ✅ Found {len(users)} users in system")
+            initial_user_count = len(users)
+        else:
+            print("   ❌ Failed to get users list")
+            return False
+        
+        # 2. POST /api/users - Create new user
+        new_user_data = {
+            "name": "Jean Pharmacien",
+            "email": "jean.pharmacien@test.fr",
+            "password": "test123",
+            "role": "pharmacien",
+            "tenant_id": self.users['admin']['tenant_id']
+        }
+        
+        success, created_user = self.run_test(
+            "POST /api/users - Create new user",
+            "POST",
+            "users",
+            200,
+            data=new_user_data
+        )
+        
+        if success and 'id' in created_user:
+            user_id = created_user['id']
+            self.created_items['users'].append(user_id)
+            print(f"   ✅ Created user ID: {user_id}")
+            print(f"   ✅ User name: {created_user.get('name')}")
+            print(f"   ✅ User role: {created_user.get('role')}")
+            print(f"   ✅ User email: {created_user.get('email')}")
+            
+            # Store user info for later role testing
+            self.users['pharmacien'] = created_user
+            
+            # 3. GET /api/users/{id} - Get specific user
+            success, specific_user = self.run_test(
+                "GET /api/users/{id} - Get specific user",
+                "GET",
+                f"users/{user_id}",
+                200
+            )
+            
+            if success:
+                print(f"   ✅ Retrieved specific user: {specific_user.get('name')}")
+            
+            # 4. PUT /api/users/{id} - Update user (change name)
+            update_data = {
+                "name": "Jean Pharmacien Modifié",
+                "role": "pharmacien"
+            }
+            
+            success, updated_user = self.run_test(
+                "PUT /api/users/{id} - Update user",
+                "PUT",
+                f"users/{user_id}",
+                200,
+                data=update_data
+            )
+            
+            if success:
+                print(f"   ✅ Updated user name to: {updated_user.get('name')}")
+            
+            # Test login with created user to get their token
+            success, pharmacien_login = self.run_test(
+                "Login as pharmacien user",
+                "POST",
+                "auth/login",
+                200,
+                data={"email": "jean.pharmacien@test.fr", "password": "test123"}
+            )
+            
+            if success and 'access_token' in pharmacien_login:
+                self.tokens['pharmacien'] = pharmacien_login['access_token']
+                print(f"   ✅ Pharmacien token obtained")
+            
+            # 5. DELETE /api/users/{id} - Delete user (will be done in cleanup)
+            # We'll test this in cleanup to ensure proper cleanup
+            
+            return True
+        else:
+            print("   ❌ Failed to create user")
+            return False
+
+    def test_role_based_access_control(self):
+        """Test role-based access control"""
+        print("\n=== ROLE-BASED ACCESS CONTROL TESTS ===")
+        
+        # Create a caissier user for testing
+        if self.tokens['admin']:
+            self.token = self.tokens['admin']
+            caissier_data = {
+                "name": "Marie Caissier",
+                "email": "marie.caissier@test.fr",
+                "password": "test123",
+                "role": "caissier",
+                "tenant_id": self.users['admin']['tenant_id']
+            }
+            
+            success, caissier_user = self.run_test(
+                "Create caissier user for testing",
+                "POST",
+                "users",
+                200,
+                data=caissier_data
+            )
+            
+            if success:
+                self.created_items['users'].append(caissier_user['id'])
+                self.users['caissier'] = caissier_user
+                
+                # Login as caissier
+                success, caissier_login = self.run_test(
+                    "Login as caissier user",
+                    "POST",
+                    "auth/login",
+                    200,
+                    data={"email": "marie.caissier@test.fr", "password": "test123"}
+                )
+                
+                if success:
+                    self.tokens['caissier'] = caissier_login['access_token']
+        
+        # Test pharmacien access
+        if self.tokens['pharmacien']:
+            print("\n--- Testing Pharmacien Access ---")
+            self.token = self.tokens['pharmacien']
+            
+            # Pharmacien should NOT be able to access user management
+            success, response = self.run_test(
+                "Pharmacien tries to access GET /api/users (should fail)",
+                "GET",
+                "users",
+                403
+            )
+            if success:
+                print("   ✅ Pharmacien correctly denied access to user management")
+            
+            # Pharmacien SHOULD be able to access products
+            success, products = self.run_test(
+                "Pharmacien accesses GET /api/products (should succeed)",
+                "GET",
+                "products",
+                200
+            )
+            if success:
+                print("   ✅ Pharmacien can access products")
+            
+            # Pharmacien SHOULD be able to access suppliers
+            success, suppliers = self.run_test(
+                "Pharmacien accesses GET /api/suppliers (should succeed)",
+                "GET",
+                "suppliers",
+                200
+            )
+            if success:
+                print("   ✅ Pharmacien can access suppliers")
+            
+            # Pharmacien SHOULD be able to access sales
+            success, sales = self.run_test(
+                "Pharmacien accesses GET /api/sales (should succeed)",
+                "GET",
+                "sales",
+                200
+            )
+            if success:
+                print("   ✅ Pharmacien can access sales")
+        
+        # Test caissier access
+        if self.tokens['caissier']:
+            print("\n--- Testing Caissier Access ---")
+            self.token = self.tokens['caissier']
+            
+            # Caissier should NOT be able to access user management
+            success, response = self.run_test(
+                "Caissier tries to access GET /api/users (should fail)",
+                "GET",
+                "users",
+                403
+            )
+            if success:
+                print("   ✅ Caissier correctly denied access to user management")
+            
+            # Caissier should NOT be able to access products
+            success, response = self.run_test(
+                "Caissier tries to access GET /api/products (should fail)",
+                "GET",
+                "products",
+                403
+            )
+            if success:
+                print("   ✅ Caissier correctly denied access to products")
+            else:
+                print("   ❌ Caissier should be denied access to products")
+            
+            # Caissier SHOULD be able to access sales
+            success, sales = self.run_test(
+                "Caissier accesses GET /api/sales (should succeed)",
+                "GET",
+                "sales",
+                200
+            )
+            if success:
+                print("   ✅ Caissier can access sales")
+            
+            # Caissier SHOULD be able to access customers
+            success, customers = self.run_test(
+                "Caissier accesses GET /api/customers (should succeed)",
+                "GET",
+                "customers",
+                200
+            )
+            if success:
+                print("   ✅ Caissier can access customers")
+        
+        # Restore admin token
+        self.token = self.tokens['admin']
+        return True
+
+    def test_security_scenarios(self):
+        """Test security scenarios"""
+        print("\n=== SECURITY TESTS ===")
+        
+        # Ensure we're using admin token
+        self.token = self.tokens['admin']
+        
+        # 1. Test creating user with invalid role
+        invalid_role_data = {
+            "name": "Invalid Role User",
+            "email": "invalid@test.fr",
+            "password": "test123",
+            "role": "invalid_role",
+            "tenant_id": self.users['admin']['tenant_id']
+        }
+        
+        success, response = self.run_test(
+            "Try to create user with invalid role (should fail)",
+            "POST",
+            "users",
+            400,
+            data=invalid_role_data
+        )
+        if success:
+            print("   ✅ Invalid role correctly rejected")
+        
+        # 2. Test admin trying to delete their own account
+        admin_user_id = self.users['admin']['id']
+        success, response = self.run_test(
+            "Admin tries to delete own account (should fail)",
+            "DELETE",
+            f"users/{admin_user_id}",
+            400
+        )
+        if success:
+            print("   ✅ Admin correctly prevented from deleting own account")
+        
+        # 3. Test accessing admin endpoints without token
+        old_token = self.token
+        self.token = None
+        
+        success, response = self.run_test(
+            "Access admin endpoint without token (should fail)",
+            "GET",
+            "users",
+            401
+        )
+        if success:
+            print("   ✅ Admin endpoint correctly requires authentication")
+        
+        # Restore token
+        self.token = old_token
+        
+        # 4. Test accessing admin endpoints with invalid token
+        self.token = "invalid_token_123"
+        
+        success, response = self.run_test(
+            "Access admin endpoint with invalid token (should fail)",
+            "GET",
+            "users",
+            401
+        )
+        if success:
+            print("   ✅ Invalid token correctly rejected")
+        
+        # Restore valid token
+        self.token = old_token
+        
+        return True
+
     def cleanup_created_items(self):
         """Clean up created test items"""
         print("\n=== CLEANUP ===")
