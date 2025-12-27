@@ -202,13 +202,38 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         tenant_id: str = payload.get("tenant_id")
+        role: str = payload.get("role")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
-        return {"user_id": user_id, "tenant_id": tenant_id}
+        return {"user_id": user_id, "tenant_id": tenant_id, "role": role}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+# Role-based access control
+ROLE_HIERARCHY = {
+    "admin": 3,
+    "pharmacien": 2,
+    "caissier": 1
+}
+
+def require_role(allowed_roles: List[str]):
+    """Dependency to check if user has required role"""
+    async def role_checker(current_user: dict = Depends(get_current_user)):
+        if current_user['role'] not in allowed_roles:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Permission denied. Required role: {', '.join(allowed_roles)}"
+            )
+        return current_user
+    return role_checker
+
+def require_admin(current_user: dict = Depends(get_current_user)):
+    """Dependency to check if user is admin"""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
 
 # Auth Routes
 @api_router.post("/auth/register", response_model=User)
