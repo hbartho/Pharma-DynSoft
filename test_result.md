@@ -243,15 +243,13 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.1"
-  test_sequence: 3
+  version: "1.2"
+  test_sequence: 4
   run_ui: true
 
 test_plan:
   current_focus:
-    - "User Management - Backend CRUD"
-    - "User Management - Frontend page"
-    - "Role-based access control"
+    - "Contrôle d'accès par rôle - Caissier"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
