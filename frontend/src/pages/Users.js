@@ -212,7 +212,7 @@ const Users = () => {
                     />
                   </div>
                 )}
-                <div className="pb-2">
+                <div className="pb-16">
                   <Label htmlFor="role">Rôle *</Label>
                   <Select 
                     value={formData.role} 
@@ -221,7 +221,7 @@ const Users = () => {
                     <SelectTrigger data-testid="user-role-select">
                       <SelectValue placeholder="Sélectionner un rôle" />
                     </SelectTrigger>
-                    <SelectContent position="popper" sideOffset={4} align="start" side="top">
+                    <SelectContent position="popper" sideOffset={4}>
                       {ROLES.map((role) => (
                         <SelectItem key={role.value} value={role.value}>
                           <div className="flex items-center gap-2">
@@ -233,7 +233,7 @@ const Users = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-4">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                   <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                     Annuler
                   </Button>
