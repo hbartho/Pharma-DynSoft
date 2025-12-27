@@ -26,30 +26,6 @@ const Customers = () => {
   });
   const { isOnline } = useOffline();
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
-
-  const refreshData = async () => {
-    try {
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-      
-      try {
-        const db = await getDB();
-        await db.clear('customers');
-      } catch (error) {
-        console.warn('Could not clear IndexedDB:', error);
-      }
-      
-      await loadCustomers(true);
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    }
-  };
-
   const loadCustomers = async (forceRefresh = false) => {
     try {
       if (isOnline) {
@@ -79,6 +55,31 @@ const Customers = () => {
       setCustomers(localCustomers);
     }
   };
+
+  const refreshData = async () => {
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      try {
+        const db = await getDB();
+        await db.clear('customers');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      
+      await loadCustomers(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
