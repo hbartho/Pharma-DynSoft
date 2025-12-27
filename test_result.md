@@ -248,11 +248,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus:
-    - "Page Fournisseurs - Ajout fournisseur"
-    - "Page Fournisseurs - Édition fournisseur"
-    - "Page Fournisseurs - Suppression avec confirmation"
-    - "Page Fournisseurs - Recherche"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
