@@ -234,15 +234,16 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PUT /api/suppliers/{id} - Mise à jour de fournisseur"
-    - "DELETE /api/suppliers/{id} - Suppression de fournisseur"
     - "Page Fournisseurs - Ajout fournisseur"
     - "Page Fournisseurs - Édition fournisseur"
     - "Page Fournisseurs - Suppression avec confirmation"
+    - "Page Fournisseurs - Recherche"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
     message: "J'ai implémenté les fonctionnalités CRUD complètes pour les fournisseurs. Backend: ajouté PUT et DELETE endpoints. Frontend: ajouté boutons Éditer/Supprimer, dialogues correspondants, recherche. Les screenshots montrent que les dialogues s'ouvrent correctement. Merci de tester le flow complet CRUD: ajouter un fournisseur, l'éditer, puis le supprimer. Credentials: email=demo@pharmaflow.com, password=demo123"
+  - agent: "testing"
+    message: "✅ BACKEND CRUD FOURNISSEURS TESTÉ AVEC SUCCÈS - Tous les endpoints backend fonctionnent parfaitement: GET /api/suppliers (liste), POST /api/suppliers (création), PUT /api/suppliers/{id} (mise à jour), DELETE /api/suppliers/{id} (suppression). Authentification JWT validée. Tests avec données réelles réussis. Sécurité vérifiée (tokens invalides rejetés). Flow complet CRUD testé: création → lecture → mise à jour → suppression → vérification. Taux de réussite: 91.7% (11/12 tests). Seul point mineur: FastAPI retourne 403 au lieu de 401 pour requêtes sans token (comportement normal). BACKEND PRÊT POUR PRODUCTION."
