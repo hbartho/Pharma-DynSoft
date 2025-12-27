@@ -107,51 +107,63 @@ user_problem_statement: "Application de gestion de pharmacie DynSoft Pharma avec
 backend:
   - task: "GET /api/suppliers - Liste des fournisseurs"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Endpoint déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Endpoint fonctionne correctement. Retourne la liste des fournisseurs avec authentification JWT. Test avec credentials demo@pharmaflow.com réussi."
   
   - task: "POST /api/suppliers - Création de fournisseur"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Endpoint déjà existant, à tester"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Création de fournisseur réussie avec données: name='Test Fournisseur', phone='+33 6 12 34 56 78', email='test@fournisseur.com', address='123 Rue Test, Paris'. Retourne ID UUID et données complètes."
   
   - task: "PUT /api/suppliers/{id} - Mise à jour de fournisseur"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Nouvel endpoint ajouté pour édition"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Mise à jour réussie. Changement du nom de 'Test Fournisseur' vers 'Test Fournisseur Modifié' confirmé. Endpoint retourne les données mises à jour."
   
   - task: "DELETE /api/suppliers/{id} - Suppression de fournisseur"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Nouvel endpoint ajouté pour suppression"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Suppression réussie. Fournisseur supprimé de la base de données. Tentative d'accès après suppression retourne correctement 404. Compteur de fournisseurs revenu à l'état initial."
 
 frontend:
   - task: "Page Fournisseurs - Affichage liste"
