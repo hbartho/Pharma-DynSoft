@@ -429,6 +429,37 @@ async def get_suppliers(current_user: dict = Depends(get_current_user)):
             supplier['created_at'] = datetime.fromisoformat(supplier['created_at'])
     return suppliers
 
+@api_router.get("/suppliers/{supplier_id}", response_model=Supplier)
+async def get_supplier(supplier_id: str, current_user: dict = Depends(get_current_user)):
+    supplier = await db.suppliers.find_one({"id": supplier_id, "tenant_id": current_user['tenant_id']}, {"_id": 0})
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    if isinstance(supplier['created_at'], str):
+        supplier['created_at'] = datetime.fromisoformat(supplier['created_at'])
+    return Supplier(**supplier)
+
+@api_router.put("/suppliers/{supplier_id}", response_model=Supplier)
+async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.suppliers.find_one({"id": supplier_id, "tenant_id": current_user['tenant_id']})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    update_data = supplier_data.model_dump()
+    
+    await db.suppliers.update_one({"id": supplier_id}, {"$set": update_data})
+    
+    updated_supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+    if isinstance(updated_supplier['created_at'], str):
+        updated_supplier['created_at'] = datetime.fromisoformat(updated_supplier['created_at'])
+    return Supplier(**updated_supplier)
+
+@api_router.delete("/suppliers/{supplier_id}")
+async def delete_supplier(supplier_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.suppliers.delete_one({"id": supplier_id, "tenant_id": current_user['tenant_id']})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return {"message": "Supplier deleted successfully"}
+
 # Prescription Routes
 @api_router.post("/prescriptions", response_model=Prescription)
 async def create_prescription(prescription_data: PrescriptionCreate, current_user: dict = Depends(get_current_user)):
