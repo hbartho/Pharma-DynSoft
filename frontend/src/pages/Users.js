@@ -362,7 +362,7 @@ const Users = () => {
               Confirmer la suppression
             </AlertDialogTitle>
             <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
-              Êtes-vous sûr de vouloir supprimer l'utilisateur &ldquo;{userToDelete?.name}&rdquo; ?
+              Êtes-vous sûr de vouloir supprimer l&apos;utilisateur &ldquo;{userToDelete?.name}&rdquo; ?
               Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
