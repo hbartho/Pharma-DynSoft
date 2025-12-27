@@ -15,7 +15,19 @@ class PharmaFlowAPITester:
             'customers': [],
             'suppliers': [],
             'prescriptions': [],
-            'sales': []
+            'sales': [],
+            'users': []
+        }
+        # Store tokens for different user roles
+        self.tokens = {
+            'admin': None,
+            'pharmacien': None,
+            'caissier': None
+        }
+        self.users = {
+            'admin': None,
+            'pharmacien': None,
+            'caissier': None
         }
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
