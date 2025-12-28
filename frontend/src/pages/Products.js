@@ -106,8 +106,11 @@ const Products = () => {
   };
 
   useEffect(() => {
-    loadProducts();
-    loadCategories();
+    const init = async () => {
+      await loadProducts();
+      await loadCategories();
+    };
+    init();
   }, []); // eslint-disable-line
 
   const handleSubmit = async (e) => {
