@@ -99,8 +99,10 @@ const Products = () => {
       } catch (error) {
         console.warn('Could not clear IndexedDB:', error);
       }
-      await loadProducts(true);
-      await loadCategories();
+      await Promise.all([
+        loadProducts(true),
+        loadCategories(true)
+      ]);
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
