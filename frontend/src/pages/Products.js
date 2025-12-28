@@ -223,9 +223,13 @@ const Products = () => {
     try {
       await api.delete(`/categories/${categoryToDelete.id}`);
       toast.success('Catégorie supprimée');
-      await loadCategories();
       setShowDeleteCategoryDialog(false);
       setCategoryToDelete(null);
+      await loadCategories(true); // Force refresh
+      // Reset filter if deleted category was selected
+      if (filterCategory === categoryToDelete.id) {
+        setFilterCategory('all');
+      }
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
