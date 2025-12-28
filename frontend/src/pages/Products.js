@@ -254,6 +254,7 @@ const Products = () => {
 
   const resetForm = () => {
     setEditingProduct(null);
+    setProductSearchInForm('');
     setFormData({
       name: '',
       barcode: '',
