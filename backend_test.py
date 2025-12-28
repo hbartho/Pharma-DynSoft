@@ -1163,14 +1163,18 @@ class PharmaFlowAPITester:
             self.token = self.tokens['admin']
         
         # Delete created users (admin only)
-        for user_id in self.created_items['users']:
+        for user_id in self.created_items.get('users', []):
             success, response = self.run_test(f"Delete user {user_id}", "DELETE", f"users/{user_id}", 200)
             if success:
                 print(f"   ✅ Deleted user {user_id}")
         
-        # Delete created products
-        for product_id in self.created_items['products']:
+        # Delete created products first (they may reference categories)
+        for product_id in self.created_items.get('products', []):
             self.run_test(f"Delete product {product_id}", "DELETE", f"products/{product_id}", 200)
+        
+        # Delete created categories
+        for category_id in self.created_items.get('categories', []):
+            self.run_test(f"Delete category {category_id}", "DELETE", f"categories/{category_id}", 200)
 
     def run_all_tests(self):
         """Run all API tests"""
