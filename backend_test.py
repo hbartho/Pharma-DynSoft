@@ -928,6 +928,162 @@ class PharmaFlowAPITester:
         self.token = self.tokens['admin']
         return True
 
+    def test_categories_crud_comprehensive(self):
+        """Test comprehensive CRUD operations for categories as per requirements"""
+        print("\n=== CATEGORIES CRUD COMPREHENSIVE TESTS ===")
+        print("🏥 DynSoft Pharma - Test des endpoints de catégories")
+        
+        # 1. GET /api/categories - Lister les catégories (initial)
+        success, categories = self.run_test("GET /api/categories - Lister les catégories", "GET", "categories", 200)
+        if success:
+            print(f"   ✅ Found {len(categories)} categories initially")
+            initial_count = len(categories)
+        else:
+            print("❌ Failed to get initial categories list")
+            return False
+        
+        # 2. POST /api/categories - Créer première catégorie "Antibiotiques"
+        category1_data = {
+            "name": "Antibiotiques",
+            "description": "Médicaments antibiotiques",
+            "color": "#EF4444"
+        }
+        success, new_category1 = self.run_test("POST /api/categories - Créer catégorie Antibiotiques", "POST", "categories", 200, category1_data)
+        if success and 'id' in new_category1:
+            category1_id = new_category1['id']
+            self.created_items.setdefault('categories', []).append(category1_id)
+            print(f"   ✅ Created category 1 ID: {category1_id}")
+            print(f"   ✅ Category name: {new_category1.get('name')}")
+            print(f"   ✅ Category description: {new_category1.get('description')}")
+            print(f"   ✅ Category color: {new_category1.get('color')}")
+        else:
+            print("❌ Failed to create first category")
+            return False
+        
+        # 3. POST /api/categories - Créer deuxième catégorie "Antidouleurs"
+        category2_data = {
+            "name": "Antidouleurs",
+            "description": "Analgésiques et anti-inflammatoires",
+            "color": "#3B82F6"
+        }
+        success, new_category2 = self.run_test("POST /api/categories - Créer catégorie Antidouleurs", "POST", "categories", 200, category2_data)
+        if success and 'id' in new_category2:
+            category2_id = new_category2['id']
+            self.created_items.setdefault('categories', []).append(category2_id)
+            print(f"   ✅ Created category 2 ID: {category2_id}")
+            print(f"   ✅ Category name: {new_category2.get('name')}")
+            print(f"   ✅ Category description: {new_category2.get('description')}")
+            print(f"   ✅ Category color: {new_category2.get('color')}")
+        else:
+            print("❌ Failed to create second category")
+            return False
+        
+        # 4. GET /api/categories - Lister les catégories (après création)
+        success, updated_categories = self.run_test("GET /api/categories - Lister après création", "GET", "categories", 200)
+        if success:
+            if len(updated_categories) == initial_count + 2:
+                print(f"   ✅ Category count increased from {initial_count} to {len(updated_categories)}")
+            else:
+                print(f"   ❌ Expected {initial_count + 2} categories, found {len(updated_categories)}")
+        
+        # 5. PUT /api/categories/{id} - Modifier une catégorie
+        update_data = {
+            "name": "Antibiotiques Modifiés",
+            "description": "Médicaments antibiotiques - description modifiée",
+            "color": "#FF6B6B"
+        }
+        success, updated_category = self.run_test("PUT /api/categories/{id} - Modifier catégorie", "PUT", f"categories/{category1_id}", 200, update_data)
+        if success:
+            print(f"   ✅ Updated category name to: {updated_category.get('name')}")
+            print(f"   ✅ Updated description to: {updated_category.get('description')}")
+            print(f"   ✅ Updated color to: {updated_category.get('color')}")
+            
+            # Verify the update
+            success, verify_update = self.run_test("Verify category update", "GET", f"categories/{category1_id}", 200)
+            if success and verify_update.get('name') == "Antibiotiques Modifiés":
+                print(f"   ✅ Update verified: {verify_update.get('name')}")
+            else:
+                print(f"   ❌ Update verification failed")
+        
+        # 6. POST /api/products - Créer un produit avec category_id
+        product_with_category_data = {
+            "name": "Amoxicilline Test",
+            "barcode": "AMX123456",
+            "description": "Antibiotique de test",
+            "price": 12.50,
+            "stock": 50,
+            "min_stock": 5,
+            "category_id": category1_id
+        }
+        success, new_product = self.run_test("POST /api/products - Créer produit avec catégorie", "POST", "products", 200, product_with_category_data)
+        if success and 'id' in new_product:
+            product_id = new_product['id']
+            self.created_items.setdefault('products', []).append(product_id)
+            print(f"   ✅ Created product with category ID: {product_id}")
+            print(f"   ✅ Product name: {new_product.get('name')}")
+            print(f"   ✅ Product category_id: {new_product.get('category_id')}")
+            
+            # 7. GET /api/products - Vérifier que le produit a la catégorie
+            success, products = self.run_test("GET /api/products - Vérifier produit avec catégorie", "GET", "products", 200)
+            if success:
+                product_found = False
+                for product in products:
+                    if product.get('id') == product_id:
+                        if product.get('category_id') == category1_id:
+                            print(f"   ✅ Product correctly linked to category: {product.get('category_id')}")
+                            product_found = True
+                        else:
+                            print(f"   ❌ Product category mismatch: expected {category1_id}, got {product.get('category_id')}")
+                        break
+                if not product_found:
+                    print(f"   ❌ Product not found in products list")
+        else:
+            print("❌ Failed to create product with category")
+            return False
+        
+        # 8. DELETE /api/categories/{id} - Essayer de supprimer catégorie utilisée (doit échouer avec 400)
+        success, delete_response = self.run_test("DELETE /api/categories/{id} - Supprimer catégorie utilisée (doit échouer)", "DELETE", f"categories/{category1_id}", 400)
+        if success:
+            print(f"   ✅ Category deletion correctly blocked when used by products (400)")
+            print(f"   ✅ Error message: {delete_response.get('detail', 'No detail provided')}")
+        else:
+            print(f"   ❌ Category deletion should fail with 400 when used by products")
+        
+        # 9. DELETE product first, then DELETE category (should succeed)
+        success, product_delete = self.run_test("DELETE /api/products/{id} - Supprimer produit d'abord", "DELETE", f"products/{product_id}", 200)
+        if success:
+            print(f"   ✅ Product deleted successfully")
+            if product_id in self.created_items.get('products', []):
+                self.created_items['products'].remove(product_id)
+            
+            # Now try to delete the category (should succeed)
+            success, category_delete = self.run_test("DELETE /api/categories/{id} - Supprimer catégorie après produit", "DELETE", f"categories/{category1_id}", 200)
+            if success:
+                print(f"   ✅ Category deleted successfully after removing products")
+                if category1_id in self.created_items.get('categories', []):
+                    self.created_items['categories'].remove(category1_id)
+            else:
+                print(f"   ❌ Category deletion should succeed after removing products")
+        
+        # 10. DELETE /api/categories/{id} - Supprimer deuxième catégorie (non utilisée)
+        success, delete_response2 = self.run_test("DELETE /api/categories/{id} - Supprimer catégorie non utilisée", "DELETE", f"categories/{category2_id}", 200)
+        if success:
+            print(f"   ✅ Unused category deleted successfully")
+            if category2_id in self.created_items.get('categories', []):
+                self.created_items['categories'].remove(category2_id)
+            
+            # Verify category count back to original
+            success, final_categories = self.run_test("GET /api/categories - Vérifier après suppression", "GET", "categories", 200)
+            if success:
+                if len(final_categories) == initial_count:
+                    print(f"   ✅ Category count back to original: {len(final_categories)}")
+                else:
+                    print(f"   ❌ Expected {initial_count} categories after deletion, found {len(final_categories)}")
+        else:
+            print("❌ Failed to delete unused category")
+        
+        return True
+
     def test_security_scenarios(self):
         """Test security scenarios"""
         print("\n=== SECURITY TESTS ===")
