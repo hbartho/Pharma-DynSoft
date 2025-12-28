@@ -107,8 +107,7 @@ const Products = () => {
   useEffect(() => {
     loadProducts();
     loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line
 
   const handleSubmit = async (e) => {
     e.preventDefault();
