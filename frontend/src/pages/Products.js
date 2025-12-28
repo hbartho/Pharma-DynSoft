@@ -314,11 +314,9 @@ const Products = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filterCategory]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <Layout>
