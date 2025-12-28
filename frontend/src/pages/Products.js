@@ -314,9 +314,13 @@ const Products = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filterCategory]);
+  // Reset page when filters change
+  const currentPageRef = React.useRef(currentPage);
+  if (currentPageRef.current !== 1 && (searchQuery || filterCategory !== 'all')) {
+    currentPageRef.current = 1;
+    // Use setTimeout to avoid setState during render
+    setTimeout(() => setCurrentPage(1), 0);
+  }
 
   return (
     <Layout>
