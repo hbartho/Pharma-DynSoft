@@ -115,10 +115,50 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="mt-8 p-4 bg-teal-50 rounded-lg">
-            <p className="text-sm text-teal-800 font-medium mb-2">Compte de démonstration:</p>
-            <p className="text-sm text-teal-700">Email: demo@pharmaflow.com</p>
-            <p className="text-sm text-teal-700">Mot de passe: demo123</p>
+          <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <p className="text-sm font-semibold text-slate-800 mb-3">🔐 Comptes de démonstration:</p>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ email: 'admin@pharmaflow.com', password: 'admin123' })}
+                className="w-full text-left p-2 rounded-lg hover:bg-teal-50 transition-colors border border-transparent hover:border-teal-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Admin</span>
+                    <p className="text-sm text-slate-700 mt-1">admin@pharmaflow.com</p>
+                  </div>
+                  <span className="text-xs text-slate-400">admin123</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ email: 'pharmacien@pharmaflow.com', password: 'pharma123' })}
+                className="w-full text-left p-2 rounded-lg hover:bg-teal-50 transition-colors border border-transparent hover:border-teal-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Pharmacien</span>
+                    <p className="text-sm text-slate-700 mt-1">pharmacien@pharmaflow.com</p>
+                  </div>
+                  <span className="text-xs text-slate-400">pharma123</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ email: 'caissier@pharmaflow.com', password: 'caisse123' })}
+                className="w-full text-left p-2 rounded-lg hover:bg-teal-50 transition-colors border border-transparent hover:border-teal-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Caissier</span>
+                    <p className="text-sm text-slate-700 mt-1">caissier@pharmaflow.com</p>
+                  </div>
+                  <span className="text-xs text-slate-400">caisse123</span>
+                </div>
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-3 text-center">Cliquez pour remplir automatiquement</p>
           </div>
 
           <div className="mt-8 text-center">
