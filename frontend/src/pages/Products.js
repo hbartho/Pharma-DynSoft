@@ -146,7 +146,8 @@ const Products = () => {
           resetForm();
           await refreshData();
         } else {
-          const newProduct = { ...productData, id: Date.now().toString() };
+          const newProductId = crypto.randomUUID();
+          const newProduct = { ...productData, id: newProductId };
           await addItem('products', newProduct);
           await addLocalChange('product', 'create', newProduct);
           toast.success('Produit ajouté');
