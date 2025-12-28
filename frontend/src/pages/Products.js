@@ -4,9 +4,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '../components/ui/pagination';
-import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Settings } from 'lucide-react';
 import api from '../services/api';
 import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
@@ -14,13 +15,19 @@ import { toast } from 'sonner';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDialog, setShowDialog] = useState(false);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage] = useState(9);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
@@ -28,47 +35,33 @@ const Products = () => {
     price: '',
     stock: '',
     min_stock: '10',
-    category: '',
+    category_id: '',
+  });
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    description: '',
+    color: '#3B82F6',
   });
   const { isOnline } = useOffline();
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const refreshData = async () => {
+  const loadCategories = async () => {
     try {
-      // Clear browser cache for API calls
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      if (isOnline) {
+        const response = await api.get('/categories');
+        setCategories(response.data);
       }
-      
-      // Clear IndexedDB
-      try {
-        const db = await getDB();
-        await db.clear('products');
-      } catch (error) {
-        console.warn('Could not clear IndexedDB:', error);
-      }
-      
-      // Force reload data with no-cache headers
-      await loadProducts(true);
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error('Error loading categories:', error);
     }
   };
 
   const loadProducts = async (forceRefresh = false) => {
     try {
       if (isOnline) {
-        // Forcer un nouveau fetch sans cache si demandé
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : {};
-        
         const response = await api.get('/products', { headers });
         setProducts(response.data);
         
-        // Clear IndexedDB before updating if forced refresh
         if (forceRefresh) {
           try {
             const db = await getDB();
@@ -78,7 +71,6 @@ const Products = () => {
           }
         }
         
-        // Save to IndexedDB
         for (const product of response.data) {
           await addItem('products', product);
         }
@@ -93,6 +85,31 @@ const Products = () => {
     }
   };
 
+  const refreshData = async () => {
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      try {
+        const db = await getDB();
+        await db.clear('products');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      await loadProducts(true);
+      await loadCategories();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+    loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -102,6 +119,7 @@ const Products = () => {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         min_stock: parseInt(formData.min_stock),
+        category_id: formData.category_id || null,
       };
 
       if (editingProduct) {
@@ -110,8 +128,6 @@ const Products = () => {
           toast.success('Produit mis à jour');
           setShowDialog(false);
           resetForm();
-          
-          // Refresh automatique complet pour l'édition
           await refreshData();
         } else {
           productData.id = editingProduct.id;
@@ -123,14 +139,11 @@ const Products = () => {
           await loadProducts();
         }
       } else {
-        // Mode création d'un nouveau produit
         if (isOnline) {
           await api.post('/products', productData);
           toast.success('Produit ajouté');
           setShowDialog(false);
           resetForm();
-          
-          // Refresh automatique complet pour l'ajout
           await refreshData();
         } else {
           const newProduct = { ...productData, id: Date.now().toString() };
@@ -148,6 +161,26 @@ const Products = () => {
     }
   };
 
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (editingCategory) {
+        await api.put(`/categories/${editingCategory.id}`, categoryFormData);
+        toast.success('Catégorie mise à jour');
+      } else {
+        await api.post('/categories', categoryFormData);
+        toast.success('Catégorie ajoutée');
+      }
+      setShowCategoryDialog(false);
+      resetCategoryForm();
+      await loadCategories();
+    } catch (error) {
+      console.error('Error saving category:', error);
+      toast.error('Erreur lors de l\'enregistrement de la catégorie');
+    }
+  };
+
   const handleDelete = (product) => {
     setProductToDelete(product);
     setShowDeleteDialog(true);
@@ -160,8 +193,6 @@ const Products = () => {
       if (isOnline) {
         await api.delete(`/products/${productToDelete.id}`);
         toast.success('Produit supprimé');
-        
-        // Refresh automatique complet pour la suppression
         await refreshData();
       } else {
         await deleteFromDB('products', productToDelete.id);
@@ -177,6 +208,26 @@ const Products = () => {
     }
   };
 
+  const handleDeleteCategory = (category) => {
+    setCategoryToDelete(category);
+    setShowDeleteCategoryDialog(true);
+  };
+
+  const handleDeleteCategoryConfirm = async () => {
+    if (!categoryToDelete) return;
+    
+    try {
+      await api.delete(`/categories/${categoryToDelete.id}`);
+      toast.success('Catégorie supprimée');
+      await loadCategories();
+      setShowDeleteCategoryDialog(false);
+      setCategoryToDelete(null);
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
+    }
+  };
+
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
@@ -186,9 +237,19 @@ const Products = () => {
       price: product.price.toString(),
       stock: product.stock.toString(),
       min_stock: product.min_stock.toString(),
-      category: product.category || '',
+      category_id: product.category_id || '',
     });
     setShowDialog(true);
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategory(category);
+    setCategoryFormData({
+      name: category.name,
+      description: category.description || '',
+      color: category.color || '#3B82F6',
+    });
+    setShowCategoryDialog(true);
   };
 
   const resetForm = () => {
@@ -200,32 +261,49 @@ const Products = () => {
       price: '',
       stock: '',
       min_stock: '10',
-      category: '',
+      category_id: '',
     });
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.barcode?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const resetCategoryForm = () => {
+    setEditingCategory(null);
+    setCategoryFormData({
+      name: '',
+      description: '',
+      color: '#3B82F6',
+    });
+  };
 
-  // Calculs de pagination
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.name || 'Sans catégorie';
+  };
+
+  const getCategoryColor = (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.color || '#94A3B8';
+  };
+
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const startIndex = (currentPage - 1) * productsPerPage;
   const endIndex = startIndex + productsPerPage;
   const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
-  // Fonction pour changer de page
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
-    // Scroll vers le haut quand on change de page
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Reset à la page 1 quand on recherche
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, filterCategory]);
 
   return (
     <Layout>
@@ -240,115 +318,261 @@ const Products = () => {
               Gestion des médicaments et produits
             </p>
           </div>
-          <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button data-testid="add-product-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
-                <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
-                Ajouter un produit
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
-                  {editingProduct ? 'Éditer le produit' : 'Nouveau produit'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4" data-testid="product-form">
-                <div className="grid grid-cols-2 gap-4">
+          <div className="flex gap-2">
+            {/* Bouton Gérer les catégories */}
+            <Dialog open={showCategoryDialog} onOpenChange={(open) => { setShowCategoryDialog(open); if (!open) resetCategoryForm(); }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-full">
+                  <Tag className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                  Catégories
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    {editingCategory ? 'Modifier la catégorie' : 'Gestion des catégories'}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                {/* Liste des catégories existantes */}
+                {!editingCategory && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                    {categories.length === 0 ? (
+                      <p className="text-sm text-slate-500 text-center py-4">Aucune catégorie</p>
+                    ) : (
+                      categories.map((cat) => (
+                        <div key={cat.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-4 h-4 rounded-full" 
+                              style={{ backgroundColor: cat.color || '#3B82F6' }}
+                            />
+                            <div>
+                              <p className="font-medium text-slate-900">{cat.name}</p>
+                              {cat.description && (
+                                <p className="text-xs text-slate-500">{cat.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditCategory(cat)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(cat)} className="text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Formulaire d'ajout/modification */}
+                <form onSubmit={handleCategorySubmit} className="space-y-4 border-t pt-4">
+                  <p className="text-sm font-medium text-slate-700">
+                    {editingCategory ? 'Modifier' : 'Nouvelle catégorie'}
+                  </p>
                   <div>
-                    <Label htmlFor="name">Nom du produit *</Label>
+                    <Label htmlFor="cat-name">Nom *</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      id="cat-name"
+                      value={categoryFormData.name}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
                       required
-                      data-testid="product-name-input"
+                      placeholder="Ex: Antibiotiques"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="barcode">Code-barres</Label>
+                    <Label htmlFor="cat-desc">Description</Label>
                     <Input
-                      id="barcode"
-                      value={formData.barcode}
-                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                      data-testid="product-barcode-input"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="price">Prix (€) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                      data-testid="product-price-input"
+                      id="cat-desc"
+                      value={categoryFormData.description}
+                      onChange={(e) => setCategoryFormData({ ...categoryFormData, description: e.target.value })}
+                      placeholder="Description optionnelle"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="stock">Stock *</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                      required
-                      data-testid="product-stock-input"
-                    />
+                    <Label htmlFor="cat-color">Couleur</Label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        id="cat-color"
+                        value={categoryFormData.color}
+                        onChange={(e) => setCategoryFormData({ ...categoryFormData, color: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer border-0"
+                      />
+                      <Input
+                        value={categoryFormData.color}
+                        onChange={(e) => setCategoryFormData({ ...categoryFormData, color: e.target.value })}
+                        className="flex-1"
+                        placeholder="#3B82F6"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    {editingCategory && (
+                      <Button type="button" variant="outline" onClick={resetCategoryForm}>
+                        Annuler
+                      </Button>
+                    )}
+                    <Button type="submit" className="bg-teal-700 hover:bg-teal-800">
+                      {editingCategory ? 'Mettre à jour' : 'Ajouter'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Bouton Ajouter produit */}
+            <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button data-testid="add-product-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
+                  <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                  Ajouter un produit
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    {editingProduct ? 'Éditer le produit' : 'Nouveau produit'}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4" data-testid="product-form">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Nom du produit *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        data-testid="product-name-input"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="barcode">Code-barres</Label>
+                      <Input
+                        id="barcode"
+                        value={formData.barcode}
+                        onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                        data-testid="product-barcode-input"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor="min_stock">Stock minimum *</Label>
+                    <Label htmlFor="description">Description</Label>
                     <Input
-                      id="min_stock"
-                      type="number"
-                      value={formData.min_stock}
-                      onChange={(e) => setFormData({ ...formData, min_stock: e.target.value })}
-                      required
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="category">Catégorie</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  />
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" data-testid="product-submit-button" className="bg-teal-700 hover:bg-teal-800">
-                    {editingProduct ? 'Mettre à jour' : 'Ajouter'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="price">Prix (€) *</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        data-testid="product-price-input"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="stock">Stock *</Label>
+                      <Input
+                        id="stock"
+                        type="number"
+                        value={formData.stock}
+                        onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                        required
+                        data-testid="product-stock-input"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="min_stock">Stock minimum *</Label>
+                      <Input
+                        id="min_stock"
+                        type="number"
+                        value={formData.min_stock}
+                        onChange={(e) => setFormData({ ...formData, min_stock: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="category">Catégorie</Label>
+                    <Select 
+                      value={formData.category_id} 
+                      onValueChange={(value) => setFormData({ ...formData, category_id: value === 'none' ? '' : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sans catégorie</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: cat.color || '#3B82F6' }}
+                              />
+                              {cat.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
+                      Annuler
+                    </Button>
+                    <Button type="submit" data-testid="product-submit-button" className="bg-teal-700 hover:bg-teal-800">
+                      {editingProduct ? 'Mettre à jour' : 'Ajouter'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
-          <Input
-            placeholder="Rechercher par nom ou code-barres..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            data-testid="product-search-input"
-            className="pl-10"
-          />
+        {/* Search and Filter */}
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
+            <Input
+              placeholder="Rechercher par nom ou code-barres..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="product-search-input"
+              className="pl-10"
+            />
+          </div>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrer par catégorie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les catégories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: cat.color || '#3B82F6' }}
+                    />
+                    {cat.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Products Grid */}
@@ -374,6 +598,20 @@ const Products = () => {
                   <Package className="w-5 h-5 text-teal-700" strokeWidth={1.5} />
                 </div>
               </div>
+              
+              {/* Category Badge */}
+              {product.category_id && (
+                <div className="mb-3">
+                  <span 
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
+                    style={{ backgroundColor: getCategoryColor(product.category_id) }}
+                  >
+                    <Tag className="w-3 h-3" />
+                    {getCategoryName(product.category_id)}
+                  </span>
+                </div>
+              )}
+              
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Prix:</span>
@@ -492,7 +730,7 @@ const Products = () => {
         )}
       </div>
 
-      {/* Dialogue de confirmation de suppression */}
+      {/* Dialogue de confirmation de suppression produit */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
           <AlertDialogHeader>
@@ -505,20 +743,33 @@ const Products = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setProductToDelete(null);
-              }}
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
+            <AlertDialogCancel onClick={() => { setShowDeleteDialog(false); setProductToDelete(null); }}>
               Annuler
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialogue de confirmation de suppression catégorie */}
+      <AlertDialog open={showDeleteCategoryDialog} onOpenChange={setShowDeleteCategoryDialog}>
+        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Supprimer la catégorie
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
+              Êtes-vous sûr de vouloir supprimer la catégorie &ldquo;{categoryToDelete?.name}&rdquo; ?
+              Les produits associés ne seront pas supprimés mais n&apos;auront plus de catégorie.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowDeleteCategoryDialog(false); setCategoryToDelete(null); }}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCategoryConfirm} className="bg-red-600 hover:bg-red-700">
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
