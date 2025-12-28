@@ -285,6 +285,14 @@ const Products = () => {
     return category?.color || '#94A3B8';
   };
 
+  // Filtrage pour la recherche dans le formulaire produit
+  const filteredProductsInForm = products.filter((p) =>
+    productSearchInForm && (
+      p.name?.toLowerCase().includes(productSearchInForm.toLowerCase()) ||
+      p.barcode?.toLowerCase().includes(productSearchInForm.toLowerCase())
+    )
+  );
+
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
