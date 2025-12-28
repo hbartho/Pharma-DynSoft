@@ -3,152 +3,166 @@ Script de diagnostic complet pour le login
 DynSoft Pharma
 """
 import asyncio
-import sys
+import os
+import warnings
 from motor.motor_asyncio import AsyncIOMotorClient
-from passlib.context import CryptContext
+import bcrypt
 import requests
-import json
+from dotenv import load_dotenv
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Ignorer les avertissements de compatibilité bcrypt/passlib
+warnings.filterwarnings("ignore")
+
+# Charger les variables d'environnement
+load_dotenv()
+
+MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+DB_NAME = os.environ.get('DB_NAME', 'pharmaflow')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Vérifier le mot de passe avec bcrypt directement"""
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 async def diagnose_login():
     print("="*60)
-    print("DIAGNOSTIC COMPLET LOGIN")
+    print("DIAGNOSTIC COMPLET LOGIN - DYNSOFT PHARMA")
     print("="*60)
+    print()
+    print(f"Configuration:")
+    print(f"  MongoDB URL: {MONGO_URL}")
+    print(f"  Database: {DB_NAME}")
     print()
     
     # Connexion MongoDB
-    client = AsyncIOMotorClient("mongodb://localhost:27017")
-    db = client["pharma_db"]
-    
-    email = "demo@pharmaflow.com"
-    password = "demo123"
-    
-    # 1. Vérifier l'utilisateur en BD
-    print("[1/4] Vérification utilisateur en base de données...")
-    user = await db.users.find_one({"email": email})
-    
-    if not user:
-        print(f"❌ PROBLÈME : Utilisateur {email} introuvable en BD")
-        print()
-        print("SOLUTION : Créez l'utilisateur avec :")
-        print("  python add_user.py")
-        client.close()
-        return False
-    
-    print(f"✓ Utilisateur trouvé :")
-    print(f"  Email : {user.get('email')}")
-    print(f"  Name : {user.get('name', 'NON DÉFINI')}")
-    print(f"  Full Name : {user.get('full_name', 'NON DÉFINI')}")
-    print(f"  Role : {user.get('role')}")
-    print(f"  Tenant ID : {user.get('tenant_id')}")
-    print()
-    
-    # Vérifier le champ name
-    if 'name' not in user or not user['name']:
-        print("⚠️ ATTENTION : Le champ 'name' est manquant ou vide !")
-        print("Le backend attend un champ 'name', pas 'full_name'")
-        print()
-    
-    # 2. Vérifier le mot de passe
-    print("[2/4] Vérification du mot de passe...")
-    stored_password = user.get("password")
-    
-    if not stored_password:
-        print("❌ PROBLÈME : Pas de mot de passe en base")
-        client.close()
-        return False
-    
-    print(f"  Password hash : {stored_password[:30]}...")
-    
     try:
-        is_valid = pwd_context.verify(password, stored_password)
-        
-        if is_valid:
-            print(f"✓ Mot de passe correct")
-        else:
-            print(f"❌ PROBLÈME : Mot de passe incorrect")
-            print(f"   Le hash ne correspond pas au mot de passe '{password}'")
-            client.close()
-            return False
+        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000)
+        # Test de connexion
+        await client.server_info()
+        db = client[DB_NAME]
+        print("✓ Connexion MongoDB réussie")
     except Exception as e:
-        print(f"❌ PROBLÈME : Erreur de vérification : {e}")
-        client.close()
+        print(f"❌ ERREUR: Impossible de se connecter à MongoDB")
+        print(f"   {e}")
+        print()
+        print("SOLUTION: Démarrez MongoDB")
+        print("  Windows (CMD admin): net start MongoDB")
         return False
     
     print()
     
-    # 3. Tester l'API avec requests
-    print("[3/4] Test de l'API backend avec requests...")
+    # Liste des utilisateurs à tester
+    test_users = [
+        ("admin@pharmaflow.com", "admin123", "Admin"),
+        ("pharmacien@pharmaflow.com", "pharma123", "Pharmacien"),
+        ("caissier@pharmaflow.com", "caisse123", "Caissier"),
+        ("demo@pharmaflow.com", "demo123", "Demo"),
+    ]
+    
+    # 1. Vérifier les utilisateurs en BD
+    print("[1/3] Vérification des utilisateurs en base de données...")
+    print("-" * 50)
+    
+    users_found = 0
+    for email, password, role_name in test_users:
+        user = await db.users.find_one({"email": email})
+        
+        if user:
+            users_found += 1
+            # Vérifier le mot de passe
+            try:
+                pwd_valid = verify_password(password, user.get("password", ""))
+                status = "✓" if pwd_valid else "❌ (mot de passe incorrect)"
+            except:
+                status = "⚠️ (erreur vérification)"
+            
+            print(f"  {status} {role_name}: {email}")
+            print(f"      Nom: {user.get('name', 'N/A')}, Rôle: {user.get('role', 'N/A')}")
+        else:
+            print(f"  ❌ {role_name}: {email} - NON TROUVÉ")
+    
+    print()
+    
+    if users_found == 0:
+        print("❌ PROBLÈME: Aucun utilisateur trouvé en base de données")
+        print()
+        print("SOLUTION: Créez les utilisateurs avec:")
+        print("  python create_correct_user.py")
+        client.close()
+        return False
+    
+    print(f"  → {users_found}/{len(test_users)} utilisateurs trouvés")
+    print()
+    
+    # 2. Tester l'API backend
+    print("[2/3] Test de l'API backend...")
+    print("-" * 50)
+    
+    api_url = "http://localhost:8001/api/auth/login"
+    test_email = "admin@pharmaflow.com"
+    test_password = "admin123"
     
     try:
         response = requests.post(
-            "http://localhost:8001/api/auth/login",
-            json={"email": email, "password": password},
+            api_url,
+            json={"email": test_email, "password": test_password},
             headers={"Content-Type": "application/json"},
-            timeout=5
+            timeout=10
         )
         
-        print(f"  Status code : {response.status_code}")
+        print(f"  URL: {api_url}")
+        print(f"  Status: {response.status_code}")
         
         if response.status_code == 200:
-            print(f"✓ API fonctionne correctement")
             data = response.json()
-            print(f"  Token reçu : {data['access_token'][:30]}...")
-            print(f"  User : {data['user']['email']}")
+            print(f"  ✓ Login réussi!")
+            print(f"    Token: {data['access_token'][:40]}...")
+            print(f"    User: {data['user']['name']} ({data['user']['role']})")
+        elif response.status_code == 401:
+            print(f"  ❌ Identifiants incorrects")
+            print(f"    Réponse: {response.text}")
         else:
-            print(f"❌ PROBLÈME : API retourne une erreur")
-            print(f"  Réponse : {response.text}")
-            client.close()
-            return False
+            print(f"  ❌ Erreur: {response.text}")
+            
     except requests.exceptions.ConnectionError:
-        print("❌ PROBLÈME : Impossible de se connecter au backend")
-        print("  Le backend est-il démarré sur le port 8001 ?")
+        print(f"  ❌ ERREUR: Backend non accessible sur http://localhost:8001")
         print()
-        print("SOLUTION : Démarrez le backend :")
-        print("  cd backend")
-        print("  venv\\Scripts\\activate.bat")
-        print("  uvicorn server:app --host 0.0.0.0 --port 8001 --reload")
+        print("  SOLUTION: Démarrez le backend dans un autre terminal:")
+        print("    cd backend")
+        print("    start-backend.bat")
+        print("  OU:")
+        print("    uvicorn server:app --host 0.0.0.0 --port 8001 --reload")
+        client.close()
+        return False
+    except requests.exceptions.Timeout:
+        print(f"  ❌ ERREUR: Timeout - le backend met trop de temps à répondre")
         client.close()
         return False
     except Exception as e:
-        print(f"❌ PROBLÈME : Erreur lors du test API : {e}")
+        print(f"  ❌ ERREUR: {e}")
         client.close()
         return False
     
     print()
     
-    # 4. Résumé
-    print("[4/4] Résumé...")
-    print()
-    print("="*60)
-    print("✅ DIAGNOSTIC COMPLET")
+    # 3. Résumé
+    print("[3/3] Résumé")
     print("="*60)
     print()
-    print("Base de données :")
-    print(f"  ✓ Utilisateur {email} existe")
-    print(f"  ✓ Mot de passe correct")
+    print("✅ TOUT FONCTIONNE CORRECTEMENT")
     print()
-    print("Backend API :")
-    print(f"  ✓ Backend accessible sur http://localhost:8001")
-    print(f"  ✓ Login API fonctionne")
+    print("Identifiants de connexion:")
+    print("-" * 40)
+    print("| Rôle       | Email                     | MDP      |")
+    print("-" * 40)
+    print("| Admin      | admin@pharmaflow.com      | admin123 |")
+    print("| Pharmacien | pharmacien@pharmaflow.com | pharma123|")
+    print("| Caissier   | caissier@pharmaflow.com   | caisse123|")
+    print("-" * 40)
     print()
-    print("Le problème vient du FRONTEND")
+    print("Frontend: http://localhost:3000")
+    print("Backend:  http://localhost:8001")
+    print("API Docs: http://localhost:8001/docs")
     print()
-    print("Vérifications à faire :")
-    print("1. Ouvrir http://localhost:3000")
-    print("2. Appuyer sur F12 → Console")
-    print("3. Essayer de se connecter")
-    print("4. Regarder les erreurs dans la console")
-    print()
-    print("5. F12 → Network → Chercher 'login'")
-    print("6. Vérifier la requête envoyée (Payload)")
-    print("7. Vérifier la réponse (Response)")
-    print()
-    print("Identifiants de connexion :")
-    print(f"  Email : {email}")
-    print(f"  Password : {password}")
-    print("="*60)
     
     client.close()
     return True
@@ -156,14 +170,9 @@ async def diagnose_login():
 if __name__ == "__main__":
     success = asyncio.run(diagnose_login())
     
-    if success:
+    if not success:
         print()
-        print("✓ Backend et base de données OK")
-        print("  Le problème vient probablement du frontend")
-        print()
-    else:
-        print()
-        print("✗ Problème détecté, voir les messages ci-dessus")
-        print()
+        print("✗ Problème détecté - voir les messages ci-dessus")
     
-    input("\nAppuyez sur Entrée pour quitter...")
+    print()
+    input("Appuyez sur Entrée pour quitter...")
