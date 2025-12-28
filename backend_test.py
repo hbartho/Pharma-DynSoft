@@ -1374,6 +1374,50 @@ class PharmaFlowAPITester:
         
         return all_tests_passed
 
+    def run_categories_crud_tests(self):
+        """Run comprehensive Categories CRUD tests as per requirements"""
+        print("🚀 Starting Categories CRUD Tests (DynSoft Pharma)")
+        print(f"Base URL: {self.base_url}")
+        print("Testing credentials: demo@pharmaflow.com / demo123")
+        print("\n🎯 Test des endpoints de catégories pour DynSoft Pharma")
+        
+        # Authentication is required
+        if not self.test_login():
+            print("❌ Login failed, stopping tests")
+            return False
+        
+        # Verify admin role for full testing
+        if self.user_data.get('role') != 'admin':
+            print(f"⚠️ Warning: Not admin role, got: {self.user_data.get('role')}")
+            print("Some tests may be limited")
+        
+        print(f"✅ Logged in as: {self.user_data.get('name')} ({self.user_data.get('role')})")
+        
+        # Run comprehensive category tests
+        print("\n" + "="*60)
+        print("📂 BACKEND TESTS - CATÉGORIES (CATEGORIES)")
+        print("="*60)
+        categories_success = self.test_categories_crud_comprehensive()
+        
+        # Print results
+        print(f"\n📊 Categories Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        if categories_success:
+            print("\n✅ ALL CATEGORIES CRUD TESTS PASSED")
+            print("✅ Categories CRUD (GET, POST, PUT, DELETE): WORKING")
+            print("✅ Product creation with category_id: WORKING") 
+            print("✅ Category deletion protection (when used by products): WORKING")
+            print("✅ Category deletion after removing products: WORKING")
+        else:
+            print("\n❌ Some categories tests failed")
+        
+        # Cleanup
+        self.cleanup_created_items()
+        
+        return categories_success
+
 def main():
     tester = PharmaFlowAPITester()
     
@@ -1385,8 +1429,10 @@ def main():
             success = tester.run_user_management_tests()
         elif sys.argv[1] == "--customers-sales":
             success = tester.run_customers_sales_crud_tests()
+        elif sys.argv[1] == "--categories":
+            success = tester.run_categories_crud_tests()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories]")
             return 1
     else:
         success = tester.run_all_tests()
