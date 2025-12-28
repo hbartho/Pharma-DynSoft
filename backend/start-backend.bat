@@ -1,67 +1,52 @@
 @echo off
-echo ========================================
-echo DynSoft Pharma - Backend
-echo ========================================
+chcp 65001 >nul
+echo.
+echo ============================================================
+echo    DYNSOFT PHARMA - DEMARRAGE BACKEND
+echo ============================================================
 echo.
 
-REM Vérifier Python
+cd /d "%~dp0"
+
+echo [1/4] Verification de Python...
 python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERREUR: Python n'est pas installe
-    echo Telechargez-le: https://python.org/
+if errorlevel 1 (
+    echo ERREUR: Python n'est pas installe ou pas dans le PATH
+    echo Telechargez Python sur https://www.python.org/downloads/
     pause
     exit /b 1
 )
+echo       Python OK
 
-echo Python:
-python --version
+echo [2/4] Installation des dependances...
+pip install -r requirements.txt -q
+if errorlevel 1 (
+    echo ERREUR: Impossible d'installer les dependances
+    pause
+    exit /b 1
+)
+echo       Dependances OK
+
+echo [3/4] Creation des utilisateurs de demo...
+python create_correct_user.py
 echo.
 
-REM Vérifier venv
-if not exist venv (
-    echo Creation environnement virtuel...
-    python -m venv venv
-    echo OK
-    echo.
-)
-
-REM Activer venv
-call venv\Scripts\activate.bat
-
-REM Vérifier dépendances
-python -c "import fastapi, uvicorn" 2>nul
-if %errorlevel% neq 0 (
-    echo Installation des dependances...
-    pip install --upgrade pip --quiet
-    pip install -r requirements-windows.txt
-    echo OK
-    echo.
-)
-
-REM Vérifier .env
-if not exist .env (
-    echo Creation du fichier .env...
-    (
-        echo MONGO_URL=mongodb://localhost:27017/pharma_db
-        echo SECRET_KEY=dev-secret-key-change-in-production
-        echo DB_NAME=pharma_db
-    ) > .env
-    echo OK
-    echo.
-)
-
+echo [4/4] Demarrage du serveur backend...
+echo.
 echo ========================================
-echo Demarrage du serveur backend...
+echo    SERVEUR BACKEND DEMARRE
 echo ========================================
 echo.
-echo Accessible sur: http://localhost:8001
-echo Documentation: http://localhost:8001/docs
+echo    URL: http://localhost:8001
+echo    API Docs: http://localhost:8001/docs
 echo.
-echo IMPORTANT: MongoDB doit etre demarre
-echo   (CMD admin: net start MongoDB)
+echo    IMPORTANT: MongoDB doit etre demarre!
+ echo    (CMD admin: net start MongoDB)
 echo.
-echo CTRL+C pour arreter
+echo    Appuyez sur CTRL+C pour arreter
+echo ========================================
 echo.
 
-REM Démarrer
-uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+uvicorn server:app --reload --host 0.0.0.0 --port 8001
+
+pause

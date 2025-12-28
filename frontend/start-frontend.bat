@@ -1,60 +1,58 @@
 @echo off
-echo ========================================
-echo DynSoft Pharma - Frontend
-echo ========================================
+chcp 65001 >nul
+echo.
+echo ============================================================
+echo    DYNSOFT PHARMA - DEMARRAGE FRONTEND
+echo ============================================================
 echo.
 
-REM Vérifier Node.js
+cd /d "%~dp0"
+
+echo [1/3] Verification de Node.js...
 node --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERREUR: Node.js n'est pas installe
-    echo Telechargez-le: https://nodejs.org/
+if errorlevel 1 (
+    echo ERREUR: Node.js n'est pas installe ou pas dans le PATH
+    echo Telechargez Node.js sur https://nodejs.org/
     pause
     exit /b 1
 )
+echo       Node.js OK
 
-echo Node.js: 
-node --version
-echo npm:
-npm --version
-echo.
-
-REM Créer .env si nécessaire
-if not exist .env (
-    echo Creation du fichier .env...
-    echo REACT_APP_BACKEND_URL=http://localhost:8001 > .env
-    echo OK
-    echo.
-)
-
-REM Vérifier node_modules
-if not exist node_modules (
-    echo Installation des dependances...
-    echo Cela peut prendre 3-5 minutes...
-    echo.
-    npm install --legacy-peer-deps
-    
-    if %errorlevel% neq 0 (
-        echo.
-        echo ERREUR: Installation echouee
-        pause
-        exit /b 1
+echo [2/3] Installation des dependances...
+if not exist "node_modules" (
+    echo       Installation en cours (peut prendre quelques minutes)...
+    call yarn install
+    if errorlevel 1 (
+        echo       Tentative avec npm...
+        call npm install
     )
-    echo.
+) else (
+    echo       node_modules existe deja
+)
+echo       Dependances OK
+
+echo [3/3] Demarrage du serveur frontend...
+echo.
+echo ========================================
+echo    SERVEUR FRONTEND DEMARRE
+echo ========================================
+echo.
+echo    URL: http://localhost:3000
+echo.
+echo    Identifiants de connexion:
+echo    ---------------------------
+echo    Admin:      admin@pharmaflow.com / admin123
+echo    Pharmacien: pharmacien@pharmaflow.com / pharma123
+echo    Caissier:   caissier@pharmaflow.com / caisse123
+echo.
+echo    Appuyez sur CTRL+C pour arreter
+echo ========================================
+echo.
+
+set BROWSER=none
+yarn start
+if errorlevel 1 (
+    npm start
 )
 
-echo ========================================
-echo Demarrage du serveur frontend...
-echo ========================================
-echo.
-echo Accessible sur: http://localhost:3000
-echo.
-echo Identifiants:
-echo   Email: demo@pharmaflow.com
-echo   Mot de passe: demo123
-echo.
-echo CTRL+C pour arreter
-echo.
-
-REM Démarrer
-npm start
+pause
