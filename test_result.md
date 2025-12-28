@@ -746,3 +746,78 @@ agent_communication:
     message: "✅ TESTS CLIENTS ET VENTES COMPLETS RÉUSSIS - Tous les endpoints CRUD clients et ventes fonctionnent parfaitement. Contrôle d'accès admin pour suppression ventes vérifié. Stock automatiquement restauré lors suppression vente. 23/23 tests passés (100% succès). Credentials demo@pharmaflow.com/demo123 fonctionnels."
   - agent: "testing"
     message: "🔍 TESTS UI CLIENTS ET VENTES TERMINÉS - Interface fonctionnelle mais problèmes identifiés: 1) Création client échoue (formulaire OK mais client n'apparaît pas), 2) Recherche clients non fonctionnelle, 3) Boutons suppression clients/ventes non visibles. Affichage et navigation parfaits. Ventes: interface complète, recherche OK. Credentials demo@pharmaflow.com/demo123 validés."
+  - agent: "testing"
+    message: "✅ TESTS CATÉGORIES COMPLETS RÉUSSIS - Tous les endpoints CRUD catégories fonctionnent parfaitement. POST /api/categories (Antibiotiques, Antidouleurs), GET /api/categories, PUT /api/categories, DELETE /api/categories. Création produit avec category_id validée. Protection suppression catégorie utilisée (400) vérifiée. 14/14 tests passés (100% succès). Credentials demo@pharmaflow.com/demo123 fonctionnels."
+
+backend:
+  - task: "POST /api/categories - Création de catégorie"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Création de catégories réussie. Test avec 'Antibiotiques' (description: 'Médicaments antibiotiques', color: '#EF4444') et 'Antidouleurs' (description: 'Analgésiques et anti-inflammatoires', color: '#3B82F6'). Retourne ID UUID et données complètes."
+
+  - task: "GET /api/categories - Liste des catégories"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Endpoint fonctionne correctement. Retourne la liste des catégories avec authentification JWT. Test avec credentials demo@pharmaflow.com réussi. Compteur de catégories vérifié avant/après création."
+
+  - task: "PUT /api/categories/{id} - Mise à jour de catégorie"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Mise à jour réussie. Changement du nom de 'Antibiotiques' vers 'Antibiotiques Modifiés', description et couleur modifiées. Endpoint retourne les données mises à jour. Vérification par GET confirmée."
+
+  - task: "DELETE /api/categories/{id} - Suppression de catégorie"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Suppression réussie pour catégories non utilisées. Catégorie supprimée de la base de données. Compteur de catégories revenu à l'état initial."
+
+  - task: "POST /api/products avec category_id - Création produit avec catégorie"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Création de produit avec category_id réussie. Test avec 'Amoxicilline Test' lié à catégorie 'Antibiotiques'. Produit correctement créé avec category_id. Vérification par GET /api/products confirmée."
+
+  - task: "DELETE /api/categories/{id} - Protection suppression catégorie utilisée"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Protection fonctionne parfaitement. Tentative de suppression d'une catégorie utilisée par un produit retourne correctement 400 avec message 'Cannot delete category: 1 product(s) are using it'. Sécurité des données assurée."
