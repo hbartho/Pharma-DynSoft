@@ -21,10 +21,11 @@ echo       Node.js OK
 echo [2/3] Installation des dependances...
 if not exist "node_modules" (
     echo       Installation en cours (peut prendre quelques minutes)...
-    call yarn install
+    call npm install --legacy-peer-deps
     if errorlevel 1 (
-        echo       Tentative avec npm...
-        call npm install
+        echo ERREUR: Installation echouee
+        pause
+        exit /b 1
     )
 ) else (
     echo       node_modules existe deja
@@ -50,9 +51,6 @@ echo ========================================
 echo.
 
 set BROWSER=none
-yarn start
-if errorlevel 1 (
-    npm start
-)
+npm start
 
 pause
