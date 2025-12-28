@@ -177,9 +177,8 @@ const Products = () => {
         await api.post('/categories', categoryFormData);
         toast.success('Catégorie ajoutée');
       }
-      setShowCategoryDialog(false);
       resetCategoryForm();
-      await loadCategories();
+      await loadCategories(true); // Force refresh
     } catch (error) {
       console.error('Error saving category:', error);
       toast.error('Erreur lors de l\'enregistrement de la catégorie');
