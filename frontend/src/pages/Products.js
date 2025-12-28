@@ -28,6 +28,7 @@ const Products = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
+  const [productSearchInForm, setProductSearchInForm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
