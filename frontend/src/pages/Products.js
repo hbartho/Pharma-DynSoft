@@ -424,20 +424,69 @@ const Products = () => {
             </Dialog>
 
             {/* Bouton Ajouter produit */}
-            <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
+            <Dialog open={showDialog} onOpenChange={(open) => { 
+              setShowDialog(open); 
+              if (open) {
+                loadCategories(); // Recharger les catégories quand le dialogue s'ouvre
+              } else {
+                resetForm();
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button data-testid="add-product-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
                   <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
                   Ajouter un produit
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {editingProduct ? 'Éditer le produit' : 'Nouveau produit'}
                   </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4" data-testid="product-form">
+                  {/* Recherche de produit existant */}
+                  {!editingProduct && (
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <Label className="text-sm text-slate-600">Rechercher un produit existant (nom ou code-barres)</Label>
+                      <div className="relative mt-2">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" strokeWidth={1.5} />
+                        <Input
+                          placeholder="Tapez pour rechercher..."
+                          value={productSearchInForm}
+                          onChange={(e) => setProductSearchInForm(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      {productSearchInForm && filteredProductsInForm.length > 0 && (
+                        <div className="mt-2 max-h-32 overflow-y-auto border border-slate-200 rounded-lg bg-white">
+                          {filteredProductsInForm.slice(0, 5).map((product) => (
+                            <button
+                              key={product.id}
+                              type="button"
+                              onClick={() => {
+                                handleEdit(product);
+                                setProductSearchInForm('');
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 flex justify-between items-center text-sm"
+                            >
+                              <div>
+                                <p className="font-medium text-slate-900">{product.name}</p>
+                                {product.barcode && (
+                                  <p className="text-xs text-slate-500">{product.barcode}</p>
+                                )}
+                              </div>
+                              <span className="text-teal-700 font-medium">{product.price?.toFixed(2)} €</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {productSearchInForm && filteredProductsInForm.length === 0 && (
+                        <p className="mt-2 text-sm text-slate-500">Aucun produit trouvé - vous pouvez en créer un nouveau</p>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">Nom du produit *</Label>
