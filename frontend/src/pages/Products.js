@@ -45,11 +45,12 @@ const Products = () => {
   });
   const { isOnline } = useOffline();
 
-  const loadCategories = async () => {
+  const loadCategories = async (forceRefresh = false) => {
     try {
       if (isOnline) {
-        const response = await api.get('/categories');
-        setCategories(response.data);
+        const headers = forceRefresh ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {};
+        const response = await api.get('/categories', { headers });
+        setCategories([...response.data]); // Force new array reference
       }
     } catch (error) {
       console.error('Error loading categories:', error);
