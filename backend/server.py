@@ -312,6 +312,29 @@ async def login(credentials: UserLogin):
 # Product Routes
 @api_router.post("/products", response_model=Product)
 async def create_product(product_data: ProductCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    # Vérifier si un produit avec le même nom existe déjà
+    existing_by_name = await db.products.find_one({
+        "tenant_id": current_user['tenant_id'],
+        "name": {"$regex": f"^{product_data.name}$", "$options": "i"}  # Case insensitive
+    })
+    if existing_by_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Un produit avec le nom '{product_data.name}' existe déjà"
+        )
+    
+    # Vérifier si un produit avec le même code-barres existe déjà (si fourni)
+    if product_data.barcode:
+        existing_by_barcode = await db.products.find_one({
+            "tenant_id": current_user['tenant_id'],
+            "barcode": product_data.barcode
+        })
+        if existing_by_barcode:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Un produit avec le code-barres '{product_data.barcode}' existe déjà ({existing_by_barcode['name']})"
+            )
+    
     product_dict = product_data.model_dump()
     product_dict['tenant_id'] = current_user['tenant_id']
     product_obj = Product(**product_dict)
