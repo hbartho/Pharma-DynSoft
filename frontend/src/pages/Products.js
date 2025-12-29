@@ -191,7 +191,8 @@ const Products = () => {
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      toast.error('Erreur lors de l\'enregistrement');
+      const errorMessage = error.response?.data?.detail || 'Erreur lors de l\'enregistrement';
+      toast.error(errorMessage);
     }
   };
 
