@@ -988,12 +988,33 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     
     prescriptions = await db.prescriptions.find({"tenant_id": current_user['tenant_id'], "status": "pending"}, {"_id": 0}).to_list(1000)
     
+    # Calculer la valeur totale du stock
+    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
+    method = settings.get('stock_valuation_method', 'weighted_average') if settings else 'weighted_average'
+    
+    total_stock_value = 0
+    for product in products:
+        if method == 'fifo':
+            valuation = await calculate_fifo_value(product['id'], current_user['tenant_id'])
+        elif method == 'lifo':
+            valuation = await calculate_lifo_value(product['id'], current_user['tenant_id'])
+        else:
+            valuation = await calculate_weighted_average_value(product['id'], current_user['tenant_id'])
+        
+        if valuation['total_value'] == 0 and product.get('stock', 0) > 0:
+            estimated_cost = product.get('price', 0) * 0.7
+            total_stock_value += product['stock'] * estimated_cost
+        else:
+            total_stock_value += valuation['total_value']
+    
     return {
         "today_sales_count": len(today_sales),
         "today_revenue": today_revenue,
         "total_products": len(products),
         "low_stock_count": low_stock_count,
-        "pending_prescriptions": len(prescriptions)
+        "pending_prescriptions": len(prescriptions),
+        "total_stock_value": round(total_stock_value, 2),
+        "stock_valuation_method": method
     }
 
 @api_router.get("/reports/sales")
