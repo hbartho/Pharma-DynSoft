@@ -417,7 +417,7 @@ const Sales = () => {
                             data-testid={`quantity-${item.product_id}`}
                           />
                           <p className="font-medium text-slate-900 w-24 text-right">
-                            {(item.price * item.quantity).toFixed(2)} €
+                            {formatAmount(item.price * item.quantity)}
                           </p>
                           <button
                             type="button"
