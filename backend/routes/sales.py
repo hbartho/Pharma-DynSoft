@@ -52,19 +52,11 @@ async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user))
 
 @router.delete("/{sale_id}")
 async def delete_sale(sale_id: str, current_user: dict = Depends(require_role(["admin"]))):
-    """Delete a sale (Admin only) - restores stock"""
-    sale = await db.sales.find_one({"id": sale_id, "tenant_id": current_user['tenant_id']})
-    if not sale:
-        raise HTTPException(status_code=404, detail="Sale not found")
-    
-    # Restore stock for each item
-    for item in sale.get('items', []):
-        product = await db.products.find_one({"id": item['product_id'], "tenant_id": current_user['tenant_id']})
-        if product:
-            new_stock = product['stock'] + item['quantity']
-            await db.products.update_one({"id": item['product_id']}, {"$set": {"stock": new_stock}})
-    
-    result = await db.sales.delete_one({"id": sale_id, "tenant_id": current_user['tenant_id']})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Sale not found")
-    return {"message": "Sale deleted and stock restored successfully"}
+    """
+    Suppression de vente désactivée pour des raisons d'historique et de prévention de fraude.
+    Les ventes ne peuvent pas être supprimées une fois enregistrées.
+    """
+    raise HTTPException(
+        status_code=403, 
+        detail="La suppression des ventes est désactivée pour des raisons d'historique et de prévention de fraude. Les ventes enregistrées ne peuvent pas être supprimées."
+    )
