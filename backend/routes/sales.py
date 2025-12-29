@@ -43,10 +43,20 @@ async def get_sales(current_user: dict = Depends(get_current_user)):
     for sale in sales:
         if isinstance(sale['created_at'], str):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
-        # Ajouter le nom de l'agent
+        # Ajouter les informations de l'agent
         if sale.get('user_id') and sale['user_id'] in users_map:
-            sale['user_name'] = users_map[sale['user_id']]['name']
+            user = users_map[sale['user_id']]
+            # Gérer la compatibilité avec l'ancien format
+            if 'employee_code' in user and user['employee_code']:
+                sale['employee_code'] = user['employee_code']
+            else:
+                role_prefix = {'admin': 'ADM', 'pharmacien': 'PHA', 'caissier': 'CAI'}.get(user.get('role', ''), 'EMP')
+                sale['employee_code'] = f"{role_prefix}-{user['id'][:4].upper()}"
+            sale['user_role'] = user.get('role', 'unknown')
+            sale['user_name'] = user.get('name') or f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
         else:
+            sale['employee_code'] = 'N/A'
+            sale['user_role'] = 'unknown'
             sale['user_name'] = 'Inconnu'
     return sales
 
