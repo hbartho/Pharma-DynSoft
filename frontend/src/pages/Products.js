@@ -202,8 +202,8 @@ const Products = () => {
         await refreshData();
       } else {
         await deleteFromDB('products', productToDelete.id);
-        await addLocalChange('product', 'delete', { id: productToDelete.id });
-        toast.success('Produit supprimé');
+        await addLocalChange('products', 'delete', { id: productToDelete.id });
+        toast.success('Produit supprimé (synchronisation en attente)');
         await loadProducts();
       }
       setShowDeleteDialog(false);
