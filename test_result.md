@@ -821,3 +821,105 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTÉ - Protection fonctionne parfaitement. Tentative de suppression d'une catégorie utilisée par un produit retourne correctement 400 avec message 'Cannot delete category: 1 product(s) are using it'. Sécurité des données assurée."
+
+
+#====================================================================================================
+# Offline-First Sync Engine Implementation - Testing Section
+#====================================================================================================
+
+frontend:
+  - task: "Offline Sync - Indicateur de statut de synchronisation"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Layout.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Indicateur visuel amélioré avec tooltip informatif, compteur de modifications en attente, et icône de cloud. L'indicateur change de couleur selon l'état (vert=synchronisé, ambre=modifications en attente, rouge=hors ligne)."
+
+  - task: "Offline Sync - Tracking des modifications locales (Products)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Products.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Toutes les opérations CRUD utilisent addLocalChange() pour tracker les modifications offline. Les toasts indiquent '(synchronisation en attente)' quand offline."
+
+  - task: "Offline Sync - Tracking des modifications locales (Customers)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Customers.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Import de addLocalChange ajouté. Toutes les opérations CRUD (create, update, delete) trackent maintenant les modifications locales pour synchronisation ultérieure."
+
+  - task: "Offline Sync - Tracking des modifications locales (Suppliers)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Suppliers.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Import de addLocalChange ajouté. Toutes les opérations CRUD trackent les modifications locales. UUID utilisé pour les IDs offline au lieu de Date.now()."
+
+  - task: "Offline Sync - Tracking des modifications locales (Sales)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Sales.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Ventes créées offline sont trackées avec addLocalChange. UUID utilisé pour les IDs."
+
+  - task: "Offline Sync - Service de synchronisation (15 min)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/services/syncService.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Intervalle de synchronisation configuré à 15 minutes (SYNC_INTERVAL = 15 * 60 * 1000). Auto-sync démarre 30 secondes après chargement de l'app."
+
+  - task: "Offline Sync - Contexte Offline avec compteur modifications"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/contexts/OfflineContext.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "OfflineContext expose pendingChangesCount, getTimeSinceLastSync(), et tous les états de synchronisation. Toast notifications en français pour online/offline."
+
+agent_communication:
+  - agent: "main"
+    message: "MOTEUR DE SYNCHRONISATION OFFLINE-FIRST IMPLÉMENTÉ: 1) Services IndexedDB et syncService déjà configurés avec intervalle 15min. 2) Amélioré Layout.js avec indicateur visuel de sync (vert/ambre/rouge + tooltip). 3) Ajouté addLocalChange() à toutes les pages (Products, Customers, Suppliers, Sales) pour tracker les modifications offline. 4) Créé SyncStatusIndicator.js et offlineDataService.js pour centraliser la logique. Credentials: admin@pharmaflow.com / admin123"
+
+test_plan:
+  current_focus:
+    - "Offline Sync - Indicateur de statut de synchronisation"
+    - "Offline Sync - Tracking des modifications locales"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
