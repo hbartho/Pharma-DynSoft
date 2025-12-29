@@ -340,7 +340,14 @@ const Products = () => {
           </div>
           <div className="flex gap-2">
             {/* Bouton Gérer les catégories */}
-            <Dialog open={showCategoryDialog} onOpenChange={(open) => { setShowCategoryDialog(open); if (!open) resetCategoryForm(); }}>
+            <Dialog open={showCategoryDialog} onOpenChange={(open) => { 
+              setShowCategoryDialog(open); 
+              if (open) {
+                loadCategories(true); // Recharger les catégories à l'ouverture
+              } else {
+                resetCategoryForm(); 
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="rounded-full">
                   <Tag className="w-4 h-4 mr-2" strokeWidth={1.5} />
