@@ -239,7 +239,7 @@ const Settings = () => {
               <div className="p-4 bg-emerald-50 rounded-lg">
                 <p className="text-sm text-emerald-700 mb-1">Valeur totale du stock</p>
                 <p className="text-2xl font-bold text-emerald-900">
-                  {stockValuation.total_value.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {stockValuation.currency}
+                  {formatCurrency(stockValuation.total_value, settings.currency)}
                 </p>
               </div>
               <div className="p-4 bg-teal-50 rounded-lg">
