@@ -227,7 +227,11 @@ const Sales = () => {
     }
   };
 
+  // Filtrer les produits : uniquement actifs et correspondant à la recherche
   const filteredProducts = products.filter((p) => {
+    // Exclure les produits désactivés
+    if (p.is_active === false) return false;
+    
     const searchLower = productSearch.toLowerCase();
     return p.name?.toLowerCase().includes(searchLower) || 
            p.barcode?.toLowerCase().includes(searchLower);
