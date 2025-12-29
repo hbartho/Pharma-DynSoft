@@ -906,7 +906,7 @@ const Sales = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Retour d'articles
+              Retour d&apos;articles
             </DialogTitle>
           </DialogHeader>
           {selectedSale && (
