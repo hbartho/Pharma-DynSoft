@@ -182,8 +182,11 @@ const Products = () => {
         toast.success('Catégorie ajoutée');
       }
       resetCategoryForm();
-      setShowCategoryDialog(false); // Fermer le dialogue
-      await loadCategories(true); // Force refresh avec nouvelle référence
+      // Attendre un instant pour s'assurer que le backend a enregistré
+      await new Promise(resolve => setTimeout(resolve, 100));
+      // Recharger les catégories avec force refresh
+      await loadCategories(true);
+      // Ne pas fermer le dialogue pour permettre d'ajouter plusieurs catégories
     } catch (error) {
       console.error('Error saving category:', error);
       toast.error('Erreur lors de l\'enregistrement de la catégorie');
