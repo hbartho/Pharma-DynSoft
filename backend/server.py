@@ -107,6 +107,7 @@ class StockMovement(BaseModel):
     type: str  # in, out
     quantity: int
     reason: Optional[str] = None
+    supplier_id: Optional[str] = None  # Pour tracer les livraisons fournisseurs
     tenant_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -115,6 +116,7 @@ class StockMovementCreate(BaseModel):
     type: str
     quantity: int
     reason: Optional[str] = None
+    supplier_id: Optional[str] = None  # ID du fournisseur pour les entrées de stock
 
 class Sale(BaseModel):
     model_config = ConfigDict(extra="ignore")
