@@ -849,7 +849,8 @@ const Products = () => {
                 </Button>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {/* Informations de pagination */}
