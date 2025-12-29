@@ -222,7 +222,6 @@ const Products = () => {
       setShowDeleteDialog(false);
       setProductToDelete(null);
     }
-    }
   };
 
   const handleDeleteCategory = (category) => {
