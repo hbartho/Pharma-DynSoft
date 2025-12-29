@@ -359,6 +359,24 @@ async def update_product(product_id: str, product_data: ProductCreate, current_u
         updated_product['updated_at'] = datetime.fromisoformat(updated_product['updated_at'])
     return Product(**updated_product)
 
+@api_router.patch("/products/{product_id}/toggle-status")
+async def toggle_product_status(product_id: str, current_user: dict = Depends(require_role(["admin"]))):
+    """Activer ou désactiver un produit (Admin uniquement)"""
+    product = await db.products.find_one({"id": product_id, "tenant_id": current_user['tenant_id']})
+    if not product:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    
+    # Inverser le statut is_active
+    new_status = not product.get('is_active', True)
+    
+    await db.products.update_one(
+        {"id": product_id},
+        {"$set": {"is_active": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    status_text = "activé" if new_status else "désactivé"
+    return {"message": f"Produit {status_text} avec succès", "is_active": new_status}
+
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
     # Vérifier si le produit a été vendu au moins une fois
