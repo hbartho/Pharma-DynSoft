@@ -319,6 +319,8 @@ const Products = () => {
     return category?.color || '#94A3B8';
   };
 
+  const isAdmin = user?.role === 'admin';
+
   // Filtrage pour la recherche dans le formulaire produit
   const filteredProductsInForm = products.filter((p) =>
     productSearchInForm && (
@@ -331,7 +333,10 @@ const Products = () => {
     const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
-    return matchesSearch && matchesCategory;
+    const matchesStatus = filterStatus === 'all' || 
+      (filterStatus === 'active' && p.is_active !== false) || 
+      (filterStatus === 'inactive' && p.is_active === false);
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
