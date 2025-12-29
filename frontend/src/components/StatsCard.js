@@ -1,11 +1,12 @@
 import React from 'react';
 
-const StatsCard = ({ title, value, icon: Icon, trend, color = 'teal' }) => {
+const StatsCard = ({ title, value, icon: Icon, trend, color = 'teal', subtitle }) => {
   const colorClasses = {
     teal: 'bg-teal-50 text-teal-700',
     emerald: 'bg-emerald-50 text-emerald-700',
     blue: 'bg-blue-50 text-blue-700',
     amber: 'bg-amber-50 text-amber-700',
+    purple: 'bg-purple-50 text-purple-700',
   };
 
   return (
@@ -18,6 +19,11 @@ const StatsCard = ({ title, value, icon: Icon, trend, color = 'teal' }) => {
           <p className="text-3xl font-bold text-slate-900 mb-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
             {value}
           </p>
+          {subtitle && (
+            <p className="text-xs text-slate-400" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {subtitle}
+            </p>
+          )}
           {trend && (
             <p className="text-sm text-emerald-600" style={{ fontFamily: 'Inter, sans-serif' }}>
               {trend}
