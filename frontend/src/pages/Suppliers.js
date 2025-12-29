@@ -26,33 +26,6 @@ const Suppliers = () => {
   });
   const { isOnline } = useOffline();
 
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  const refreshData = async () => {
-    try {
-      // Clear browser cache for API calls
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-      
-      // Clear IndexedDB
-      try {
-        const db = await getDB();
-        await db.clear('suppliers');
-      } catch (error) {
-        console.warn('Could not clear IndexedDB:', error);
-      }
-      
-      // Force reload data with no-cache headers
-      await loadSuppliers(true);
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    }
-  };
-
   const loadSuppliers = async (forceRefresh = false) => {
     try {
       if (isOnline) {
@@ -83,6 +56,33 @@ const Suppliers = () => {
       setSuppliers(localSuppliers);
     }
   };
+
+  const refreshData = async () => {
+    try {
+      // Clear browser cache for API calls
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      // Clear IndexedDB
+      try {
+        const db = await getDB();
+        await db.clear('suppliers');
+      } catch (error) {
+        console.warn('Could not clear IndexedDB:', error);
+      }
+      
+      // Force reload data with no-cache headers
+      await loadSuppliers(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadSuppliers();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
