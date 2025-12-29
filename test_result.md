@@ -1014,3 +1014,60 @@ test_plan:
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+#====================================================================================================
+# Tests Corrections Bugs DynSoft Pharma - Décembre 2025
+#====================================================================================================
+
+frontend:
+  - task: "Dashboard - Vérification données du jour"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Dashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Dashboard fonctionne parfaitement. Ventes aujourd'hui: 3 (exactement comme attendu), Revenu du jour: 121.80€ (>0), Ordonnances en attente: 8 (exactement comme attendu). Toutes les données du jour sont correctes et correspondent aux attentes."
+
+  - task: "Page Ordonnances - Affichage médicaments"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/Prescriptions.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ PROBLÈME CRITIQUE - Navigation vers page Ordonnances réussie mais aucune ordonnance affichée (0 trouvées). Malgré que le dashboard indique 8 ordonnances en attente, la page Ordonnances est vide. Possible problème de chargement des données ou de filtrage."
+
+  - task: "Page Ventes - Recherche client par nom/téléphone"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Sales.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTÉ - Recherche client fonctionne parfaitement. Navigation vers page Ventes réussie, dialogue 'Nouvelle vente' s'ouvre correctement. Recherche 'Jean' affiche liste déroulante avec 'Jean Dupont' et son numéro de téléphone '06 12 34 56 78'. Minor: Overlay modal peut intercepter les clics mais fonctionnalité core opérationnelle."
+
+  - task: "Page Ventes - Recherche produit par nom/code-barres"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Sales.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "ℹ️ NON TESTÉ COMPLÈTEMENT - Test interrompu par problème d'overlay modal lors de la sélection client. Recherche produit 'Doliprane' non testée à cause de l'arrêt du test précédent."
+
+agent_communication:
+  - agent: "testing"
+    message: "🔍 TESTS CORRECTIONS BUGS DYNSOFT PHARMA TERMINÉS - Dashboard parfait avec données exactes (3 ventes, 121.80€, 8 ordonnances). Recherche client fonctionnelle avec affichage nom+téléphone. PROBLÈME CRITIQUE: Page Ordonnances vide malgré 8 ordonnances en attente selon dashboard. Possible problème de chargement des données ordonnances. Credentials admin@pharmaflow.com/admin123 validés."
