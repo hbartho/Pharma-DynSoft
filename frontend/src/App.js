@@ -16,6 +16,7 @@ import Suppliers from './pages/Suppliers';
 import Prescriptions from './pages/Prescriptions';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
+import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
