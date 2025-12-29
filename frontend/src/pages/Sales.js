@@ -437,7 +437,7 @@ const Sales = () => {
                 <div className="flex justify-between items-center p-4 bg-teal-50 rounded-lg">
                   <span className="text-lg font-semibold text-slate-900">Total:</span>
                   <span className="text-2xl font-bold text-teal-700" data-testid="cart-total">
-                    {calculateTotal().toFixed(2)} €
+                    {formatAmount(calculateTotal())}
                   </span>
                 </div>
 
