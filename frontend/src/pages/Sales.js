@@ -83,7 +83,7 @@ const Sales = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []); // eslint-disable-line
 
   const addToCart = (product) => {
     if (product.stock <= 0) {
