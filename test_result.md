@@ -1071,3 +1071,5 @@ frontend:
 agent_communication:
   - agent: "testing"
     message: "🔍 TESTS CORRECTIONS BUGS DYNSOFT PHARMA TERMINÉS - Dashboard parfait avec données exactes (3 ventes, 121.80€, 8 ordonnances). Recherche client fonctionnelle avec affichage nom+téléphone. PROBLÈME CRITIQUE: Page Ordonnances vide malgré 8 ordonnances en attente selon dashboard. Possible problème de chargement des données ordonnances. Credentials admin@pharmaflow.com/admin123 validés."
+  - agent: "testing"
+    message: "❌ TESTS REFRESH CATÉGORIES ÉCHOUÉS - PROBLÈME CRITIQUE IDENTIFIÉ: La mise à jour automatique de la liste des catégories ne fonctionne PAS. Ajout de catégorie 'Test Refresh' réussi (toast affiché) mais catégorie n'apparaît ni dans la liste des catégories ni dans le dropdown du formulaire produit. Mécanisme de refresh automatique défaillant. Credentials admin@pharmaflow.com/admin123 validés."
