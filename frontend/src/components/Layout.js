@@ -32,7 +32,9 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { isOnline, isSyncing, performSync, lastSyncTime } = useOffline();
+  const { isOnline, isSyncing, performSync, lastSyncTime, pendingChangesCount, getTimeSinceLastSync } = useOffline();
+  
+  const timeSinceSync = getTimeSinceLastSync();
 
   // Define menu items with role restrictions
   const allMenuItems = [
