@@ -22,7 +22,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [formatAmount]); // Recharger quand les settings changent
 
   const loadDashboardData = async () => {
     try {
