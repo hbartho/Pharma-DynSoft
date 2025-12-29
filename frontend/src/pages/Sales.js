@@ -771,6 +771,9 @@ const Sales = () => {
                     Date
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    Agent
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     Client
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
@@ -792,6 +795,11 @@ const Sales = () => {
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors" data-testid={`sale-row-${sale.id}`}>
                     <td className="px-6 py-4 text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {new Date(sale.created_at).toLocaleString('fr-FR')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-900">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {sale.user_name || 'Inconnu'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900">
                       {getCustomerName(sale.customer_id)}
