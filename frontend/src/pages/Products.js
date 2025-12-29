@@ -228,11 +228,11 @@ const Products = () => {
       toast.success('Catégorie supprimée');
       setShowDeleteCategoryDialog(false);
       setCategoryToDelete(null);
-      await loadCategories(true); // Force refresh
       // Reset filter if deleted category was selected
       if (filterCategory === categoryToDelete.id) {
         setFilterCategory('all');
       }
+      await loadCategories(true); // Force refresh avec nouvelle référence
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
