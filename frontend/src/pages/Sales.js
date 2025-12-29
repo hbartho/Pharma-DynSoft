@@ -27,8 +27,6 @@ const Sales = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { isOnline } = useOffline();
 
-  const isAdmin = user?.role === 'admin';
-
   const loadData = async (forceRefresh = false) => {
     try {
       if (isOnline) {
