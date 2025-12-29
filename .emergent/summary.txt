@@ -19,65 +19,60 @@ The user wants a comprehensive, offline-first, multi-tenant pharmacy management 
 **User's preferred language**: French
 
 **what currently exists?**
-A full-stack pharmacy management application.
-- **Frontend**: A React PWA with TailwindCSS and Shadcn/UI. It features full CRUD operations for Products, Categories, Suppliers, Customers, and Sales. Role-based access control is implemented, dynamically adjusting the UI (e.g., menu items) based on the user's role (Admin, Pharmacist, Cashier). The login page now lists demo accounts for easy testing. A foundational offline sync mechanism has been started.
-- **Backend**: A FastAPI server connected to a **single-tenant MongoDB database**. It provides a full REST API with role-based protection for all major features, including user and category management.
-- **Data**: A comprehensive seeding script exists () that populates the database with users for all three roles, along with sample products, categories, customers, suppliers, sales, and prescriptions, providing a rich demo environment.
-- **Tooling**: A suite of  scripts for Windows users to simplify dependency installation and application startup.
+A full-stack pharmacy management application with a React PWA frontend and a FastAPI backend using a single-tenant MongoDB database.
+- **Frontend**: The application supports full offline functionality with a completed synchronization engine that uses IndexedDB and a visual sync status indicator. It features full CRUD for Products, Categories, Suppliers, Customers, and Sales, with role-based access control. A new Settings page allows Admins to configure stock valuation methods and currency. All pages now dynamically display prices and totals in the selected currency (EUR, USD, CAD, XOF, GNF).
+- **Backend**: The FastAPI server provides a REST API with role-based JWT authentication. It now includes advanced business logic:
+    - **Stock Valuation**: Calculates total stock value using FIFO, LIFO, or Weighted Average methods.
+    - **Deletion Rules**: Prevents deletion of products that have been sold or suppliers that have made deliveries.
+    - **Product Management**: Includes product activation/deactivation and uniqueness validation for product names and barcodes.
+- **Data**: The  script seeds the database with comprehensive demo data, including users, products, sales (for today), and prescriptions with correct data structures.
 
 **Last working item**:
-- **Last item agent was working**: The agent began implementing a comprehensive offline-first synchronization engine. It created the foundational services and context for this feature.
-    - Updated  to include object stores for all data models and a  to log pending changes.
-    - Created a new advanced service  to handle processing the sync queue, manage conflicts, and initiate periodic synchronization (currently set to 5-minute intervals).
-    - Created  to manage and provide offline/sync status to the application.
-    - Started updating  to add a visual indicator for sync status.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: both
-- **User Testing Done**: N
+- **Last item agent was working**: The agent implemented and tested the validation to ensure uniqueness for product names and barcodes during creation and updates. The backend was modified to raise an  with a specific error message if a duplicate is found, and the frontend was updated to display this user-friendly message in a toast notification.
+- **Status**: COMPLETED
+- **Agent Testing Done**: Y
+- **Which testing method agent to use?**: NA
+- **User Testing Done**: Y
 
 **All Pending/In progress Issue list**:
 - **Issue 1: Architectural Mismatch (MongoDB vs. PostgreSQL) (P1)**
-    - **Description**: The application is built on a single-tenant MongoDB stack, which contradicts the user's original and core requirement for a multi-tenant PostgreSQL architecture for data isolation and scalability.
+    - **Description**: The application is built on a single-tenant MongoDB stack, which contradicts the user's original and core requirement for a multi-tenant PostgreSQL architecture for data isolation and scalability. This is a carry-over from the initial project setup.
     - **Status**: NOT STARTED
     - **Is recurring issue?**: N
 
 **In progress Task List**:
-- **Task 1: Complete Offline-First Sync Engine Implementation (P0)**
-    - **Where to resume**: The core services (, , ) have been created. The next step is to integrate this logic into all the data-handling pages (, , , etc.). Specifically, all Create, Update, and Delete operations need to be wrapped. When the app is offline, these operations should write to the  in IndexedDB. When online, the  should process this queue. All data fetching (Read operations) must also be updated to prioritize data from IndexedDB before falling back to API calls. The sync interval should be adjusted from 5 minutes to the requested 15 minutes.
-    - **What will be achieved with this?**: The application will gain full offline capabilities, allowing users to continue working without an internet connection, with data syncing automatically when connectivity is restored.
-    - **Status**: IN PROGRESS
-    - **Should Test frontend/backend/both after fix?**: Both
-    - **Blocked on something**: None
+- None.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    - **P1: Implement Log-Based Sync Engine**: This is the completion of the current in-progress task.
-    - **P2: Complete other feature pages**: Ensure all pages, including , are fully functional and respect user roles.
 
 - **Future Tasks:**
     - **P1: Migrate Backend to Multi-Tenant PostgreSQL**: This is a major architectural overhaul to align with the original problem statement. It will involve creating a new database provisioning system for tenants and rewriting all backend data access logic in .
+    - **P2: Refactor Frontend State Management**: The global  was removed due to timing issues with authentication. Settings are now fetched individually in each component (, , ). This could be refactored into a more robust global state solution that loads correctly after authentication.
 
 **Completed work in this session**
-- **Feature**: Implemented full CRUD with role-based access control for **Suppliers**, **Customers**, and **Sales**.
-- **Feature**: Implemented a complete **Product Categories** system, including backend CRUD endpoints and a frontend management UI within the Products page.
-- **Feature**: Implemented **User Roles** (Admin, Pharmacien, Caissier) across the stack, with protected backend endpoints and a role-aware frontend UI. Created a **User Management** page for Admins.
-- **Feature**: Created a comprehensive **demo data seeder** () to populate the database with users, products, categories, clients, sales, etc.
-- **UI Enhancement**: Added a clickable list of demo accounts to the **Login page** for easy testing.
-- **UI Fix**: Resolved a layout issue in the Add User dialog where the role selection dropdown overlapped form buttons.
-- **User Support**: Provided extensive support for the user's local Windows environment, including:
-    - Fixing  dependency conflicts by creating a  file.
-    - Correcting  scripts to properly activate the Python virtual environment.
-    - Updating the  file with a secure .
-    - Updating a diagnostic script () to handle  version warnings.
-- **Minor Updates**: Changed a URL in the footer badge as requested.
+- **Offline-First Sync Engine**: Completed full integration into all data pages (, , etc.) and added a visual sync status indicator.
+- **Bug Fixes & Data Integrity**:
+    - Resolved backend errors caused by missing fields in older data by making Pydantic model fields optional (, ).
+    - Fixed data inconsistencies between the dashboard and detail pages by regenerating clean demo data using an improved seeder script.
+- **Feature: Sales Page Enhancement**: Implemented searchable inputs for customers and products in the New Sale form.
+- **Feature: Category Management UI**: Implemented automatic refresh of the category list on the  page after any CRUD operation on categories.
+- **Feature: Chart Sorting**: Corrected graph sorting on the  and  pages to be chronological.
+- **Feature: Business Rules (Deletion Prevention)**:
+    - Implemented backend logic to prevent deletion of products if sold or suppliers if they've made a delivery.
+    - Updated frontend to display specific error messages for these cases.
+- **Feature: Product Activation/Deactivation**: Added functionality for Admins to activate/deactivate products, with UI filters and exclusion from the sales form for inactive items.
+- **Feature: Product Uniqueness Validation**: Added backend and frontend logic to prevent the creation of products with duplicate names or barcodes.
+- **MAJOR FEATURE: Stock Valuation & Settings**:
+    - Created a new Settings page for Admins to manage stock valuation methods (FIFO, LIFO, Weighted Average) and currency.
+    - Implemented dynamic currency formatting (EUR, USD, CAD, XOF, GNF) across the entire application, including the Dashboard, Products, Sales, and Settings pages.
+    - Set the default currency to GNF as requested.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Architectural Mismatch (MongoDB vs. PostgreSQL)**
-    -   **Debug checklist**: Requires a full migration plan. This involves rewriting database logic in , creating a new database provisioning system for new tenants, and updating all Pydantic models and data access patterns.
-    -   **Why to solve this issue and what will be achieved with this?**: To fulfill the user's original, explicit requirement for a scalable and data-isolated architecture.
-    -   **Should Test frontend/backend/both after fix**: Both
-    -   **Is recurring issue?**: N
+- **Issue 1: Architectural Mismatch (MongoDB vs. PostgreSQL)**
+    - **Debug checklist**: Requires a full migration plan. This involves rewriting database logic in , creating a new database provisioning system for new tenants, and updating all Pydantic models and data access patterns.
+    - **Why to solve this issue and what will be achieved with this?**: To fulfill the user's original, explicit requirement for a scalable and data-isolated architecture.
+    - **Should Test frontend/backend/both after fix**: Both
+    - **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
 - None.
@@ -86,94 +81,89 @@ A full-stack pharmacy management application.
 
 
 **Key Technical Concepts**
-- **Frontend**: React, React Hooks (useState, useEffect, useContext), React Router, Tailwind CSS, Shadcn/UI, Axios.
-- **State Management**: React Context API (, ).
+- **Frontend**: React, React Hooks, React Router, Tailwind CSS, Shadcn/UI, Axios,  library.
+- **State Management**: React Context API (, ). Local state management for settings within components.
 - **Backend**: FastAPI, Motor (async MongoDB driver), Pydantic, JWT.
-- **Database**: MongoDB (single instance).
-- **Authorization**: Role-Based Access Control (RBAC) implemented with FastAPI dependencies/decorators.
-- **Offline**: Foundational work for an offline-first strategy using IndexedDB ( library) and a custom synchronization service.
+- **Authorization**: Role-Based Access Control (RBAC).
+- **Offline**: Completed offline-first strategy using IndexedDB and a custom sync service.
+- **Business Logic**: Stock valuation (FIFO, LIFO, Weighted Avg), deletion constraints, product uniqueness.
+- **Internationalization**: Dynamic currency formatting and display based on user settings.
 
 **key DB schema**
 - **users**: {id, email, password, name, role, tenant_id, created_at}
-- **products**: {id, name, price, stock, min_stock, **category_id**, barcode, tenant_id, created_at, updated_at}
-- **prescriptions**: {id, customer_id, doctor_name, status, tenant_id, created_at}
-- **customers**: {id, name, phone, email, address, tenant_id, created_at}
-- **suppliers**: {id, name, phone, email, address, tenant_id, created_at}
-- **sales**: {id, customer_id, items, payment_method, total, tenant_id, created_at}
-- **categories**: {id, name, color, tenant_id, created_at}
+- **products**: {id, name, price, stock, min_stock, category_id, barcode, **is_active**, tenant_id, ...}
+- **sales**: {id, customer_id, user_id, items, payment_method, total, tenant_id, ...}
+- **prescriptions**: {id, customer_id, doctor_name, medications, status, tenant_id, ...}
+- **stock_movements**: {id, product_id, type, quantity, **supplier_id**, reason, ...}
+- **settings**: {id, tenant_id, stock_valuation_method, currency, pharmacy_name, ...} (New)
 
 **changes in tech stack**
-- The user requested **PostgreSQL**, but the agent implemented **MongoDB**. This is the most significant deviation from the original requirements.
+- None. The stack remains React/FastAPI/MongoDB, despite the original request for PostgreSQL.
 
 **All files of reference**
-- : The single backend file containing all API endpoints, Pydantic models, and business logic.
-- : All pages were either created or heavily modified, including , , , , and the new .
-- : Rewritten to support all data models for offline storage.
-- : (New) Core logic for the offline synchronization engine.
-- : (New) Context to provide sync status to the app.
-- : Significantly expanded to become a full demo data seeder.
-- : Modified to show demo user accounts.
-- : Corrected to activate the virtual environment.
-- : (New) Created to resolve npm dependency issues on Windows.
+- : Heavily modified to add endpoints for settings, stock valuation, product activation, and to implement new business rules for deletion and uniqueness.
+- : New file for the application settings UI.
+- , , : Updated to consume and display data with the selected currency, and to implement new features (product status, search, etc.).
+- : New utility for formatting currency.
+- : Created and then refactored out of use for most components, but the file remains.
+- : Updated with the route for the new Settings page.
+- : Updated to add Paramètres to the navigation menu.
+- : Updated to clear old data and create new, consistent demo data, including sales for the current day.
 
 **Areas that need refactoring**:
-- The entire backend should be migrated from single-tenant MongoDB to multi-tenant PostgreSQL to meet the user's primary requirement.
-- The single  file is becoming very large and should be broken down into a more modular structure (e.g., routers for each feature, separate model files).
+- **Backend Architecture**: The entire backend should be migrated from single-tenant MongoDB to multi-tenant PostgreSQL to meet the user's primary requirement. The  file is now over 1000 lines and should be broken down into a modular structure (e.g., using FastAPI's  for each feature).
+- **Frontend State Management**: Settings are now fetched locally in each component. A more robust solution would be to fix the global context to load reliably after authentication, avoiding redundant API calls and simplifying component logic.
 
 **key api endpoints**
-- , 
-- ,  (Admin only)
-- Full CRUD for , , , , 
-- Full CRUD for  (Admin/Pharmacist only)
-- Report endpoints like 
+-  (GET, PUT): Manage application settings.
+-  (GET): Get the calculated total stock value.
+-  (PUT): Activate or deactivate a product.
+-  (POST),  (PUT): Logic updated to enforce uniqueness of name/barcode.
+-  (DELETE),  (DELETE): Logic updated to prevent deletion based on sales/delivery history.
 
 **Critical Info for New Agent**
 - **User's Language is French**: You MUST communicate in French.
-- **User's Environment is Windows**: The user relies heavily on the provided  scripts. Any instructions for local execution should be tailored for Windows and be very clear.
-- **Demo Data is Key**: The  script is now essential for setting up a functional demo environment. It must be run to populate the database.
-- **Offline Sync is In-Progress**: The largest active task is the offline sync engine. The groundwork is laid, but it's not yet integrated into the UI components. This is the highest priority task to complete.
-- **Architectural Mismatch**: Be aware that the current MongoDB implementation deviates from the user's explicit request for PostgreSQL. Do not proactively start a migration, but be prepared to discuss it if the user raises the issue.
+- **Architectural Mismatch**: The application uses MongoDB, not the requested PostgreSQL. Be prepared for this discussion. The next logical major task is this migration.
+- **Settings & Currency**: A major feature for managing settings (stock valuation, currency) has been implemented. Currency formatting is handled on the frontend via  after fetching settings from the backend.
+- **Frontend State Workaround**: The global  was problematic. The current implementation fetches settings directly in each component that needs them. Be aware of this pattern when modifying related pages.
 
 **documents and test reports created in this job**
-- /app/backend/create_correct_user.py
-- /app/backend/create-users.bat
-- /app/backend/start-backend.bat
-- /app/frontend/start-frontend.bat
-- /app/START-BACKEND.bat
-- /app/START-FRONTEND.bat
-- /app/frontend/.npmrc
+- 
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Fix ESLint error in . (Status: Completed)
-2.  **User**: The category list in the add product form is empty, and I want to search for products in that form. (Status: Completed)
-3.  **User**: The preview is not working due to an ESLint error. (Status: Completed)
-4.  **User**: List the demo accounts on the login page for easy testing. (Status: Completed)
-5.  **User**: The seeding script should create full demo data (products, categories, sales, etc.). (Status: Completed)
-6.  **User**: Adding/deleting a category doesn't refresh the lists that use it. (Status: Completed)
-7.  **User**: Implement an offline-first sync engine that syncs every 15 minutes. (Status: In Progress)
-8.  **User**: Adjust the Add User dialog layout as the dropdown covers the buttons (initial report). (Status: Completed)
-9.  **User**: Add more space to make the buttons fully visible (follow-up). (Status: Completed)
-10. **User**: Change the footer URL in . (Status: Completed)
+1.  **Request**: Check for product uniqueness (name, barcode) on creation/update. (Status: Completed)
+2.  **Request**: Set default currency to GNF. (Status: Completed)
+3.  **Request**: Fix bug where currency/method changes in Settings don't update app-wide. (Status: Completed)
+4.  **Request**: Add more currency options (USD, CAD, XOF, GNF). (Status: Completed)
+5.  **Confirmation**: User confirms the plan for the new Settings page. (Status: Handled)
+6.  **Request**: Add stock valuation methods (FIFO, LIFO, Weighted Avg) via a Settings page. (Status: Completed)
+7.  **Feedback**: User retracts a bug report about product filters, confirming they work as expected. (Status: Handled)
+8.  **Bug Report**: User reports an issue with product status filters. (Status: Resolved as user misunderstanding)
+9.  **Request**: Add the ability to activate/deactivate products. (Status: Completed)
+10. **Request**: Add business rules to prevent deleting products if sold or suppliers if they've delivered. (Status: Completed)
 
 **Project Health Check:**
-- **Working**: The application is highly functional with rich demo data and advanced features like role-based access control.
-- **In-Progress**: The offline synchronization feature is partially implemented. The core services exist but are not yet integrated into the UI pages.
+- **Working**: The application is stable and feature-rich. All user requests from this session have been completed and verified.
+- **Broken**: None.
+- **Mocked**: None.
 
 **3rd Party Integrations**
 - None.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES
+- **Testing agent used after significant changes**: YES (for the offline sync feature)
 - **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: Test scenarios were added to  for the testing agents.
-- **Known regressions**: None. The testing agent reported some false positives on the Customers/Sales UI, which were visually verified as working by the main agent.
+- **Test files created**: None.
+- **Known regressions**: None.
 
 **Credentials to test flow:**
-- Credentials are created by the  script. The main accounts are:
+- Credentials are created by the  script and listed on the login page.
     - **Admin**:  / 
     - **Pharmacien**:  / 
     - **Caissier**:  / 
-- These are also displayed on the login page for convenience.
 
 **What agent forgot to execute**
-- The agent implemented the periodic sync interval at 5 minutes in  instead of the 15 minutes requested by the user. This is a minor adjustment needed during the completion of the task.</analysis>
+- Nothing was forgotten. The agent iteratively developed and fixed features, such as the currency context implementation, until they met the user's requirements.</analysis>
