@@ -49,6 +49,26 @@ const Products = () => {
   });
   const { isOnline } = useOffline();
 
+  // Charger les settings
+  const loadAppSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      setAppSettings(response.data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  // Fonction pour formater avec la devise chargée
+  const formatAmount = (amount) => {
+    const currency = appSettings?.currency || 'EUR';
+    const symbols = { USD: '$', CAD: '$ CAD', EUR: '€', XOF: 'FCFA', GNF: 'GNF' };
+    const decimals = { USD: 2, CAD: 2, EUR: 2, XOF: 0, GNF: 0 };
+    const dec = decimals[currency] ?? 2;
+    const formatted = (amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    return `${formatted} ${symbols[currency] || currency}`;
+  };
+
   const loadCategories = async (forceRefresh = false) => {
     try {
       if (isOnline) {
