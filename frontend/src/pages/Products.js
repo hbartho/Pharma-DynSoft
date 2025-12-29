@@ -227,6 +227,17 @@ const Products = () => {
     }
   };
 
+  const handleToggleStatus = async (product) => {
+    try {
+      const response = await api.patch(`/products/${product.id}/toggle-status`);
+      toast.success(response.data.message);
+      await refreshData();
+    } catch (error) {
+      console.error('Error toggling product status:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors du changement de statut');
+    }
+  };
+
   const handleDeleteCategory = (category) => {
     setCategoryToDelete(category);
     setShowDeleteCategoryDialog(true);
