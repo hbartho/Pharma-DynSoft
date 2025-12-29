@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '../components/ui/pagination';
-import { Plus, Search, Edit, Trash2, Package, Tag, Settings, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Settings, Power, PowerOff, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
