@@ -292,7 +292,7 @@ async def create_demo_data():
     payment_methods = ["cash", "card", "check"]
     sales_created = 0
     
-    # Créer 15 ventes sur les 7 derniers jours
+    # Créer 15 ventes sur les 7 derniers jours (avec quelques ventes aujourd'hui)
     for i in range(15):
         # Sélectionner 1-4 produits aléatoires
         num_items = random.randint(1, 4)
@@ -313,6 +313,9 @@ async def create_demo_data():
         # Client aléatoire (ou anonyme)
         customer_id = random.choice(customer_ids) if random.random() > 0.3 else None
         
+        # Les 3 premières ventes sont aujourd'hui (days_ago=0)
+        days_ago = 0 if i < 3 else random.randint(1, 7)
+        
         await db.sales.insert_one({
             "id": generate_id(),
             "customer_id": customer_id,
@@ -320,11 +323,11 @@ async def create_demo_data():
             "total": round(total, 2),
             "payment_method": random.choice(payment_methods),
             "tenant_id": TENANT_ID,
-            "created_at": get_timestamp(random.randint(0, 7))
+            "created_at": get_timestamp(days_ago)
         })
         sales_created += 1
     
-    print(f"       ✓ {sales_created} vente(s) créée(s)")
+    print(f"       ✓ {sales_created} vente(s) créée(s) (dont 3 aujourd'hui)")
     
     # ============================================
     # 7. ORDONNANCES
@@ -332,23 +335,45 @@ async def create_demo_data():
     print("[7/7] Création des ordonnances...")
     
     doctors = ["Dr. Martin", "Dr. Dubois", "Dr. Laurent", "Dr. Simon", "Dr. Michel"]
-    statuses = ["pending", "completed", "cancelled"]
+    statuses = ["pending", "fulfilled", "cancelled"]
+    
+    # Médicaments de démonstration
+    demo_medications = [
+        {"name": "Amoxicilline 500mg", "dosage": "3 fois par jour", "quantity": "21 comprimés"},
+        {"name": "Doliprane 1000mg", "dosage": "En cas de douleur", "quantity": "8 comprimés"},
+        {"name": "Ibuprofène 400mg", "dosage": "2 fois par jour", "quantity": "14 comprimés"},
+        {"name": "Ventoline spray", "dosage": "2 bouffées si besoin", "quantity": "1 flacon"},
+        {"name": "Augmentin 1g", "dosage": "2 fois par jour", "quantity": "14 comprimés"},
+        {"name": "Smecta", "dosage": "3 sachets par jour", "quantity": "12 sachets"},
+        {"name": "Toplexil sirop", "dosage": "3 cuillères par jour", "quantity": "1 flacon"},
+        {"name": "Vitamine C 1000mg", "dosage": "1 fois par jour", "quantity": "30 comprimés"},
+    ]
     
     prescriptions_created = 0
+    pending_count = 0
     for i in range(8):
         customer_id = random.choice(customer_ids)
+        status = random.choices(statuses, weights=[0.5, 0.4, 0.1])[0]
+        if status == "pending":
+            pending_count += 1
+        
+        # Sélectionner 1-3 médicaments aléatoires
+        num_meds = random.randint(1, 3)
+        selected_meds = random.sample(demo_medications, num_meds)
         
         await db.prescriptions.insert_one({
             "id": generate_id(),
             "customer_id": customer_id,
             "doctor_name": random.choice(doctors),
-            "status": random.choices(statuses, weights=[0.5, 0.4, 0.1])[0],
+            "medications": selected_meds,
+            "notes": f"Ordonnance du {datetime.now().strftime('%d/%m/%Y')}" if random.random() > 0.5 else None,
+            "status": status,
             "tenant_id": TENANT_ID,
             "created_at": get_timestamp(random.randint(0, 14))
         })
         prescriptions_created += 1
     
-    print(f"       ✓ {prescriptions_created} ordonnance(s) créée(s)")
+    print(f"       ✓ {prescriptions_created} ordonnance(s) créée(s) (dont {pending_count} en attente)")
     
     # ============================================
     # RÉSUMÉ
