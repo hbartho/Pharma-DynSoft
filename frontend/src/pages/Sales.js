@@ -12,7 +12,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
 const Sales = () => {
-  const { user } = useAuth();
   const [appSettings, setAppSettings] = useState({ currency: 'GNF' });
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
