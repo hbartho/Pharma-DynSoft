@@ -7,9 +7,9 @@ Usage:
     python create_correct_user.py
 
 Les utilisateurs créés:
-    - Admin: admin@pharmaflow.com / admin123
-    - Pharmacien: pharmacien@pharmaflow.com / pharma123  
-    - Caissier: caissier@pharmaflow.com / caisse123
+    - Admin: admin@pharmaflow.com / admin123 (ADM-001)
+    - Pharmacien: pharmacien@pharmaflow.com / pharma123 (PHA-001)  
+    - Caissier: caissier@pharmaflow.com / caisse123 (CAI-001)
 """
 
 import asyncio
@@ -54,55 +54,89 @@ async def create_demo_data():
     # ============================================
     # 1. UTILISATEURS
     # ============================================
-    print("[1/7] Création des utilisateurs...")
+    print("[1/8] Création des utilisateurs...")
+    
+    # Générer des IDs fixes pour pouvoir les réutiliser dans les ventes
+    admin_id = generate_id()
+    pharmacien_id = generate_id()
+    caissier_id = generate_id()
+    demo_id = generate_id()
     
     users_to_create = [
         {
-            "id": generate_id(),
+            "id": admin_id,
             "email": "admin@pharmaflow.com",
             "password": hash_password("admin123"),
-            "name": "Administrateur",
+            "first_name": "Mamadou",
+            "last_name": "Diallo",
+            "employee_code": "ADM-001",
             "role": "admin",
             "tenant_id": TENANT_ID,
             "is_active": True,
             "created_at": get_timestamp(30)
         },
         {
-            "id": generate_id(),
+            "id": pharmacien_id,
             "email": "pharmacien@pharmaflow.com",
             "password": hash_password("pharma123"),
-            "name": "Jean Pharmacien",
+            "first_name": "Fatoumata",
+            "last_name": "Camara",
+            "employee_code": "PHA-001",
             "role": "pharmacien",
             "tenant_id": TENANT_ID,
             "is_active": True,
             "created_at": get_timestamp(25)
         },
         {
-            "id": generate_id(),
+            "id": caissier_id,
             "email": "caissier@pharmaflow.com",
             "password": hash_password("caisse123"),
-            "name": "Marie Caissière",
+            "first_name": "Ibrahima",
+            "last_name": "Barry",
+            "employee_code": "CAI-001",
             "role": "caissier",
             "tenant_id": TENANT_ID,
             "is_active": True,
             "created_at": get_timestamp(20)
         },
         {
-            "id": generate_id(),
+            "id": demo_id,
             "email": "demo@pharmaflow.com",
             "password": hash_password("demo123"),
-            "name": "Pharmacien Démo",
-            "role": "admin",
+            "first_name": "Aissatou",
+            "last_name": "Bah",
+            "employee_code": "PHA-002",
+            "role": "pharmacien",
             "tenant_id": TENANT_ID,
             "is_active": True,
             "created_at": get_timestamp(15)
         }
     ]
     
+    # Stocker les utilisateurs pour les ventes
+    user_ids = {
+        "admin": admin_id,
+        "pharmacien": pharmacien_id,
+        "caissier": caissier_id,
+        "demo": demo_id
+    }
+    
     users_created = 0
     for user_data in users_to_create:
         existing = await db.users.find_one({"email": user_data["email"]})
-        if not existing:
+        if existing:
+            # Mettre à jour l'utilisateur existant avec les nouveaux champs
+            await db.users.update_one(
+                {"email": user_data["email"]},
+                {"$set": {
+                    "first_name": user_data["first_name"],
+                    "last_name": user_data["last_name"],
+                    "employee_code": user_data["employee_code"]
+                }}
+            )
+            user_ids[user_data["role"]] = existing["id"]
+            print(f"       → Mis à jour: {user_data['first_name']} {user_data['last_name']} ({user_data['employee_code']})")
+        else:
             await db.users.insert_one(user_data)
             users_created += 1
     print(f"       ✓ {users_created} utilisateur(s) créé(s)")
@@ -110,7 +144,7 @@ async def create_demo_data():
     # ============================================
     # 2. CATÉGORIES
     # ============================================
-    print("[2/7] Création des catégories...")
+    print("[2/8] Création des catégories...")
     
     categories_data = [
         {"name": "Antibiotiques", "description": "Médicaments antibactériens", "color": "#EF4444"},
@@ -146,12 +180,12 @@ async def create_demo_data():
     # ============================================
     # 3. PRODUITS
     # ============================================
-    print("[3/7] Création des produits...")
+    print("[3/8] Création des produits...")
     
     products_data = [
         # Antibiotiques
         {"name": "Amoxicilline 500mg", "barcode": "3400930000001", "price": 8.50, "stock": 150, "min_stock": 20, "category": "Antibiotiques", "description": "Antibiotique à large spectre"},
-        {"name": "Augmentin 1g", "barcode": "3400930000002", "price": 12.90, "stock": 80, "min_stock": 15, "category": "Antibiotiques", "description": "Amoxicilline + Acide clavulanique"},
+        {"name": "Augmentin 1g", "barcode": "3400930000002", "price": 12.90, "stock": 10, "min_stock": 15, "category": "Antibiotiques", "description": "Amoxicilline + Acide clavulanique"},
         {"name": "Azithromycine 250mg", "barcode": "3400930000003", "price": 15.20, "stock": 60, "min_stock": 10, "category": "Antibiotiques", "description": "Antibiotique macrolide"},
         
         # Antidouleurs
@@ -207,6 +241,7 @@ async def create_demo_data():
                 "stock": prod_data["stock"],
                 "min_stock": prod_data["min_stock"],
                 "category_id": category_ids.get(prod_data["category"]),
+                "is_active": True,
                 "tenant_id": TENANT_ID,
                 "created_at": get_timestamp(random.randint(5, 30)),
                 "updated_at": get_timestamp(random.randint(0, 5))
@@ -219,19 +254,19 @@ async def create_demo_data():
     # ============================================
     # 4. CLIENTS
     # ============================================
-    print("[4/7] Création des clients...")
+    print("[4/8] Création des clients...")
     
     customers_data = [
-        {"name": "Jean Dupont", "phone": "06 12 34 56 78", "email": "jean.dupont@email.fr", "address": "12 Rue de la Paix, 75001 Paris"},
-        {"name": "Marie Martin", "phone": "06 23 45 67 89", "email": "marie.martin@email.fr", "address": "45 Avenue des Champs, 75008 Paris"},
-        {"name": "Pierre Bernard", "phone": "06 34 56 78 90", "email": "pierre.bernard@email.fr", "address": "8 Boulevard Haussmann, 75009 Paris"},
-        {"name": "Sophie Petit", "phone": "06 45 67 89 01", "email": "sophie.petit@email.fr", "address": "23 Rue du Commerce, 75015 Paris"},
-        {"name": "Lucas Moreau", "phone": "06 56 78 90 12", "email": "lucas.moreau@email.fr", "address": "67 Avenue Victor Hugo, 75016 Paris"},
-        {"name": "Emma Leroy", "phone": "06 67 89 01 23", "email": "emma.leroy@email.fr", "address": "15 Rue de Rivoli, 75004 Paris"},
-        {"name": "Thomas Roux", "phone": "06 78 90 12 34", "email": "thomas.roux@email.fr", "address": "92 Boulevard Saint-Germain, 75006 Paris"},
-        {"name": "Camille Fournier", "phone": "06 89 01 23 45", "email": "camille.fournier@email.fr", "address": "34 Rue de la République, 69001 Lyon"},
-        {"name": "Antoine Girard", "phone": "06 90 12 34 56", "email": "antoine.girard@email.fr", "address": "56 Cours Lafayette, 69003 Lyon"},
-        {"name": "Léa Bonnet", "phone": "06 01 23 45 67", "email": "lea.bonnet@email.fr", "address": "78 Avenue Jean Jaurès, 69007 Lyon"},
+        {"name": "Amadou Diallo", "phone": "620 12 34 56", "email": "amadou.diallo@email.gn", "address": "Quartier Madina, Conakry"},
+        {"name": "Mariama Bah", "phone": "621 23 45 67", "email": "mariama.bah@email.gn", "address": "Kaloum, Conakry"},
+        {"name": "Ousmane Camara", "phone": "622 34 56 78", "email": "ousmane.camara@email.gn", "address": "Ratoma, Conakry"},
+        {"name": "Fatoumata Sow", "phone": "623 45 67 89", "email": "fatoumata.sow@email.gn", "address": "Dixinn, Conakry"},
+        {"name": "Ibrahima Barry", "phone": "624 56 78 90", "email": "ibrahima.barry@email.gn", "address": "Matam, Conakry"},
+        {"name": "Aissatou Diallo", "phone": "625 67 89 01", "email": "aissatou.diallo@email.gn", "address": "Lambanyi, Conakry"},
+        {"name": "Mamadou Keita", "phone": "626 78 90 12", "email": "mamadou.keita@email.gn", "address": "Cosa, Conakry"},
+        {"name": "Kadiatou Sylla", "phone": "627 89 01 23", "email": "kadiatou.sylla@email.gn", "address": "Kankan Centre"},
+        {"name": "Alpha Barry", "phone": "628 90 12 34", "email": "alpha.barry@email.gn", "address": "Labé Centre"},
+        {"name": "Hawa Camara", "phone": "629 01 23 45", "email": "hawa.camara@email.gn", "address": "N'Zérékoré Centre"},
     ]
     
     customer_ids = []
@@ -258,14 +293,14 @@ async def create_demo_data():
     # ============================================
     # 5. FOURNISSEURS
     # ============================================
-    print("[5/7] Création des fournisseurs...")
+    print("[5/8] Création des fournisseurs...")
     
     suppliers_data = [
-        {"name": "Pharma Distribution", "phone": "01 23 45 67 89", "email": "contact@pharmadistrib.fr", "address": "Zone Industrielle Nord, 93100 Montreuil"},
-        {"name": "MedSupply France", "phone": "01 34 56 78 90", "email": "commandes@medsupply.fr", "address": "45 Rue de l'Industrie, 92000 Nanterre"},
-        {"name": "Laboratoires Santé+", "phone": "01 45 67 89 01", "email": "pro@santeplus.fr", "address": "12 Avenue de la Recherche, 69100 Villeurbanne"},
-        {"name": "Alliance Healthcare", "phone": "01 56 78 90 12", "email": "service@alliance-healthcare.fr", "address": "Parc d'Activités, 31000 Toulouse"},
-        {"name": "OCP Répartition", "phone": "01 67 89 01 23", "email": "contact@ocp.fr", "address": "Boulevard de l'Europe, 33000 Bordeaux"},
+        {"name": "Pharma Guinée Distribution", "phone": "622 11 22 33", "email": "contact@pharmaguinee.gn", "address": "Zone Industrielle Matoto, Conakry"},
+        {"name": "MedSupply Afrique", "phone": "621 44 55 66", "email": "commandes@medsupply-afrique.gn", "address": "Kaloum Centre, Conakry"},
+        {"name": "Laboratoires Santé+", "phone": "623 77 88 99", "email": "pro@santeplus.gn", "address": "Dixinn Port, Conakry"},
+        {"name": "Alliance Healthcare GN", "phone": "624 00 11 22", "email": "service@alliance-gn.com", "address": "Ratoma, Conakry"},
+        {"name": "OCP Guinée", "phone": "625 33 44 55", "email": "contact@ocp-guinee.gn", "address": "Matam, Conakry"},
     ]
     
     suppliers_created = 0
@@ -285,12 +320,27 @@ async def create_demo_data():
     print(f"       ✓ {suppliers_created} fournisseur(s) créé(s)")
     
     # ============================================
-    # 6. VENTES
+    # 6. VENTES (avec user_id)
     # ============================================
-    print("[6/7] Création des ventes...")
+    print("[6/8] Création des ventes...")
+    
+    # D'abord supprimer les ventes existantes pour avoir des données propres
+    await db.sales.delete_many({"tenant_id": TENANT_ID})
     
     payment_methods = ["cash", "card", "check"]
     sales_created = 0
+    
+    # Récupérer les vrais IDs des utilisateurs
+    admin_user = await db.users.find_one({"email": "admin@pharmaflow.com"})
+    pharmacien_user = await db.users.find_one({"email": "pharmacien@pharmaflow.com"})
+    caissier_user = await db.users.find_one({"email": "caissier@pharmaflow.com"})
+    
+    user_options = [
+        {"id": admin_user["id"], "role": "admin"} if admin_user else None,
+        {"id": pharmacien_user["id"], "role": "pharmacien"} if pharmacien_user else None,
+        {"id": caissier_user["id"], "role": "caissier"} if caissier_user else None,
+    ]
+    user_options = [u for u in user_options if u]  # Filtrer les None
     
     # Créer 15 ventes sur les 7 derniers jours (avec quelques ventes aujourd'hui)
     for i in range(15):
@@ -313,6 +363,9 @@ async def create_demo_data():
         # Client aléatoire (ou anonyme)
         customer_id = random.choice(customer_ids) if random.random() > 0.3 else None
         
+        # Utilisateur aléatoire pour la vente
+        sale_user = random.choice(user_options) if user_options else None
+        
         # Les 3 premières ventes sont aujourd'hui (days_ago=0)
         days_ago = 0 if i < 3 else random.randint(1, 7)
         
@@ -322,6 +375,7 @@ async def create_demo_data():
             "items": items,
             "total": round(total, 2),
             "payment_method": random.choice(payment_methods),
+            "user_id": sale_user["id"] if sale_user else None,
             "tenant_id": TENANT_ID,
             "created_at": get_timestamp(days_ago)
         })
@@ -332,9 +386,9 @@ async def create_demo_data():
     # ============================================
     # 7. ORDONNANCES
     # ============================================
-    print("[7/7] Création des ordonnances...")
+    print("[7/8] Création des ordonnances...")
     
-    doctors = ["Dr. Martin", "Dr. Dubois", "Dr. Laurent", "Dr. Simon", "Dr. Michel"]
+    doctors = ["Dr. Camara", "Dr. Diallo", "Dr. Barry", "Dr. Sylla", "Dr. Keita"]
     statuses = ["pending", "fulfilled", "cancelled"]
     
     # Médicaments de démonstration
@@ -376,33 +430,59 @@ async def create_demo_data():
     print(f"       ✓ {prescriptions_created} ordonnance(s) créée(s) (dont {pending_count} en attente)")
     
     # ============================================
+    # 8. PARAMÈTRES
+    # ============================================
+    print("[8/8] Configuration des paramètres...")
+    
+    existing_settings = await db.settings.find_one({"tenant_id": TENANT_ID})
+    if not existing_settings:
+        await db.settings.insert_one({
+            "id": generate_id(),
+            "tenant_id": TENANT_ID,
+            "stock_valuation_method": "weighted_average",
+            "currency": "GNF",
+            "pharmacy_name": "DynSoft Pharma",
+            "created_at": get_timestamp(30),
+            "updated_at": get_timestamp(0)
+        })
+        print("       ✓ Paramètres créés (Devise: GNF)")
+    else:
+        print("       → Paramètres déjà existants")
+    
+    # ============================================
     # RÉSUMÉ
     # ============================================
     print()
-    print("=" * 60)
+    print("=" * 70)
     print("   RÉSUMÉ DE LA CRÉATION")
-    print("=" * 60)
+    print("=" * 70)
     print()
     print("📋 IDENTIFIANTS DE CONNEXION:")
-    print("-" * 60)
-    print("| Rôle         | Email                      | Mot de passe |")
-    print("-" * 60)
-    print("| Admin        | admin@pharmaflow.com       | admin123     |")
-    print("| Pharmacien   | pharmacien@pharmaflow.com  | pharma123    |")
-    print("| Caissier     | caissier@pharmaflow.com    | caisse123    |")
-    print("| Demo (Admin) | demo@pharmaflow.com        | demo123      |")
-    print("-" * 60)
+    print("-" * 70)
+    print("| Code     | Rôle       | Prénom      | Nom      | Email                      | MDP       |")
+    print("-" * 70)
+    print("| ADM-001  | Admin      | Mamadou     | Diallo   | admin@pharmaflow.com       | admin123  |")
+    print("| PHA-001  | Pharmacien | Fatoumata   | Camara   | pharmacien@pharmaflow.com  | pharma123 |")
+    print("| CAI-001  | Caissier   | Ibrahima    | Barry    | caissier@pharmaflow.com    | caisse123 |")
+    print("| PHA-002  | Pharmacien | Aissatou    | Bah      | demo@pharmaflow.com        | demo123   |")
+    print("-" * 70)
+    print()
+    print("🎨 CODE COULEUR DES BADGES:")
+    print("   • 🟣 Admin (violet)     : ADM-XXX")
+    print("   • 🟢 Pharmacien (teal)  : PHA-XXX")
+    print("   • 🟡 Caissier (ambre)   : CAI-XXX")
     print()
     print("📊 DONNÉES CRÉÉES:")
+    print(f"   • {len(users_to_create)} utilisateurs")
     print(f"   • {len(categories_data)} catégories")
     print(f"   • {len(products_data)} produits")
     print(f"   • {len(customers_data)} clients")
     print(f"   • {len(suppliers_data)} fournisseurs")
-    print(f"   • 15 ventes")
+    print(f"   • 15 ventes (avec traçabilité agent)")
     print(f"   • 8 ordonnances")
     print()
     print("💡 Permissions par rôle:")
-    print("   - Admin: Accès complet + Gestion utilisateurs")
+    print("   - Admin: Accès complet + Gestion utilisateurs + Paramètres")
     print("   - Pharmacien: Produits, Ordonnances, Fournisseurs, Ventes, Clients")
     print("   - Caissier: Ventes, Clients, Tableau de bord uniquement")
     print()
