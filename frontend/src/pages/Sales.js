@@ -914,7 +914,7 @@ const Sales = () => {
               <div className="text-sm text-slate-500 bg-amber-50 p-3 rounded-lg border border-amber-200">
                 <p className="font-medium text-amber-800">⚠️ Note importante</p>
                 <p className="text-amber-700 mt-1">
-                  Le retour créera une nouvelle entrée dans l'historique des opérations. 
+                  Le retour créera une nouvelle entrée dans l&apos;historique des opérations. 
                   La vente originale ne sera pas modifiée.
                 </p>
               </div>
