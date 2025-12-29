@@ -48,9 +48,11 @@ const Products = () => {
   const loadCategories = async (forceRefresh = false) => {
     try {
       if (isOnline) {
+        const timestamp = Date.now(); // Cache buster
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {};
-        const response = await api.get('/categories', { headers });
-        setCategories([...response.data]); // Force new array reference
+        const response = await api.get(`/categories?_t=${timestamp}`, { headers });
+        console.log('Categories loaded:', response.data.length);
+        setCategories(response.data);
       }
     } catch (error) {
       console.error('Error loading categories:', error);
