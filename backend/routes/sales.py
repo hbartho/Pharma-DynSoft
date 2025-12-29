@@ -31,7 +31,7 @@ async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(get_cu
     await db.sales.insert_one(doc)
     return sale_obj
 
-@router.get("", response_model=List[Sale])
+@router.get("")
 async def get_sales(current_user: dict = Depends(get_current_user)):
     """Get all sales with user information"""
     sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
