@@ -511,7 +511,7 @@ const Sales = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-teal-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                      {sale.total?.toFixed(2) || '0.00'} €
+                      {formatAmount(sale.total || 0)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
