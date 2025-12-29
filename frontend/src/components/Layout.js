@@ -16,8 +16,17 @@ import {
   WifiOff,
   RefreshCw,
   UserCog,
+  Cloud,
+  CloudOff,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 const Layout = ({ children }) => {
   const location = useLocation();
