@@ -938,9 +938,7 @@ agent_communication:
     message: "✅ TESTS OFFLINE-FIRST SYNCHRONISATION COMPLETS RÉUSSIS - Application DynSoft Pharma entièrement fonctionnelle. Connexion admin@pharmaflow.com/admin123 réussie. Indicateur 'Synchronisé' affiché en vert avec icône cloud et bouton refresh. Navigation entre toutes les pages (produits, clients, fournisseurs) opérationnelle. Formulaires CRUD fonctionnels. Synchronisation manuelle testée avec succès. Interface 100% en français. Fonctionnalités offline-first implémentées et testées."
 
 test_plan:
-  current_focus:
-    - "Offline Sync - Indicateur de statut de synchronisation"
-    - "Offline Sync - Tracking des modifications locales"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
