@@ -578,7 +578,7 @@ const Sales = () => {
                 </div>
                 <div>
                   <p className="text-slate-500">Total</p>
-                  <p className="font-medium text-teal-700">{selectedSale.total?.toFixed(2)} €</p>
+                  <p className="font-medium text-teal-700">{formatAmount(selectedSale.total || 0)}</p>
                 </div>
               </div>
               
