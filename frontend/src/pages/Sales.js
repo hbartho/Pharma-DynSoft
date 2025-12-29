@@ -811,8 +811,11 @@ const Sales = () => {
                       {new Date(sale.created_at).toLocaleString('fr-FR')}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {sale.user_name || 'Inconnu'}
+                      <span 
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getAgentBadgeStyles(sale.user_role)}`}
+                        title={sale.user_name || 'Inconnu'}
+                      >
+                        {sale.employee_code || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900">
