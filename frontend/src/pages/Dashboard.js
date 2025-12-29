@@ -7,7 +7,6 @@ import { useSettings } from '../contexts/SettingsContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
-  const { formatAmount, refreshSettings, currency, loading: settingsLoading } = useSettings();
   const [stats, setStats] = useState({
     today_sales_count: 0,
     today_revenue: 0,
@@ -19,18 +18,35 @@ const Dashboard = () => {
   });
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState({ currency: 'EUR' });
 
-  // Charger les settings au montage
-  useEffect(() => {
-    refreshSettings();
-  }, []); // eslint-disable-line
-
-  // Charger les données du dashboard quand les settings sont prêts
-  useEffect(() => {
-    if (!settingsLoading) {
-      loadDashboardData();
+  // Charger les settings directement
+  const loadSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      setSettings(response.data);
+    } catch (error) {
+      console.error('Error loading settings:', error);
     }
-  }, [settingsLoading, currency]); // eslint-disable-line
+  };
+
+  // Fonction pour formater avec la devise chargée
+  const formatAmount = (amount) => {
+    const currency = settings?.currency || 'EUR';
+    const symbols = { USD: '$', CAD: '$ CAD', EUR: '€', XOF: 'FCFA', GNF: 'GNF' };
+    const decimals = { USD: 2, CAD: 2, EUR: 2, XOF: 0, GNF: 0 };
+    const dec = decimals[currency] ?? 2;
+    const formatted = (amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    return `${formatted} ${symbols[currency] || currency}`;
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      await loadSettings();
+      await loadDashboardData();
+    };
+    init();
+  }, []); // eslint-disable-line
 
   const loadDashboardData = async () => {
     try {
