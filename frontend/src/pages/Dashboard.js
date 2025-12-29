@@ -67,7 +67,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <StatsCard
             title="Ventes aujourd'hui"
             value={stats.today_sales_count}
@@ -79,6 +79,13 @@ const Dashboard = () => {
             value={`${stats.today_revenue.toFixed(2)} €`}
             icon={DollarSign}
             color="emerald"
+          />
+          <StatsCard
+            title="Valeur du stock"
+            value={`${stats.total_stock_value?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '0.00'} €`}
+            icon={Coins}
+            color="purple"
+            subtitle={stats.stock_valuation_method === 'fifo' ? 'FIFO' : stats.stock_valuation_method === 'lifo' ? 'LIFO' : 'Moy. Pond.'}
           />
           <StatsCard
             title="Produits en stock"
