@@ -777,6 +777,202 @@ async def sync_pull(since: Optional[str] = None, current_user: dict = Depends(ge
         "customers": customers
     }
 
+# Settings Routes
+@api_router.get("/settings")
+async def get_settings(current_user: dict = Depends(get_current_user)):
+    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
+    if not settings:
+        # Créer les paramètres par défaut
+        default_settings = Settings(
+            tenant_id=current_user['tenant_id'],
+            stock_valuation_method="weighted_average",
+            currency="EUR"
+        )
+        doc = default_settings.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        await db.settings.insert_one(doc)
+        settings = doc
+    return settings
+
+@api_router.put("/settings")
+async def update_settings(settings_data: SettingsUpdate, current_user: dict = Depends(require_role(["admin"]))):
+    update_data = {k: v for k, v in settings_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.settings.update_one(
+        {"tenant_id": current_user['tenant_id']},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
+    return settings
+
+# Stock Valuation Functions
+async def calculate_fifo_value(product_id: str, tenant_id: str) -> dict:
+    """Calcul FIFO: les premiers entrés sont les premiers sortis"""
+    movements = await db.stock_movements.find({
+        "tenant_id": tenant_id,
+        "product_id": product_id,
+        "type": "in"
+    }, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    
+    # Calculer les sorties totales
+    out_movements = await db.stock_movements.find({
+        "tenant_id": tenant_id,
+        "product_id": product_id,
+        "type": "out"
+    }, {"_id": 0}).to_list(1000)
+    total_out = sum(m.get('quantity', 0) for m in out_movements)
+    
+    # Appliquer FIFO
+    remaining_out = total_out
+    total_value = 0
+    total_qty = 0
+    
+    for m in movements:
+        qty = m.get('quantity', 0)
+        price = m.get('unit_price', 0)
+        
+        if remaining_out >= qty:
+            remaining_out -= qty
+        else:
+            available = qty - remaining_out
+            remaining_out = 0
+            total_value += available * price
+            total_qty += available
+    
+    return {
+        "total_quantity": total_qty,
+        "total_value": round(total_value, 2),
+        "unit_cost": round(total_value / total_qty, 2) if total_qty > 0 else 0
+    }
+
+async def calculate_lifo_value(product_id: str, tenant_id: str) -> dict:
+    """Calcul LIFO: les derniers entrés sont les premiers sortis"""
+    movements = await db.stock_movements.find({
+        "tenant_id": tenant_id,
+        "product_id": product_id,
+        "type": "in"
+    }, {"_id": 0}).sort("created_at", -1).to_list(1000)  # Tri décroissant
+    
+    out_movements = await db.stock_movements.find({
+        "tenant_id": tenant_id,
+        "product_id": product_id,
+        "type": "out"
+    }, {"_id": 0}).to_list(1000)
+    total_out = sum(m.get('quantity', 0) for m in out_movements)
+    
+    # Appliquer LIFO
+    remaining_out = total_out
+    total_value = 0
+    total_qty = 0
+    
+    for m in movements:
+        qty = m.get('quantity', 0)
+        price = m.get('unit_price', 0)
+        
+        if remaining_out >= qty:
+            remaining_out -= qty
+        else:
+            available = qty - remaining_out
+            remaining_out = 0
+            total_value += available * price
+            total_qty += available
+    
+    return {
+        "total_quantity": total_qty,
+        "total_value": round(total_value, 2),
+        "unit_cost": round(total_value / total_qty, 2) if total_qty > 0 else 0
+    }
+
+async def calculate_weighted_average_value(product_id: str, tenant_id: str) -> dict:
+    """Calcul Moyenne Pondérée: coût moyen de toutes les entrées"""
+    movements = await db.stock_movements.find({
+        "tenant_id": tenant_id,
+        "product_id": product_id,
+        "type": "in"
+    }, {"_id": 0}).to_list(1000)
+    
+    total_cost = sum(m.get('quantity', 0) * m.get('unit_price', 0) for m in movements)
+    total_in_qty = sum(m.get('quantity', 0) for m in movements)
+    
+    out_movements = await db.stock_movements.find({
+        "tenant_id": tenant_id,
+        "product_id": product_id,
+        "type": "out"
+    }, {"_id": 0}).to_list(1000)
+    total_out = sum(m.get('quantity', 0) for m in out_movements)
+    
+    current_qty = total_in_qty - total_out
+    avg_cost = total_cost / total_in_qty if total_in_qty > 0 else 0
+    
+    return {
+        "total_quantity": current_qty,
+        "total_value": round(current_qty * avg_cost, 2),
+        "unit_cost": round(avg_cost, 2)
+    }
+
+@api_router.get("/stock/valuation/{product_id}")
+async def get_product_stock_valuation(product_id: str, current_user: dict = Depends(get_current_user)):
+    """Obtenir la valorisation du stock pour un produit spécifique"""
+    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
+    method = settings.get('stock_valuation_method', 'weighted_average') if settings else 'weighted_average'
+    
+    if method == 'fifo':
+        valuation = await calculate_fifo_value(product_id, current_user['tenant_id'])
+    elif method == 'lifo':
+        valuation = await calculate_lifo_value(product_id, current_user['tenant_id'])
+    else:
+        valuation = await calculate_weighted_average_value(product_id, current_user['tenant_id'])
+    
+    valuation['method'] = method
+    return valuation
+
+@api_router.get("/stock/valuation")
+async def get_total_stock_valuation(current_user: dict = Depends(get_current_user)):
+    """Obtenir la valorisation totale du stock"""
+    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
+    method = settings.get('stock_valuation_method', 'weighted_average') if settings else 'weighted_average'
+    
+    products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    
+    total_value = 0
+    products_valuation = []
+    
+    for product in products:
+        if method == 'fifo':
+            valuation = await calculate_fifo_value(product['id'], current_user['tenant_id'])
+        elif method == 'lifo':
+            valuation = await calculate_lifo_value(product['id'], current_user['tenant_id'])
+        else:
+            valuation = await calculate_weighted_average_value(product['id'], current_user['tenant_id'])
+        
+        # Si pas de mouvements, utiliser le prix de vente comme estimation
+        if valuation['total_value'] == 0 and product.get('stock', 0) > 0:
+            estimated_cost = product.get('price', 0) * 0.7  # Estimation: 70% du prix de vente
+            valuation['total_value'] = round(product['stock'] * estimated_cost, 2)
+            valuation['unit_cost'] = round(estimated_cost, 2)
+            valuation['total_quantity'] = product['stock']
+            valuation['estimated'] = True
+        
+        total_value += valuation['total_value']
+        products_valuation.append({
+            "product_id": product['id'],
+            "product_name": product['name'],
+            "stock": product.get('stock', 0),
+            **valuation
+        })
+    
+    return {
+        "method": method,
+        "total_value": round(total_value, 2),
+        "products_count": len(products),
+        "currency": settings.get('currency', 'EUR') if settings else 'EUR',
+        "products": products_valuation
+    }
+
 # Reports Routes
 @api_router.get("/reports/dashboard")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
