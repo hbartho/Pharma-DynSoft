@@ -72,6 +72,7 @@ class Product(BaseModel):
     stock: int
     min_stock: int = 10
     category_id: Optional[str] = None
+    is_active: bool = True  # Produit actif par défaut
     tenant_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -84,6 +85,7 @@ class ProductCreate(BaseModel):
     stock: int
     min_stock: int = 10
     category_id: Optional[str] = None
+    is_active: bool = True  # Produit actif par défaut
 
 # Category Model
 class Category(BaseModel):
