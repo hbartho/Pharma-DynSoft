@@ -627,6 +627,18 @@ async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, curre
 
 @api_router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(supplier_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    # Vérifier si le fournisseur a déjà livré au moins une fois (mouvement de stock de type "in")
+    deliveries_count = await db.stock_movements.count_documents({
+        "tenant_id": current_user['tenant_id'],
+        "supplier_id": supplier_id,
+        "type": "in"
+    })
+    if deliveries_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Impossible de supprimer ce fournisseur : il a effectué {deliveries_count} livraison(s). Vous pouvez le désactiver en modifiant ses informations."
+        )
+    
     result = await db.suppliers.delete_one({"id": supplier_id, "tenant_id": current_user['tenant_id']})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Supplier not found")
