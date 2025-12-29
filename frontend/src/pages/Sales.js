@@ -691,20 +691,20 @@ const Sales = () => {
                           size="sm"
                           onClick={() => handleViewDetails(sale)}
                           data-testid={`view-sale-${sale.id}`}
+                          title="Voir les détails"
                         >
                           <Eye className="w-4 h-4" strokeWidth={1.5} />
                         </Button>
-                        {isAdmin && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteClick(sale)}
-                            data-testid={`delete-sale-${sale.id}`}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generateSalePDF(sale)}
+                          data-testid={`pdf-sale-${sale.id}`}
+                          className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                          title="Télécharger le reçu PDF"
+                        >
+                          <FileText className="w-4 h-4" strokeWidth={1.5} />
+                        </Button>
                       </div>
                     </td>
                   </tr>
