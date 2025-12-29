@@ -216,7 +216,12 @@ const Products = () => {
       setProductToDelete(null);
     } catch (error) {
       console.error('Error deleting product:', error);
-      toast.error('Erreur lors de la suppression');
+      // Afficher le message d'erreur du serveur (règle d'affaires)
+      const errorMessage = error.response?.data?.detail || 'Erreur lors de la suppression';
+      toast.error(errorMessage);
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
+    }
     }
   };
 
