@@ -163,6 +163,7 @@ const Sales = () => {
       toast.success('Vente enregistrée avec succès');
       setCart([]);
       setSelectedCustomer('');
+      setCustomerSearch('');
       setPaymentMethod('cash');
       setProductSearch('');
       setShowDialog(false);
