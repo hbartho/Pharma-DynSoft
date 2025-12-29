@@ -381,6 +381,111 @@ const Sales = () => {
     toast.success('Document PDF généré');
   };
 
+  // Fonction pour ouvrir le dialogue de retour
+  const handleReturnClick = async (sale) => {
+    setSelectedSale(sale);
+    
+    // Charger les retours existants pour cette vente
+    try {
+      const returnsRes = await api.get(`/returns/sale/${sale.id}`);
+      const existingReturns = returnsRes.data;
+      
+      // Calculer les quantités déjà retournées par produit
+      const returnedQuantities = {};
+      existingReturns.forEach(ret => {
+        ret.items.forEach(item => {
+          returnedQuantities[item.product_id] = (returnedQuantities[item.product_id] || 0) + item.quantity;
+        });
+      });
+      
+      // Initialiser les articles de retour avec quantité 0
+      const items = sale.items.map(item => ({
+        product_id: item.product_id,
+        name: item.name,
+        price: item.price,
+        sold_quantity: item.quantity,
+        returned_quantity: returnedQuantities[item.product_id] || 0,
+        return_quantity: 0
+      }));
+      
+      setReturnItems(items);
+      setReturnReason('');
+      setShowReturnDialog(true);
+    } catch (error) {
+      console.error('Error loading returns:', error);
+      // Si erreur, initialiser sans retours existants
+      const items = sale.items.map(item => ({
+        product_id: item.product_id,
+        name: item.name,
+        price: item.price,
+        sold_quantity: item.quantity,
+        returned_quantity: 0,
+        return_quantity: 0
+      }));
+      setReturnItems(items);
+      setReturnReason('');
+      setShowReturnDialog(true);
+    }
+  };
+
+  // Mettre à jour la quantité de retour
+  const updateReturnQuantity = (productId, quantity) => {
+    setReturnItems(returnItems.map(item => {
+      if (item.product_id === productId) {
+        const maxReturn = item.sold_quantity - item.returned_quantity;
+        const newQty = Math.max(0, Math.min(parseInt(quantity) || 0, maxReturn));
+        return { ...item, return_quantity: newQty };
+      }
+      return item;
+    }));
+  };
+
+  // Calculer le total du remboursement
+  const calculateRefundTotal = () => {
+    return returnItems.reduce((sum, item) => sum + (item.price * item.return_quantity), 0);
+  };
+
+  // Soumettre le retour
+  const handleReturnSubmit = async () => {
+    const itemsToReturn = returnItems.filter(item => item.return_quantity > 0);
+    
+    if (itemsToReturn.length === 0) {
+      toast.error('Veuillez sélectionner au moins un article à retourner');
+      return;
+    }
+    
+    try {
+      await api.post('/returns', {
+        sale_id: selectedSale.id,
+        items: itemsToReturn.map(item => ({
+          product_id: item.product_id,
+          quantity: item.return_quantity
+        })),
+        reason: returnReason || null
+      });
+      
+      toast.success('Retour enregistré avec succès');
+      setShowReturnDialog(false);
+      setSelectedSale(null);
+      await refreshData();
+    } catch (error) {
+      console.error('Error creating return:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'enregistrement du retour');
+    }
+  };
+
+  // Charger l'historique des opérations
+  const loadOperationsHistory = async () => {
+    try {
+      const historyRes = await api.get('/returns/history');
+      setOperationsHistory(historyRes.data);
+      setShowHistoryDialog(true);
+    } catch (error) {
+      console.error('Error loading history:', error);
+      toast.error('Erreur lors du chargement de l\'historique');
+    }
+  };
+
   const getCustomerName = (customerId) => {
     if (!customerId) return 'Client anonyme';
     const customer = customers.find(c => c.id === customerId);
