@@ -23,12 +23,21 @@ const Reports = () => {
     }
   };
 
+  // Transformer et trier les données par date croissante
   const chartData = salesData
-    ? Object.entries(salesData.daily_stats).map(([date, data]) => ({
-        date: new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-        revenue: data.revenue,
-        count: data.count,
-      }))
+    ? Object.entries(salesData.daily_stats)
+        .map(([date, data]) => ({
+          date,
+          dateFormatted: new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+          revenue: data.revenue,
+          count: data.count,
+        }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map(({ dateFormatted, revenue, count }) => ({
+          date: dateFormatted,
+          revenue,
+          count,
+        }))
     : [];
 
   return (
