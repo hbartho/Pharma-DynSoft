@@ -251,7 +251,7 @@ const Settings = () => {
               <div className="p-4 bg-amber-50 rounded-lg">
                 <p className="text-sm text-amber-700 mb-1">Coût moyen par produit</p>
                 <p className="text-2xl font-bold text-amber-900">
-                  {(stockValuation.total_value / stockValuation.products_count || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {stockValuation.currency}
+                  {formatCurrency(stockValuation.total_value / stockValuation.products_count || 0, settings.currency)}
                 </p>
               </div>
             </div>
@@ -272,13 +272,13 @@ const Settings = () => {
                         <div>
                           <p className="font-medium text-slate-900">{product.product_name}</p>
                           <p className="text-sm text-slate-500">
-                            {product.stock} unités × {product.unit_cost.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {stockValuation.currency}
+                            {product.stock} unités × {formatCurrency(product.unit_cost, settings.currency)}
                             {product.estimated && <span className="ml-2 text-amber-600">(estimé)</span>}
                           </p>
                         </div>
                       </div>
                       <p className="font-semibold text-slate-900">
-                        {product.total_value.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {stockValuation.currency}
+                        {formatCurrency(product.total_value, settings.currency)}
                       </p>
                     </div>
                   ))}
