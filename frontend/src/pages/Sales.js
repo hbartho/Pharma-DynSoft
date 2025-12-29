@@ -188,30 +188,194 @@ const Sales = () => {
     setShowDetailDialog(true);
   };
 
-  const handleDeleteClick = (sale) => {
-    setSaleToDelete(sale);
-    setShowDeleteDialog(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!saleToDelete) return;
+  // Fonction pour générer et télécharger le PDF de la vente
+  const generateSalePDF = (sale) => {
+    const customerName = getCustomerName(sale.customer_id);
+    const saleDate = new Date(sale.created_at).toLocaleString('fr-FR');
+    const paymentLabel = getPaymentLabel(sale.payment_method);
     
-    try {
-      if (isOnline) {
-        await api.delete(`/sales/${saleToDelete.id}`);
-        toast.success('Vente supprimée et stock restauré');
-        await refreshData();
-      } else {
-        await deleteFromDB('sales', saleToDelete.id);
-        toast.success('Vente supprimée (hors ligne)');
-        await loadData();
-      }
-      setShowDeleteDialog(false);
-      setSaleToDelete(null);
-    } catch (error) {
-      console.error('Error deleting sale:', error);
-      toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
-    }
+    // Créer le contenu HTML pour le PDF
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Reçu de vente - ${saleDate}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            padding: 40px; 
+            max-width: 800px; 
+            margin: 0 auto;
+            color: #1e293b;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            padding-bottom: 20px; 
+            border-bottom: 2px solid #0d9488;
+          }
+          .header h1 { 
+            color: #0d9488; 
+            font-size: 28px; 
+            margin-bottom: 5px;
+          }
+          .header p { 
+            color: #64748b; 
+            font-size: 14px;
+          }
+          .info-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+          }
+          .info-item label { 
+            display: block; 
+            font-size: 12px; 
+            color: #64748b; 
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .info-item span { 
+            font-size: 16px; 
+            font-weight: 600;
+            color: #1e293b;
+          }
+          .items-section { margin-bottom: 30px; }
+          .items-section h3 { 
+            font-size: 16px; 
+            margin-bottom: 15px; 
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse;
+          }
+          th { 
+            text-align: left; 
+            padding: 12px; 
+            background: #f1f5f9; 
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+          }
+          th:last-child { text-align: right; }
+          td { 
+            padding: 12px; 
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+          }
+          td:last-child { 
+            text-align: right; 
+            font-weight: 600;
+          }
+          .total-row { 
+            background: #0d9488; 
+            color: white;
+          }
+          .total-row td { 
+            padding: 16px 12px; 
+            font-size: 18px; 
+            font-weight: 700;
+            border: none;
+          }
+          .footer { 
+            text-align: center; 
+            margin-top: 40px; 
+            padding-top: 20px; 
+            border-top: 1px solid #e2e8f0;
+            color: #94a3b8;
+            font-size: 12px;
+          }
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${appSettings?.pharmacy_name || 'DynSoft Pharma'}</h1>
+          <p>Reçu de vente</p>
+        </div>
+        
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Date et heure</label>
+            <span>${saleDate}</span>
+          </div>
+          <div class="info-item">
+            <label>Client</label>
+            <span>${customerName}</span>
+          </div>
+          <div class="info-item">
+            <label>Mode de paiement</label>
+            <span>${paymentLabel}</span>
+          </div>
+          <div class="info-item">
+            <label>Référence</label>
+            <span>${sale.id?.substring(0, 8).toUpperCase() || 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div class="items-section">
+          <h3>Articles</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Prix unitaire</th>
+                <th>Quantité</th>
+                <th>Sous-total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sale.items?.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${formatAmount(item.price || 0)}</td>
+                  <td>${item.quantity}</td>
+                  <td>${formatAmount((item.price || 0) * item.quantity)}</td>
+                </tr>
+              `).join('') || ''}
+              <tr class="total-row">
+                <td colspan="3">TOTAL</td>
+                <td>${formatAmount(sale.total || 0)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="footer">
+          <p>Merci pour votre achat !</p>
+          <p style="margin-top: 5px;">Document généré le ${new Date().toLocaleString('fr-FR')}</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    // Ouvrir une nouvelle fenêtre et imprimer/sauvegarder en PDF
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Attendre le chargement puis lancer l'impression
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+    
+    toast.success('Document PDF généré');
   };
 
   const getCustomerName = (customerId) => {
