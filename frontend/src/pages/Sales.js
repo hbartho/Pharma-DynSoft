@@ -741,6 +741,7 @@ const Sales = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Search */}
