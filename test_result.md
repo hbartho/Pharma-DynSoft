@@ -918,6 +918,78 @@ frontend:
         agent: "testing"
         comment: "✅ TESTÉ - Service de synchronisation opérationnel. Bouton de sync manuel fonctionnel avec [data-testid='sync-button']. Animation de rotation détectée lors du clic. Auto-sync configuré à 15 minutes comme spécifié."
 
+
+
+#====================================================================================================
+# Bug Fixes - Data Issues Resolved
+#====================================================================================================
+
+backend_fixes:
+  - task: "Fix Sales API - user_id field validation error"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Changed Sale model user_id from required (str) to optional (Optional[str] = None). This fixed ResponseValidationError for existing sales data."
+
+  - task: "Fix Prescriptions API - medications field validation error"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Changed Prescription model medications from required (List[Dict]) to optional with default empty list (List[Dict] = Field(default_factory=list)). Fixed ResponseValidationError for existing prescriptions."
+
+  - task: "Fix Demo Data - Add medications to prescriptions and sales today"
+    implemented: true
+    working: true
+    file: "/app/backend/create_correct_user.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Updated seeder script to: 1) Add medication details (name, dosage, quantity) to all prescriptions. 2) Create 3 sales for today (not just random days). Dashboard now shows correct today_sales_count and today_revenue."
+
+frontend_improvements:
+  - task: "Sales Form - Client search by name or phone"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Sales.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Replaced simple dropdown with searchable input. Users can now search clients by name or phone number. Shows dropdown with matching results including phone numbers."
+
+  - task: "Sales Form - Product search by name or barcode"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Sales.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Enhanced product search to filter by both name AND barcode. Results now show barcode and stock level. Placeholder text updated to indicate barcode scanning capability."
+
+agent_communication:
+  - agent: "main"
+    message: "BUG FIXES COMPLETED: 1) Fixed Sales API user_id validation error. 2) Fixed Prescriptions API medications validation error. 3) Updated seeder script to add medications to prescriptions and create sales for today. 4) Enhanced Sales form with client search (by name/phone) and product search (by name/barcode). Dashboard now shows correct data: 3 sales today, 121.80€ revenue, 8 pending prescriptions."
+
   - task: "Offline Sync - Contexte Offline avec compteur modifications"
     implemented: true
     working: true
