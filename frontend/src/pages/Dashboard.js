@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
-import { DollarSign, Package, AlertTriangle, FileText } from 'lucide-react';
+import { DollarSign, Package, AlertTriangle, FileText, Coins } from 'lucide-react';
 import api from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -12,6 +12,8 @@ const Dashboard = () => {
     total_products: 0,
     low_stock_count: 0,
     pending_prescriptions: 0,
+    total_stock_value: 0,
+    stock_valuation_method: 'weighted_average',
   });
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
