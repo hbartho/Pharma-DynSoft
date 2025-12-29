@@ -352,15 +352,25 @@ const Products = () => {
     )
   );
 
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
-    const matchesStatus = filterStatus === 'all' || 
-      (filterStatus === 'active' && p.is_active !== false) || 
-      (filterStatus === 'inactive' && p.is_active === false);
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const filteredProducts = products
+    .filter((p) => {
+      const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
+      const matchesStatus = filterStatus === 'all' || 
+        (filterStatus === 'active' && p.is_active !== false) || 
+        (filterStatus === 'inactive' && p.is_active === false);
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    // Trier: produits nécessitant réapprovisionnement en premier
+    .sort((a, b) => {
+      const aLowStock = a.stock <= a.min_stock;
+      const bLowStock = b.stock <= b.min_stock;
+      if (aLowStock && !bLowStock) return -1;
+      if (!aLowStock && bLowStock) return 1;
+      // Si même statut, trier par nom
+      return a.name.localeCompare(b.name);
+    });
 
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const startIndex = (currentPage - 1) * productsPerPage;
