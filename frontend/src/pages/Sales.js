@@ -975,14 +975,20 @@ const Sales = () => {
               </div>
 
               <div>
-                <Label htmlFor="return-reason">Motif du retour (optionnel)</Label>
+                <Label htmlFor="return-reason">
+                  Motif du retour <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="return-reason"
                   placeholder="Ex: Produit endommagé, erreur de commande..."
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
-                  className="mt-1"
+                  className={`mt-1 ${!returnReason.trim() && 'border-red-300 focus:border-red-500'}`}
+                  required
                 />
+                {!returnReason.trim() && (
+                  <p className="text-xs text-red-500 mt-1">Ce champ est obligatoire</p>
+                )}
               </div>
 
               <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg border border-amber-200">
