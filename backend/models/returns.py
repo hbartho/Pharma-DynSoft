@@ -17,4 +17,4 @@ class SaleReturn(BaseModel):
 class SaleReturnCreate(BaseModel):
     sale_id: str
     items: List[Dict[str, Any]]  # [{product_id, quantity}]
-    reason: Optional[str] = None
+    reason: str  # Motif obligatoire
