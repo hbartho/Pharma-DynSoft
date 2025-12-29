@@ -771,39 +771,6 @@ const Sales = () => {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Dialogue de confirmation de suppression */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Confirmer la suppression
-            </AlertDialogTitle>
-            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
-              Êtes-vous sûr de vouloir supprimer cette vente de {formatAmount(saleToDelete?.total || 0)} ?
-              Le stock des produits sera restauré. Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel 
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setSaleToDelete(null);
-              }}
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
-              Annuler
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Layout>
   );
 };
