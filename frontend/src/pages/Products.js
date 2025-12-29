@@ -736,14 +736,18 @@ const Products = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentProducts.map((product) => (
+          {currentProducts.map((product) => {
+            const needsRestock = product.stock <= product.min_stock;
+            return (
             <div
               key={product.id}
               data-testid={`product-card-${product.id}`}
               className={`p-4 rounded-xl bg-white border transition-all cursor-pointer ${
                 product.is_active === false 
                   ? 'border-red-200 bg-red-50/30 opacity-75' 
-                  : 'border-slate-100 hover:border-teal-200'
+                  : needsRestock
+                    ? 'border-amber-300 bg-amber-50/30'
+                    : 'border-slate-100 hover:border-teal-200'
               }`}
             >
               <div className="flex items-start justify-between mb-3">
@@ -757,6 +761,12 @@ const Products = () => {
                         Désactivé
                       </span>
                     )}
+                    {needsRestock && product.is_active !== false && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Réappro.
+                      </span>
+                    )}
                   </div>
                   {product.barcode && (
                     <p className="text-sm text-slate-500" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
@@ -764,8 +774,12 @@ const Products = () => {
                     </p>
                   )}
                 </div>
-                <div className="p-2 bg-teal-50 rounded-lg">
-                  <Package className="w-5 h-5 text-teal-700" strokeWidth={1.5} />
+                <div className={`p-2 rounded-lg ${needsRestock && product.is_active !== false ? 'bg-amber-100' : 'bg-teal-50'}`}>
+                  {needsRestock && product.is_active !== false ? (
+                    <AlertTriangle className="w-5 h-5 text-amber-600" strokeWidth={1.5} />
+                  ) : (
+                    <Package className="w-5 h-5 text-teal-700" strokeWidth={1.5} />
+                  )}
                 </div>
               </div>
               
