@@ -589,9 +589,9 @@ const Sales = () => {
                     <div key={index} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-slate-500">{item.price?.toFixed(2)} € × {item.quantity}</p>
+                        <p className="text-sm text-slate-500">{formatAmount(item.price || 0)} × {item.quantity}</p>
                       </div>
-                      <p className="font-medium">{(item.price * item.quantity).toFixed(2)} €</p>
+                      <p className="font-medium">{formatAmount((item.price || 0) * item.quantity)}</p>
                     </div>
                   ))}
                 </div>
