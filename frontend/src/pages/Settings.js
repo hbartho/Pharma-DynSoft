@@ -148,11 +148,11 @@ const Settings = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="USD">Dollar US ($)</SelectItem>
+                    <SelectItem value="CAD">Dollar CAD ($ CAD)</SelectItem>
                     <SelectItem value="EUR">Euro (€)</SelectItem>
-                    <SelectItem value="USD">Dollar ($)</SelectItem>
                     <SelectItem value="XOF">Franc CFA (FCFA)</SelectItem>
-                    <SelectItem value="MAD">Dirham (MAD)</SelectItem>
-                    <SelectItem value="TND">Dinar Tunisien (TND)</SelectItem>
+                    <SelectItem value="GNF">Franc Guinéen (GNF)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
