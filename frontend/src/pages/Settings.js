@@ -56,7 +56,9 @@ const Settings = () => {
     try {
       await api.put('/settings', settings);
       toast.success('Paramètres enregistrés avec succès');
-      // Recharger la valorisation avec la nouvelle méthode
+      // Rafraîchir le contexte global des settings
+      refreshSettings();
+      // Recharger la valorisation avec la nouvelle méthode et devise
       await loadStockValuation();
     } catch (error) {
       console.error('Error saving settings:', error);
