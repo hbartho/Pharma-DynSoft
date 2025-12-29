@@ -384,7 +384,7 @@ const Sales = () => {
                               Stock: {product.stock} {product.stock <= 0 && '(Rupture)'}
                             </p>
                           </div>
-                          <p className="font-medium text-teal-700">{product.price.toFixed(2)} €</p>
+                          <p className="font-medium text-teal-700">{formatAmount(product.price)}</p>
                         </button>
                       ))}
                     </div>
