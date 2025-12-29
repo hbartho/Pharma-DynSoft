@@ -10,6 +10,10 @@ router = APIRouter(prefix="/returns", tags=["Returns"])
 @router.post("", response_model=SaleReturn)
 async def create_return(return_data: SaleReturnCreate, current_user: dict = Depends(get_current_user)):
     """Créer un retour d'articles pour une vente"""
+    # Vérifier que le motif est fourni
+    if not return_data.reason or not return_data.reason.strip():
+        raise HTTPException(status_code=400, detail="Le motif du retour est obligatoire")
+    
     # Vérifier que la vente existe
     sale = await db.sales.find_one({"id": return_data.sale_id, "tenant_id": current_user['tenant_id']})
     if not sale:
