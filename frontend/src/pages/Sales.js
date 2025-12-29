@@ -1058,9 +1058,14 @@ const Sales = () => {
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">
-                            {op.type === 'sale' ? 'Vente' : 'Retour'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-slate-900">
+                              {op.type === 'sale' ? 'Vente' : 'Retour'}
+                            </p>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {op.user_name || 'Inconnu'}
+                            </span>
+                          </div>
                           <p className="text-sm text-slate-500">
                             {new Date(op.date).toLocaleString('fr-FR')}
                           </p>
