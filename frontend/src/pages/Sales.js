@@ -453,6 +453,11 @@ const Sales = () => {
       toast.error('Veuillez sélectionner au moins un article à retourner');
       return;
     }
+
+    if (!returnReason.trim()) {
+      toast.error('Le motif du retour est obligatoire');
+      return;
+    }
     
     try {
       await api.post('/returns', {
@@ -461,7 +466,7 @@ const Sales = () => {
           product_id: item.product_id,
           quantity: item.return_quantity
         })),
-        reason: returnReason || null
+        reason: returnReason.trim()
       });
       
       toast.success('Retour enregistré avec succès');
