@@ -384,7 +384,7 @@ const Sales = () => {
                     </div>
                   )}
                   {productSearch && filteredProducts.length === 0 && (
-                    <p className="mt-2 text-sm text-slate-500">Aucun produit trouvé pour "{productSearch}"</p>
+                    <p className="mt-2 text-sm text-slate-500">Aucun produit trouvé pour &quot;{productSearch}&quot;</p>
                   )}
                 </div>
 
