@@ -270,26 +270,69 @@ const Sales = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6" data-testid="sale-form">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  {/* Client Search */}
+                  <div className="relative">
                     <Label htmlFor="customer">Client (optionnel)</Label>
-                    <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                      <SelectTrigger data-testid="customer-select">
-                        <SelectValue placeholder="Sélectionner un client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Aucun client</SelectItem>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </SelectItem>
+                    <div className="relative mt-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" strokeWidth={1.5} />
+                      <Input
+                        placeholder="Rechercher un client par nom ou téléphone..."
+                        value={customerSearch}
+                        onChange={(e) => {
+                          setCustomerSearch(e.target.value);
+                          setShowCustomerDropdown(true);
+                          if (!e.target.value) {
+                            setSelectedCustomer('');
+                          }
+                        }}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        data-testid="customer-search-input"
+                        className="pl-9"
+                      />
+                    </div>
+                    {showCustomerDropdown && customerSearch && filteredCustomers.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCustomer('');
+                            setCustomerSearch('');
+                            setShowCustomerDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-500 border-b border-slate-100"
+                        >
+                          Aucun client (vente anonyme)
+                        </button>
+                        {filteredCustomers.map((customer) => (
+                          <button
+                            key={customer.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomer(customer.id);
+                              setCustomerSearch(customer.name);
+                              setShowCustomerDropdown(false);
+                            }}
+                            data-testid={`select-customer-${customer.id}`}
+                            className="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors"
+                          >
+                            <p className="font-medium text-slate-900">{customer.name}</p>
+                            {customer.phone && (
+                              <p className="text-sm text-slate-500">{customer.phone}</p>
+                            )}
+                          </button>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    )}
+                    {selectedCustomer && (
+                      <p className="mt-1 text-sm text-teal-600">
+                        ✓ Client sélectionné: {customers.find(c => c.id === selectedCustomer)?.name}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="payment">Mode de paiement</Label>
                     <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger data-testid="payment-select">
+                      <SelectTrigger data-testid="payment-select" className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -303,11 +346,11 @@ const Sales = () => {
 
                 {/* Product Search */}
                 <div>
-                  <Label>Rechercher un produit</Label>
+                  <Label>Rechercher un produit (par nom ou code-barres)</Label>
                   <div className="relative mt-2">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
                     <Input
-                      placeholder="Rechercher..."
+                      placeholder="Rechercher par nom ou scanner le code-barres..."
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       data-testid="product-search-input"
@@ -316,7 +359,7 @@ const Sales = () => {
                   </div>
                   {productSearch && filteredProducts.length > 0 && (
                     <div className="mt-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg">
-                      {filteredProducts.slice(0, 5).map((product) => (
+                      {filteredProducts.slice(0, 8).map((product) => (
                         <button
                           key={product.id}
                           type="button"
@@ -329,6 +372,7 @@ const Sales = () => {
                         >
                           <div>
                             <p className="font-medium text-slate-900">{product.name}</p>
+                            <p className="text-xs text-slate-400">{product.barcode || 'Pas de code-barres'}</p>
                             <p className={`text-sm ${product.stock <= 0 ? 'text-red-500' : 'text-slate-500'}`}>
                               Stock: {product.stock} {product.stock <= 0 && '(Rupture)'}
                             </p>
@@ -339,7 +383,7 @@ const Sales = () => {
                     </div>
                   )}
                   {productSearch && filteredProducts.length === 0 && (
-                    <p className="mt-2 text-sm text-slate-500">Aucun produit trouvé</p>
+                    <p className="mt-2 text-sm text-slate-500">Aucun produit trouvé pour "{productSearch}"</p>
                   )}
                 </div>
 
