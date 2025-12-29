@@ -116,31 +116,97 @@ const Layout = ({ children }) => {
         </nav>
 
         <div className="p-4 border-t border-slate-200 space-y-3">
-          {/* Sync Status */}
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-50 rounded-lg">
-            <div className="flex items-center gap-2">
-              {isOnline ? (
-                <Wifi className="w-4 h-4 text-emerald-600" strokeWidth={1.5} />
-              ) : (
-                <WifiOff className="w-4 h-4 text-red-500" strokeWidth={1.5} />
-              )}
-              <span className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-                {isOnline ? 'En ligne' : 'Hors ligne'}
-              </span>
-            </div>
-            {isOnline && (
-              <button
-                onClick={performSync}
-                disabled={isSyncing}
-                data-testid="sync-button"
-                className="text-teal-600 hover:text-teal-700 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
+          {/* Sync Status - Enhanced */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={`flex items-center justify-between px-4 py-3 rounded-lg ${
+                  isOnline 
+                    ? pendingChangesCount > 0 
+                      ? 'bg-amber-50 border border-amber-100' 
+                      : 'bg-emerald-50 border border-emerald-100'
+                    : 'bg-red-50 border border-red-100'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {isOnline ? (
+                      pendingChangesCount > 0 ? (
+                        <Cloud className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
+                      ) : (
+                        <Cloud className="w-4 h-4 text-emerald-600" strokeWidth={1.5} />
+                      )
+                    ) : (
+                      <CloudOff className="w-4 h-4 text-red-500" strokeWidth={1.5} />
+                    )}
+                    <div>
+                      <span className={`text-sm font-medium ${
+                        isOnline 
+                          ? pendingChangesCount > 0 ? 'text-amber-700' : 'text-emerald-700'
+                          : 'text-red-600'
+                      }`} style={{ fontFamily: 'Inter, sans-serif' }}>
+                        {isOnline ? (pendingChangesCount > 0 ? 'Modifications en attente' : 'Synchronisé') : 'Hors ligne'}
+                      </span>
+                      {pendingChangesCount > 0 && (
+                        <span className="ml-2 text-xs bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full font-medium">
+                          {pendingChangesCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isOnline && (
+                    <button
+                      onClick={() => performSync()}
+                      disabled={isSyncing}
+                      data-testid="sync-button"
+                      className={`p-1.5 rounded-md transition-colors ${
+                        pendingChangesCount > 0 
+                          ? 'text-amber-600 hover:bg-amber-100' 
+                          : 'text-emerald-600 hover:bg-emerald-100'
+                      } disabled:opacity-50`}
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="text-sm">
+                  {isOnline ? (
+                    <>
+                      <p className="font-medium text-emerald-700">Connecté au serveur</p>
+                      {pendingChangesCount > 0 && (
+                        <p className="text-amber-600 mt-1">
+                          {pendingChangesCount} modification(s) à synchroniser
+                        </p>
+                      )}
+                      {timeSinceSync && (
+                        <p className="text-slate-500 mt-1">Dernière sync: {timeSinceSync}</p>
+                      )}
+                      <p className="text-slate-400 text-xs mt-1">Sync automatique toutes les 15 min</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium text-red-600">Mode hors ligne actif</p>
+                      <p className="text-slate-500 mt-1">
+                        Vos modifications sont sauvegardées localement et seront synchronisées au retour en ligne.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
-          {lastSyncTime && (
+          {/* Offline indicator badge */}
+          {!isOnline && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-lg border border-amber-100">
+              <AlertCircle className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
+              <p className="text-xs text-amber-700" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Les données seront synchronisées au retour en ligne
+              </p>
+            </div>
+          )}
+
+          {lastSyncTime && isOnline && (
             <p className="text-xs text-slate-500 px-4" style={{ fontFamily: 'Inter, sans-serif' }}>
               Dernière sync: {lastSyncTime.toLocaleTimeString()}
             </p>
