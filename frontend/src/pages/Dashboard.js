@@ -17,7 +17,7 @@ const Dashboard = () => {
   });
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState({ currency: 'EUR' });
+  const [settings, setSettings] = useState({ currency: 'GNF' });
 
   // Charger les settings directement
   const loadSettings = async () => {

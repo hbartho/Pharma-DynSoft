@@ -14,7 +14,7 @@ const Settings = () => {
   const { refreshSettings } = useSettings();
   const [settings, setSettings] = useState({
     stock_valuation_method: 'weighted_average',
-    currency: 'EUR',
+    currency: 'GNF',
     pharmacy_name: '',
   });
   const [loading, setLoading] = useState(true);

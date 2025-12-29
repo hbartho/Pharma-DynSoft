@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 const Products = () => {
   const { user } = useAuth();
-  const [appSettings, setAppSettings] = useState({ currency: 'EUR' });
+  const [appSettings, setAppSettings] = useState({ currency: 'GNF' });
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
