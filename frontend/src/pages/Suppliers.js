@@ -82,7 +82,7 @@ const Suppliers = () => {
 
   useEffect(() => {
     loadSuppliers();
-  }, []); // eslint-disable-line
+  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
