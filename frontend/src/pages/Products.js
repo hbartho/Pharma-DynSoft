@@ -754,7 +754,7 @@ const Products = () => {
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Prix:</span>
-                  <span className="font-medium text-slate-900">{product.price.toFixed(2)} €</span>
+                  <span className="font-medium text-slate-900">{formatAmount(product.price)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Stock:</span>
