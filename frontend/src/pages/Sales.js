@@ -513,6 +513,20 @@ const Sales = () => {
     }
   };
 
+  // Obtenir les styles du badge agent selon le rôle
+  const getAgentBadgeStyles = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-purple-100 text-purple-800 border border-purple-200';
+      case 'pharmacien':
+        return 'bg-teal-100 text-teal-800 border border-teal-200';
+      case 'caissier':
+        return 'bg-amber-100 text-amber-800 border border-amber-200';
+      default:
+        return 'bg-slate-100 text-slate-600 border border-slate-200';
+    }
+  };
+
   // Filtrer les produits : uniquement actifs et correspondant à la recherche
   const filteredProducts = products.filter((p) => {
     // Exclure les produits désactivés
