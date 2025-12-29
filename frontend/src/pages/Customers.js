@@ -151,7 +151,8 @@ const Customers = () => {
         await refreshData();
       } else {
         await deleteFromDB('customers', customerToDelete.id);
-        toast.success('Client supprimé (hors ligne)');
+        await addLocalChange('customer', 'delete', { id: customerToDelete.id });
+        toast.success('Client supprimé (synchronisation en attente)');
         await loadCustomers();
       }
       setShowDeleteDialog(false);
