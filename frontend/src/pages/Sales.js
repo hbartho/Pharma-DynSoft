@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { Plus, Search, ShoppingCart, Trash2, X, Eye, CreditCard, Banknote, FileCheck } from 'lucide-react';
+import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import api from '../services/api';
 import { addItem, getAllItems, addLocalChange, deleteItem as deleteFromDB, getDB } from '../services/indexedDB';
