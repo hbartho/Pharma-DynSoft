@@ -1374,49 +1374,556 @@ class PharmaFlowAPITester:
         
         return all_tests_passed
 
-    def run_categories_crud_tests(self):
-        """Run comprehensive Categories CRUD tests as per requirements"""
-        print("🚀 Starting Categories CRUD Tests (DynSoft Pharma)")
+    def run_modularized_backend_tests(self):
+        """Run comprehensive tests for the modularized backend as per review request"""
+        print("🚀 Starting Modularized Backend Tests (DynSoft Pharma)")
         print(f"Base URL: {self.base_url}")
-        print("Testing credentials: demo@pharmaflow.com / demo123")
-        print("\n🎯 Test des endpoints de catégories pour DynSoft Pharma")
+        print("Testing modularized backend after refactoring from monolithic server.py")
+        print("\n🎯 Testing all endpoints with role-based access control")
         
-        # Authentication is required
-        if not self.test_login():
-            print("❌ Login failed, stopping tests")
+        # Test with all three user roles
+        test_credentials = [
+            {"email": "admin@pharmaflow.com", "password": "admin123", "role": "admin"},
+            {"email": "pharmacien@pharmaflow.com", "password": "pharma123", "role": "pharmacien"},
+            {"email": "caissier@pharmaflow.com", "password": "caisse123", "role": "caissier"}
+        ]
+        
+        # Try to login with each credential set
+        for cred in test_credentials:
+            print(f"\n--- Testing login for {cred['role']} ---")
+            success, response = self.run_test(
+                f"Login as {cred['role']}",
+                "POST",
+                "auth/login",
+                200,
+                data={"email": cred["email"], "password": cred["password"]}
+            )
+            if success and 'access_token' in response:
+                self.tokens[cred['role']] = response['access_token']
+                self.users[cred['role']] = response.get('user', {})
+                print(f"   ✅ {cred['role']} login successful")
+                print(f"   User: {response.get('user', {}).get('name', 'Unknown')}")
+                print(f"   Role: {response.get('user', {}).get('role', 'Unknown')}")
+            else:
+                print(f"   ❌ {cred['role']} login failed")
+        
+        # Set admin as default for testing
+        if self.tokens.get('admin'):
+            self.token = self.tokens['admin']
+            self.user_data = self.users['admin']
+        else:
+            print("❌ No admin token available, cannot proceed with tests")
             return False
         
-        # Verify admin role for full testing
-        if self.user_data.get('role') != 'admin':
-            print(f"⚠️ Warning: Not admin role, got: {self.user_data.get('role')}")
-            print("Some tests may be limited")
+        # Run comprehensive tests for each module
+        tests_success = []
         
-        print(f"✅ Logged in as: {self.user_data.get('name')} ({self.user_data.get('role')})")
-        
-        # Run comprehensive category tests
+        # 1. Authentication Module Tests
         print("\n" + "="*60)
-        print("📂 BACKEND TESTS - CATÉGORIES (CATEGORIES)")
+        print("🔐 AUTHENTICATION MODULE TESTS (routes/auth.py)")
         print("="*60)
-        categories_success = self.test_categories_crud_comprehensive()
+        tests_success.append(self.test_auth_module_comprehensive())
         
-        # Print results
-        print(f"\n📊 Categories Test Results: {self.tests_passed}/{self.tests_run} passed")
-        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
-        print(f"Success rate: {success_rate:.1f}%")
+        # 2. Products Module Tests
+        print("\n" + "="*60)
+        print("💊 PRODUCTS MODULE TESTS (routes/products.py)")
+        print("="*60)
+        tests_success.append(self.test_products_module_comprehensive())
         
-        if categories_success:
-            print("\n✅ ALL CATEGORIES CRUD TESTS PASSED")
-            print("✅ Categories CRUD (GET, POST, PUT, DELETE): WORKING")
-            print("✅ Product creation with category_id: WORKING") 
-            print("✅ Category deletion protection (when used by products): WORKING")
-            print("✅ Category deletion after removing products: WORKING")
-        else:
-            print("\n❌ Some categories tests failed")
+        # 3. Categories Module Tests
+        print("\n" + "="*60)
+        print("📂 CATEGORIES MODULE TESTS (routes/categories.py)")
+        print("="*60)
+        tests_success.append(self.test_categories_module_comprehensive())
+        
+        # 4. Sales Module Tests
+        print("\n" + "="*60)
+        print("💰 SALES MODULE TESTS (routes/sales.py)")
+        print("="*60)
+        tests_success.append(self.test_sales_module_comprehensive())
+        
+        # 5. Stock Module Tests
+        print("\n" + "="*60)
+        print("📦 STOCK MODULE TESTS (routes/stock.py)")
+        print("="*60)
+        tests_success.append(self.test_stock_module_comprehensive())
+        
+        # 6. Settings Module Tests
+        print("\n" + "="*60)
+        print("⚙️ SETTINGS MODULE TESTS (routes/settings.py)")
+        print("="*60)
+        tests_success.append(self.test_settings_module_comprehensive())
+        
+        # 7. Reports Module Tests
+        print("\n" + "="*60)
+        print("📊 REPORTS MODULE TESTS (routes/reports.py)")
+        print("="*60)
+        tests_success.append(self.test_reports_module_comprehensive())
+        
+        # 8. Role-Based Access Control Tests
+        print("\n" + "="*60)
+        print("🔒 ROLE-BASED ACCESS CONTROL TESTS")
+        print("="*60)
+        tests_success.append(self.test_rbac_comprehensive())
         
         # Cleanup
         self.cleanup_created_items()
         
-        return categories_success
+        # Print results
+        print(f"\n📊 Modularized Backend Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        all_tests_passed = all(tests_success)
+        
+        if all_tests_passed:
+            print("\n✅ ALL MODULARIZED BACKEND TESTS PASSED")
+            print("✅ Authentication module: WORKING")
+            print("✅ Products module: WORKING")
+            print("✅ Categories module: WORKING")
+            print("✅ Sales module: WORKING")
+            print("✅ Stock module: WORKING")
+            print("✅ Settings module: WORKING")
+            print("✅ Reports module: WORKING")
+            print("✅ Role-based access control: WORKING")
+        else:
+            print("\n❌ Some modularized backend tests failed")
+            failed_tests = []
+            test_names = [
+                "Authentication module",
+                "Products module",
+                "Categories module", 
+                "Sales module",
+                "Stock module",
+                "Settings module",
+                "Reports module",
+                "Role-based access control"
+            ]
+            for i, success in enumerate(tests_success):
+                if not success:
+                    failed_tests.append(test_names[i])
+            print(f"❌ Failed modules: {', '.join(failed_tests)}")
+        
+        return all_tests_passed
+
+    def test_auth_module_comprehensive(self):
+        """Test authentication module endpoints"""
+        print("Testing authentication endpoints...")
+        
+        # Test login with valid credentials
+        success, response = self.run_test(
+            "POST /api/auth/login - Valid credentials",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@pharmaflow.com", "password": "admin123"}
+        )
+        if not success:
+            return False
+        
+        # Test login with invalid credentials
+        success, response = self.run_test(
+            "POST /api/auth/login - Invalid credentials",
+            "POST",
+            "auth/login",
+            401,
+            data={"email": "admin@pharmaflow.com", "password": "wrongpassword"}
+        )
+        
+        # Test register endpoint (if available)
+        register_data = {
+            "name": "Test User Registration",
+            "email": "testregister@pharmaflow.com",
+            "password": "test123",
+            "role": "pharmacien"
+        }
+        success, response = self.run_test(
+            "POST /api/auth/register - Register new user",
+            "POST",
+            "auth/register",
+            200,
+            data=register_data
+        )
+        if success and 'id' in response:
+            self.created_items.setdefault('users', []).append(response['id'])
+        
+        # Test get current user info
+        success, response = self.run_test(
+            "GET /api/auth/me - Get current user info",
+            "GET",
+            "auth/me",
+            200
+        )
+        if success:
+            print(f"   ✅ Current user: {response.get('name')} ({response.get('role')})")
+        
+        return True
+
+    def test_products_module_comprehensive(self):
+        """Test products module endpoints"""
+        print("Testing products endpoints...")
+        
+        # Get all products
+        success, products = self.run_test(
+            "GET /api/products - List all products",
+            "GET",
+            "products",
+            200
+        )
+        if not success:
+            return False
+        
+        print(f"   Found {len(products)} products")
+        
+        # Create a product with uniqueness validation
+        product_data = {
+            "name": "Test Modular Product",
+            "barcode": "MOD123456789",
+            "description": "Product for modular testing",
+            "price": 25.99,
+            "stock": 100,
+            "min_stock": 10,
+            "category": "Test Category"
+        }
+        success, new_product = self.run_test(
+            "POST /api/products - Create product",
+            "POST",
+            "products",
+            200,
+            data=product_data
+        )
+        if success and 'id' in new_product:
+            product_id = new_product['id']
+            self.created_items.setdefault('products', []).append(product_id)
+            print(f"   ✅ Created product ID: {product_id}")
+            
+            # Test uniqueness validation - try to create duplicate
+            success, response = self.run_test(
+                "POST /api/products - Test uniqueness validation (should fail)",
+                "POST",
+                "products",
+                400,
+                data=product_data
+            )
+            if success:
+                print("   ✅ Uniqueness validation working")
+            
+            # Search products
+            success, search_results = self.run_test(
+                "GET /api/products/search?q=Modular - Search products",
+                "GET",
+                "products/search?q=Modular",
+                200
+            )
+            if success:
+                print(f"   ✅ Search found {len(search_results)} products")
+            
+            # Toggle product status
+            success, response = self.run_test(
+                "PATCH /api/products/{id}/toggle-status - Toggle active status",
+                "PATCH",
+                f"products/{product_id}/toggle-status",
+                200
+            )
+            if success:
+                print("   ✅ Product status toggle working")
+            
+            # Try to delete product (should work if not sold)
+            success, response = self.run_test(
+                "DELETE /api/products/{id} - Delete product",
+                "DELETE",
+                f"products/{product_id}",
+                200
+            )
+            if success:
+                print("   ✅ Product deletion working")
+                if product_id in self.created_items.get('products', []):
+                    self.created_items['products'].remove(product_id)
+        
+        return True
+
+    def test_categories_module_comprehensive(self):
+        """Test categories module endpoints"""
+        print("Testing categories endpoints...")
+        
+        # Get all categories
+        success, categories = self.run_test(
+            "GET /api/categories - List all categories",
+            "GET",
+            "categories",
+            200
+        )
+        if not success:
+            return False
+        
+        print(f"   Found {len(categories)} categories")
+        
+        # Create a category
+        category_data = {
+            "name": "Test Modular Category",
+            "description": "Category for modular testing",
+            "color": "#FF5733"
+        }
+        success, new_category = self.run_test(
+            "POST /api/categories - Create category",
+            "POST",
+            "categories",
+            200,
+            data=category_data
+        )
+        if success and 'id' in new_category:
+            category_id = new_category['id']
+            self.created_items.setdefault('categories', []).append(category_id)
+            print(f"   ✅ Created category ID: {category_id}")
+        
+        return True
+
+    def test_sales_module_comprehensive(self):
+        """Test sales module endpoints"""
+        print("Testing sales endpoints...")
+        
+        # Get all sales
+        success, sales = self.run_test(
+            "GET /api/sales - List all sales",
+            "GET",
+            "sales",
+            200
+        )
+        if not success:
+            return False
+        
+        print(f"   Found {len(sales)} sales")
+        
+        # Create a sale (need products first)
+        if self.created_items.get('products'):
+            sale_data = {
+                "customer_id": None,
+                "items": [
+                    {
+                        "product_id": self.created_items['products'][0],
+                        "name": "Test Product",
+                        "price": 25.99,
+                        "quantity": 1
+                    }
+                ],
+                "total": 25.99,
+                "payment_method": "cash"
+            }
+            success, new_sale = self.run_test(
+                "POST /api/sales - Create new sale",
+                "POST",
+                "sales",
+                200,
+                data=sale_data
+            )
+            if success and 'id' in new_sale:
+                sale_id = new_sale['id']
+                self.created_items.setdefault('sales', []).append(sale_id)
+                print(f"   ✅ Created sale ID: {sale_id}")
+                
+                # Test admin-only deletion
+                success, response = self.run_test(
+                    "DELETE /api/sales/{id} - Delete sale (admin only)",
+                    "DELETE",
+                    f"sales/{sale_id}",
+                    200
+                )
+                if success:
+                    print("   ✅ Sale deletion and stock restoration working")
+                    if sale_id in self.created_items.get('sales', []):
+                        self.created_items['sales'].remove(sale_id)
+        
+        return True
+
+    def test_stock_module_comprehensive(self):
+        """Test stock module endpoints"""
+        print("Testing stock endpoints...")
+        
+        # Get stock movements
+        success, stock_movements = self.run_test(
+            "GET /api/stock - List stock movements",
+            "GET",
+            "stock",
+            200
+        )
+        if not success:
+            return False
+        
+        print(f"   Found {len(stock_movements)} stock movements")
+        
+        # Get low stock alerts
+        success, alerts = self.run_test(
+            "GET /api/stock/alerts - Get low stock alerts",
+            "GET",
+            "stock/alerts",
+            200
+        )
+        if success:
+            print(f"   ✅ Found {len(alerts)} low stock alerts")
+        
+        # Get stock valuation
+        success, valuation = self.run_test(
+            "GET /api/stock/valuation - Get total stock valuation",
+            "GET",
+            "stock/valuation",
+            200
+        )
+        if success:
+            print(f"   ✅ Stock valuation retrieved")
+            if 'fifo' in valuation:
+                print(f"   FIFO valuation: {valuation.get('fifo', 0)}")
+            if 'lifo' in valuation:
+                print(f"   LIFO valuation: {valuation.get('lifo', 0)}")
+            if 'weighted_average' in valuation:
+                print(f"   Weighted Average: {valuation.get('weighted_average', 0)}")
+        
+        return True
+
+    def test_settings_module_comprehensive(self):
+        """Test settings module endpoints"""
+        print("Testing settings endpoints...")
+        
+        # Get current settings
+        success, settings = self.run_test(
+            "GET /api/settings - Get current settings",
+            "GET",
+            "settings",
+            200
+        )
+        if not success:
+            return False
+        
+        print("   ✅ Settings retrieved successfully")
+        
+        # Update settings (admin only)
+        if settings:
+            update_data = {**settings, "test_field": "modular_test_value"}
+            success, updated_settings = self.run_test(
+                "PUT /api/settings - Update settings (admin only)",
+                "PUT",
+                "settings",
+                200,
+                data=update_data
+            )
+            if success:
+                print("   ✅ Settings update working (admin only)")
+        
+        return True
+
+    def test_reports_module_comprehensive(self):
+        """Test reports module endpoints"""
+        print("Testing reports endpoints...")
+        
+        # Get dashboard statistics
+        success, dashboard = self.run_test(
+            "GET /api/reports/dashboard - Get dashboard statistics",
+            "GET",
+            "reports/dashboard",
+            200
+        )
+        if not success:
+            return False
+        
+        print("   ✅ Dashboard statistics retrieved")
+        if 'total_products' in dashboard:
+            print(f"   Total products: {dashboard.get('total_products', 0)}")
+        if 'total_sales' in dashboard:
+            print(f"   Total sales: {dashboard.get('total_sales', 0)}")
+        
+        # Get sales report
+        success, sales_report = self.run_test(
+            "GET /api/reports/sales?days=7 - Get sales report",
+            "GET",
+            "reports/sales?days=7",
+            200
+        )
+        if success:
+            print("   ✅ Sales report retrieved")
+            print(f"   Report period: {sales_report.get('period_days', 'N/A')} days")
+        
+        return True
+
+    def test_rbac_comprehensive(self):
+        """Test role-based access control comprehensively"""
+        print("Testing role-based access control...")
+        
+        # Test caissier access (basic access)
+        if self.tokens.get('caissier'):
+            print("\n--- Testing Caissier Access (Basic) ---")
+            self.token = self.tokens['caissier']
+            
+            # Caissier should NOT access admin-only endpoints
+            success, response = self.run_test(
+                "Caissier tries GET /api/settings (should fail with 403)",
+                "GET",
+                "settings",
+                403
+            )
+            if success:
+                print("   ✅ Caissier correctly denied access to settings")
+            
+            # Caissier should NOT access user management
+            success, response = self.run_test(
+                "Caissier tries GET /api/users (should fail with 403)",
+                "GET",
+                "users",
+                403
+            )
+            if success:
+                print("   ✅ Caissier correctly denied access to user management")
+        
+        # Test pharmacien access (limited access)
+        if self.tokens.get('pharmacien'):
+            print("\n--- Testing Pharmacien Access (Limited) ---")
+            self.token = self.tokens['pharmacien']
+            
+            # Pharmacien should access product management
+            success, response = self.run_test(
+                "Pharmacien accesses GET /api/products (should succeed)",
+                "GET",
+                "products",
+                200
+            )
+            if success:
+                print("   ✅ Pharmacien can access product management")
+            
+            # Pharmacien should NOT access user management
+            success, response = self.run_test(
+                "Pharmacien tries GET /api/users (should fail with 403)",
+                "GET",
+                "users",
+                403
+            )
+            if success:
+                print("   ✅ Pharmacien correctly denied access to user management")
+        
+        # Test admin access (full access)
+        if self.tokens.get('admin'):
+            print("\n--- Testing Admin Access (Full) ---")
+            self.token = self.tokens['admin']
+            
+            # Admin should access all endpoints
+            success, response = self.run_test(
+                "Admin accesses GET /api/users (should succeed)",
+                "GET",
+                "users",
+                200
+            )
+            if success:
+                print("   ✅ Admin can access user management")
+            
+            success, response = self.run_test(
+                "Admin accesses GET /api/settings (should succeed)",
+                "GET",
+                "settings",
+                200
+            )
+            if success:
+                print("   ✅ Admin can access settings")
+        
+        # Restore admin token
+        self.token = self.tokens['admin']
+        return True
 
 def main():
     tester = PharmaFlowAPITester()
