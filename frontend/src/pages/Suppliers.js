@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Plus, Truck, Edit, Trash2, Search, Phone, Mail, MapPin } from 'lucide-react';
 import api from '../services/api';
-import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, getDB } from '../services/indexedDB';
+import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import { toast } from 'sonner';
 
