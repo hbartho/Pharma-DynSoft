@@ -226,8 +226,15 @@ const Sales = () => {
     }
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.name?.toLowerCase().includes(productSearch.toLowerCase())
+  const filteredProducts = products.filter((p) => {
+    const searchLower = productSearch.toLowerCase();
+    return p.name?.toLowerCase().includes(searchLower) || 
+           p.barcode?.toLowerCase().includes(searchLower);
+  });
+
+  const filteredCustomers = customers.filter((c) =>
+    c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    c.phone?.includes(customerSearch)
   );
 
   const filteredSales = sales.filter((s) => {
