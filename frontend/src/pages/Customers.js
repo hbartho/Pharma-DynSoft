@@ -94,7 +94,8 @@ const Customers = () => {
         } else {
           const updatedCustomer = { ...formData, id: editingCustomer.id };
           await updateItem('customers', updatedCustomer);
-          toast.success('Client mis à jour (hors ligne)');
+          await addLocalChange('customer', 'update', updatedCustomer);
+          toast.success('Client mis à jour (synchronisation en attente)');
           setShowDialog(false);
           resetForm();
           await loadCustomers();
@@ -111,7 +112,8 @@ const Customers = () => {
           const newCustomerId = crypto.randomUUID();
           const newCustomer = { ...formData, id: newCustomerId };
           await addItem('customers', newCustomer);
-          toast.success('Client ajouté (hors ligne)');
+          await addLocalChange('customer', 'create', newCustomer);
+          toast.success('Client ajouté (synchronisation en attente)');
           setShowDialog(false);
           resetForm();
           await loadCustomers();
