@@ -170,7 +170,7 @@ class Prescription(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     customer_id: str
     doctor_name: str
-    medications: List[Dict[str, Any]]
+    medications: List[Dict[str, Any]] = Field(default_factory=list)
     notes: Optional[str] = None
     status: str  # pending, fulfilled
     tenant_id: str
