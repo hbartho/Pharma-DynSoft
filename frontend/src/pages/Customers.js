@@ -78,7 +78,7 @@ const Customers = () => {
 
   useEffect(() => {
     loadCustomers();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e) => {
     e.preventDefault();
