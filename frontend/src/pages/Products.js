@@ -772,6 +772,25 @@ const Products = () => {
                   <Edit className="w-4 h-4 mr-1" strokeWidth={1.5} />
                   Éditer
                 </Button>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleStatus(product)}
+                    data-testid={`toggle-product-${product.id}`}
+                    className={product.is_active === false 
+                      ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" 
+                      : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    }
+                    title={product.is_active === false ? "Activer le produit" : "Désactiver le produit"}
+                  >
+                    {product.is_active === false ? (
+                      <Power className="w-4 h-4" strokeWidth={1.5} />
+                    ) : (
+                      <PowerOff className="w-4 h-4" strokeWidth={1.5} />
+                    )}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
