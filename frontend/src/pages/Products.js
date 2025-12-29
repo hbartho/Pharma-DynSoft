@@ -138,8 +138,8 @@ const Products = () => {
         } else {
           productData.id = editingProduct.id;
           await updateItem('products', productData);
-          await addLocalChange('product', 'update', productData);
-          toast.success('Produit mis à jour');
+          await addLocalChange('products', 'update', productData);
+          toast.success('Produit mis à jour (synchronisation en attente)');
           setShowDialog(false);
           resetForm();
           await loadProducts();
@@ -155,8 +155,8 @@ const Products = () => {
           const newProductId = crypto.randomUUID();
           const newProduct = { ...productData, id: newProductId };
           await addItem('products', newProduct);
-          await addLocalChange('product', 'create', newProduct);
-          toast.success('Produit ajouté');
+          await addLocalChange('products', 'create', newProduct);
+          toast.success('Produit ajouté (synchronisation en attente)');
           setShowDialog(false);
           resetForm();
           await loadProducts();
