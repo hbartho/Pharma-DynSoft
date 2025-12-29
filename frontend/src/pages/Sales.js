@@ -153,9 +153,9 @@ const Sales = () => {
         const response = await api.post('/sales', saleData);
         await addItem('sales', response.data);
       } else {
-        const newSale = { ...saleData, id: Date.now().toString(), created_at: new Date().toISOString() };
+        const newSale = { ...saleData, id: crypto.randomUUID(), created_at: new Date().toISOString() };
         await addItem('sales', newSale);
-        await addLocalChange('sale', 'create', newSale);
+        await addLocalChange('sales', 'create', newSale);
       }
 
       toast.success('Vente enregistrée avec succès');
