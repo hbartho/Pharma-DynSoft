@@ -82,7 +82,7 @@ const Suppliers = () => {
 
   useEffect(() => {
     loadSuppliers();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   const handleSubmit = async (e) => {
     e.preventDefault();
