@@ -46,6 +46,7 @@ const Layout = ({ children }) => {
     { path: '/prescriptions', icon: FileText, label: 'Ordonnances', roles: ['admin', 'pharmacien'] },
     { path: '/reports', icon: BarChart3, label: 'Rapports', roles: ['admin', 'pharmacien'] },
     { path: '/users', icon: UserCog, label: 'Utilisateurs', roles: ['admin'] },
+    { path: '/settings', icon: Settings, label: 'Paramètres', roles: ['admin'] },
   ];
 
   // Filter menu items based on user role
