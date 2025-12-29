@@ -159,12 +159,14 @@ function App() {
 
   return (
     <AuthProvider>
-      <OfflineProvider>
-        <BrowserRouter>
-          <AppRoutes />
-          <Toaster position="top-right" richColors />
-        </BrowserRouter>
-      </OfflineProvider>
+      <SettingsProvider>
+        <OfflineProvider>
+          <BrowserRouter>
+            <AppRoutes />
+            <Toaster position="top-right" richColors />
+          </BrowserRouter>
+        </OfflineProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }
