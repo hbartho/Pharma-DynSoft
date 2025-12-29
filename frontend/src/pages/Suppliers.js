@@ -164,7 +164,11 @@ const Suppliers = () => {
       setSupplierToDelete(null);
     } catch (error) {
       console.error('Error deleting supplier:', error);
-      toast.error('Erreur lors de la suppression du fournisseur');
+      // Afficher le message d'erreur du serveur (règle d'affaires)
+      const errorMessage = error.response?.data?.detail || 'Erreur lors de la suppression du fournisseur';
+      toast.error(errorMessage);
+      setShowDeleteDialog(false);
+      setSupplierToDelete(null);
     }
   };
 
