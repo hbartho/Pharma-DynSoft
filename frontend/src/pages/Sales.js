@@ -1005,7 +1005,7 @@ const Sales = () => {
                 <Button 
                   onClick={handleReturnSubmit}
                   className="bg-amber-600 hover:bg-amber-700"
-                  disabled={calculateRefundTotal() === 0}
+                  disabled={calculateRefundTotal() === 0 || !returnReason.trim()}
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Confirmer le retour
