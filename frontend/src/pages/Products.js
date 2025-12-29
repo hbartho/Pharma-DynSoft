@@ -677,6 +677,28 @@ const Products = () => {
               ))}
             </SelectContent>
           </Select>
+          {isAdmin && (
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="active">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Actifs
+                  </div>
+                </SelectItem>
+                <SelectItem value="inactive">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    Désactivés
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Products Grid */}
@@ -685,13 +707,24 @@ const Products = () => {
             <div
               key={product.id}
               data-testid={`product-card-${product.id}`}
-              className="p-4 rounded-xl bg-white border border-slate-100 hover:border-teal-200 transition-all cursor-pointer"
+              className={`p-4 rounded-xl bg-white border transition-all cursor-pointer ${
+                product.is_active === false 
+                  ? 'border-red-200 bg-red-50/30 opacity-75' 
+                  : 'border-slate-100 hover:border-teal-200'
+              }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900 mb-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                    {product.name}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      {product.name}
+                    </h3>
+                    {product.is_active === false && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+                        Désactivé
+                      </span>
+                    )}
+                  </div>
                   {product.barcode && (
                     <p className="text-sm text-slate-500" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
                       {product.barcode}
