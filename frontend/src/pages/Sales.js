@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import api from '../services/api';
 import { addItem, getAllItems, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
-import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
 const Sales = () => {
