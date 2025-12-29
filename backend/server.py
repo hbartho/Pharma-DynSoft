@@ -359,6 +359,17 @@ async def update_product(product_id: str, product_data: ProductCreate, current_u
 
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    # Vérifier si le produit a été vendu au moins une fois
+    sales_with_product = await db.sales.count_documents({
+        "tenant_id": current_user['tenant_id'],
+        "items.product_id": product_id
+    })
+    if sales_with_product > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Impossible de supprimer ce produit : il a été vendu {sales_with_product} fois. Vous pouvez le désactiver ou modifier son stock à 0."
+        )
+    
     result = await db.products.delete_one({"id": product_id, "tenant_id": current_user['tenant_id']})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
