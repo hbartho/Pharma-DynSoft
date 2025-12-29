@@ -39,14 +39,16 @@ const Sales = () => {
     try {
       if (isOnline) {
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache' } : {};
-        const [salesRes, productsRes, customersRes] = await Promise.all([
+        const [salesRes, productsRes, customersRes, settingsRes] = await Promise.all([
           api.get('/sales', { headers }),
           api.get('/products', { headers }).catch(() => ({ data: [] })),
           api.get('/customers', { headers }),
+          api.get('/settings', { headers }).catch(() => ({ data: { currency: 'EUR' } })),
         ]);
         setSales(salesRes.data);
         setProducts(productsRes.data);
         setCustomers(customersRes.data);
+        setAppSettings(settingsRes.data);
       } else {
         const [localSales, localProducts, localCustomers] = await Promise.all([
           getAllItems('sales'),
@@ -60,6 +62,16 @@ const Sales = () => {
     } catch (error) {
       console.error('Error loading data:', error);
     }
+  };
+
+  // Fonction pour formater avec la devise chargée
+  const formatAmount = (amount) => {
+    const currency = appSettings?.currency || 'EUR';
+    const symbols = { USD: '$', CAD: '$ CAD', EUR: '€', XOF: 'FCFA', GNF: 'GNF' };
+    const decimals = { USD: 2, CAD: 2, EUR: 2, XOF: 0, GNF: 0 };
+    const dec = decimals[currency] ?? 2;
+    const formatted = (amount || 0).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    return `${formatted} ${symbols[currency] || currency}`;
   };
 
   const refreshData = async () => {
