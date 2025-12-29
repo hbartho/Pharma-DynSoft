@@ -6,9 +6,12 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins } from 'lucide-react';
 import api from '../services/api';
+import { useSettings } from '../contexts/SettingsContext';
+import { formatCurrency } from '../services/currencyService';
 import { toast } from 'sonner';
 
 const Settings = () => {
+  const { refreshSettings } = useSettings();
   const [settings, setSettings] = useState({
     stock_valuation_method: 'weighted_average',
     currency: 'EUR',
