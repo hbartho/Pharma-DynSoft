@@ -3,9 +3,11 @@ import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
 import { DollarSign, Package, AlertTriangle, FileText, Coins } from 'lucide-react';
 import api from '../services/api';
+import { useSettings } from '../contexts/SettingsContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
+  const { formatAmount, stockValuationMethod } = useSettings();
   const [stats, setStats] = useState({
     today_sales_count: 0,
     today_revenue: 0,
