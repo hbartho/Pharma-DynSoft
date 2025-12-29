@@ -389,6 +389,31 @@ async def update_product(product_id: str, product_data: ProductCreate, current_u
     if not existing:
         raise HTTPException(status_code=404, detail="Product not found")
     
+    # Vérifier si un autre produit avec le même nom existe (exclure le produit actuel)
+    existing_by_name = await db.products.find_one({
+        "tenant_id": current_user['tenant_id'],
+        "name": {"$regex": f"^{product_data.name}$", "$options": "i"},
+        "id": {"$ne": product_id}
+    })
+    if existing_by_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Un autre produit avec le nom '{product_data.name}' existe déjà"
+        )
+    
+    # Vérifier si un autre produit avec le même code-barres existe (si fourni)
+    if product_data.barcode:
+        existing_by_barcode = await db.products.find_one({
+            "tenant_id": current_user['tenant_id'],
+            "barcode": product_data.barcode,
+            "id": {"$ne": product_id}
+        })
+        if existing_by_barcode:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Un autre produit avec le code-barres '{product_data.barcode}' existe déjà ({existing_by_barcode['name']})"
+            )
+    
     update_data = product_data.model_dump()
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
