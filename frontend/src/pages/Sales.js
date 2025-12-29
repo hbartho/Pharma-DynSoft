@@ -29,6 +29,7 @@ const Sales = () => {
   const [productSearch, setProductSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { isOnline } = useOffline();
 
   const isAdmin = user?.role === 'admin';
