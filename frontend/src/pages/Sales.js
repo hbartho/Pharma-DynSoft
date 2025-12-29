@@ -1079,8 +1079,11 @@ const Sales = () => {
                             <p className="font-semibold text-slate-900">
                               {op.type === 'sale' ? 'Vente' : 'Retour'}
                             </p>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {op.user_name || 'Inconnu'}
+                            <span 
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getAgentBadgeStyles(op.user_role)}`}
+                              title={op.user_name || 'Inconnu'}
+                            >
+                              {op.employee_code || 'N/A'}
                             </span>
                           </div>
                           <p className="text-sm text-slate-500">
