@@ -33,11 +33,21 @@ async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(get_cu
 
 @router.get("", response_model=List[Sale])
 async def get_sales(current_user: dict = Depends(get_current_user)):
-    """Get all sales"""
+    """Get all sales with user information"""
     sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Récupérer tous les utilisateurs pour enrichir les ventes
+    users = await db.users.find({"tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0}).to_list(1000)
+    users_map = {u['id']: u for u in users}
+    
     for sale in sales:
         if isinstance(sale['created_at'], str):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+        # Ajouter le nom de l'agent
+        if sale.get('user_id') and sale['user_id'] in users_map:
+            sale['user_name'] = users_map[sale['user_id']]['name']
+        else:
+            sale['user_name'] = 'Inconnu'
     return sales
 
 @router.get("/{sale_id}", response_model=Sale)
