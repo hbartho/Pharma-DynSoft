@@ -6,7 +6,7 @@ import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import api from '../services/api';
-import { addItem, getAllItems, addLocalChange, deleteItem as deleteFromDB, getDB } from '../services/indexedDB';
+import { addItem, getAllItems, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
