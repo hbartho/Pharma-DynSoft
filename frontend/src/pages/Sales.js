@@ -900,6 +900,176 @@ const Sales = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Retour d'articles */}
+      <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Retour d'articles
+            </DialogTitle>
+          </DialogHeader>
+          {selectedSale && (
+            <div className="space-y-4">
+              <div className="text-sm text-slate-500 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="font-medium text-amber-800">⚠️ Note importante</p>
+                <p className="text-amber-700 mt-1">
+                  Le retour créera une nouvelle entrée dans l'historique des opérations. 
+                  La vente originale ne sera pas modifiée.
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-slate-700 mb-2">Sélectionnez les articles à retourner :</p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {returnItems.map((item) => {
+                    const maxReturn = item.sold_quantity - item.returned_quantity;
+                    const isFullyReturned = maxReturn === 0;
+                    return (
+                      <div 
+                        key={item.product_id} 
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          isFullyReturned ? 'bg-slate-100 opacity-60' : 'bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{item.name}</p>
+                          <p className="text-sm text-slate-500">
+                            {formatAmount(item.price)} × {item.sold_quantity} vendu(s)
+                            {item.returned_quantity > 0 && (
+                              <span className="text-amber-600 ml-2">
+                                ({item.returned_quantity} déjà retourné)
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isFullyReturned ? (
+                            <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded">
+                              Tout retourné
+                            </span>
+                          ) : (
+                            <>
+                              <Input
+                                type="number"
+                                min="0"
+                                max={maxReturn}
+                                value={item.return_quantity}
+                                onChange={(e) => updateReturnQuantity(item.product_id, e.target.value)}
+                                className="w-20 text-center"
+                                data-testid={`return-qty-${item.product_id}`}
+                              />
+                              <span className="text-xs text-slate-400">/ {maxReturn}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="return-reason">Motif du retour (optionnel)</Label>
+                <Input
+                  id="return-reason"
+                  placeholder="Ex: Produit endommagé, erreur de commande..."
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <span className="text-lg font-semibold text-slate-900">Remboursement :</span>
+                <span className="text-2xl font-bold text-amber-700">
+                  {formatAmount(calculateRefundTotal())}
+                </span>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowReturnDialog(false)}>
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleReturnSubmit}
+                  className="bg-amber-600 hover:bg-amber-700"
+                  disabled={calculateRefundTotal() === 0}
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Confirmer le retour
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Historique des opérations */}
+      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Historique des opérations
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 pr-2">
+            <div className="space-y-3">
+              {operationsHistory.length === 0 ? (
+                <p className="text-center text-slate-500 py-8">Aucune opération enregistrée</p>
+              ) : (
+                operationsHistory.map((op) => (
+                  <div 
+                    key={op.id} 
+                    className={`p-4 rounded-lg border ${
+                      op.type === 'sale' 
+                        ? 'bg-teal-50 border-teal-200' 
+                        : 'bg-amber-50 border-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${
+                          op.type === 'sale' ? 'bg-teal-100' : 'bg-amber-100'
+                        }`}>
+                          {op.type === 'sale' ? (
+                            <ShoppingCart className="w-5 h-5 text-teal-700" />
+                          ) : (
+                            <RotateCcw className="w-5 h-5 text-amber-700" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            {op.type === 'sale' ? 'Vente' : 'Retour'}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {new Date(op.date).toLocaleString('fr-FR')}
+                          </p>
+                          {op.type === 'return' && op.reason && (
+                            <p className="text-sm text-amber-700 mt-1">
+                              Motif : {op.reason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-lg font-bold ${
+                          op.type === 'sale' ? 'text-teal-700' : 'text-amber-700'
+                        }`}>
+                          {op.type === 'sale' ? '+' : ''}{formatAmount(op.amount)}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {op.items_count} article{op.items_count > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
