@@ -19,9 +19,7 @@ const Sales = () => {
   const [customers, setCustomers] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
-  const [saleToDelete, setSaleToDelete] = useState(null);
   const [cart, setCart] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
