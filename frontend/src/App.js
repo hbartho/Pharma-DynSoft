@@ -134,6 +134,14 @@ const AppRoutes = () => {
           </RoleProtectedRoute>
         }
       />
+      <Route
+        path="/settings"
+        element={
+          <RoleProtectedRoute allowedRoles={['admin']}>
+            <Settings />
+          </RoleProtectedRoute>
+        }
+      />
       <Route path="/" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
