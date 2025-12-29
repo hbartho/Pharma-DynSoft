@@ -102,12 +102,30 @@ class CategoryCreate(BaseModel):
     description: Optional[str] = None
     color: Optional[str] = "#3B82F6"
 
+# Settings Model
+class Settings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    stock_valuation_method: str = "weighted_average"  # fifo, lifo, weighted_average
+    currency: str = "EUR"
+    pharmacy_name: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SettingsUpdate(BaseModel):
+    stock_valuation_method: Optional[str] = None
+    currency: Optional[str] = None
+    pharmacy_name: Optional[str] = None
+
 class StockMovement(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     product_id: str
     type: str  # in, out
     quantity: int
+    unit_price: float = 0.0  # Prix d'achat unitaire
+    remaining_quantity: int = 0  # Quantité restante (pour FIFO/LIFO)
     reason: Optional[str] = None
     supplier_id: Optional[str] = None  # Pour tracer les livraisons fournisseurs
     tenant_id: str
@@ -117,6 +135,7 @@ class StockMovementCreate(BaseModel):
     product_id: str
     type: str
     quantity: int
+    unit_price: float = 0.0  # Prix d'achat unitaire
     reason: Optional[str] = None
     supplier_id: Optional[str] = None  # ID du fournisseur pour les entrées de stock
 
