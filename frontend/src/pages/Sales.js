@@ -27,7 +27,8 @@ const Sales = () => {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [productSearch, setProductSearch] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const { isOnline } = useOffline();
 
   const isAdmin = user?.role === 'admin';
