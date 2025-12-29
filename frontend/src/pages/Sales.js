@@ -609,7 +609,7 @@ const Sales = () => {
               Confirmer la suppression
             </AlertDialogTitle>
             <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
-              Êtes-vous sûr de vouloir supprimer cette vente de {saleToDelete?.total?.toFixed(2)} € ?
+              Êtes-vous sûr de vouloir supprimer cette vente de {formatAmount(saleToDelete?.total || 0)} ?
               Le stock des produits sera restauré. Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
