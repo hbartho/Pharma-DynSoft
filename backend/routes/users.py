@@ -4,21 +4,26 @@ from datetime import datetime
 from database import db
 from auth import hash_password, require_admin
 from models.user import User, UserCreate, UserUpdate, UserResponse
+from routes.auth import normalize_user_data
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
-@router.get("", response_model=List[UserResponse])
+@router.get("")
 async def get_users(current_user: dict = Depends(require_admin)):
     """Get all users (Admin only)"""
     users = await db.users.find({"tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0}).to_list(1000)
+    result = []
     for user in users:
         if isinstance(user.get('created_at'), str):
             user['created_at'] = datetime.fromisoformat(user['created_at'])
         if 'is_active' not in user:
             user['is_active'] = True
-    return users
+        # Normaliser les données
+        user = normalize_user_data(user)
+        result.append(user)
+    return result
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}")
 async def get_user(user_id: str, current_user: dict = Depends(require_admin)):
     """Get a specific user (Admin only)"""
     user = await db.users.find_one({"id": user_id, "tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0})
@@ -28,14 +33,21 @@ async def get_user(user_id: str, current_user: dict = Depends(require_admin)):
         user['created_at'] = datetime.fromisoformat(user['created_at'])
     if 'is_active' not in user:
         user['is_active'] = True
-    return UserResponse(**user)
+    # Normaliser les données
+    user = normalize_user_data(user)
+    return user
 
-@router.post("", response_model=UserResponse)
+@router.post("")
 async def create_user_admin(user_data: UserCreate, current_user: dict = Depends(require_admin)):
     """Create a new user (Admin only)"""
     existing_user = await db.users.find_one({"email": user_data.email, "tenant_id": user_data.tenant_id})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Vérifier l'unicité du code employé
+    existing_code = await db.users.find_one({"employee_code": user_data.employee_code, "tenant_id": user_data.tenant_id})
+    if existing_code:
+        raise HTTPException(status_code=400, detail="Ce code employé est déjà utilisé")
     
     if user_data.role not in ["admin", "pharmacien", "caissier"]:
         raise HTTPException(status_code=400, detail="Invalid role. Must be: admin, pharmacien, or caissier")
@@ -51,17 +63,19 @@ async def create_user_admin(user_data: UserCreate, current_user: dict = Depends(
     
     await db.users.insert_one(doc)
     
-    return UserResponse(
-        id=user_obj.id,
-        email=user_obj.email,
-        name=user_obj.name,
-        role=user_obj.role,
-        tenant_id=user_obj.tenant_id,
-        is_active=True,
-        created_at=user_obj.created_at
-    )
+    return {
+        "id": user_obj.id,
+        "email": user_obj.email,
+        "first_name": user_obj.first_name,
+        "last_name": user_obj.last_name,
+        "employee_code": user_obj.employee_code,
+        "role": user_obj.role,
+        "tenant_id": user_obj.tenant_id,
+        "is_active": True,
+        "created_at": user_obj.created_at
+    }
 
-@router.put("/{user_id}", response_model=UserResponse)
+@router.put("/{user_id}")
 async def update_user(user_id: str, user_update: UserUpdate, current_user: dict = Depends(require_admin)):
     """Update a user (Admin only)"""
     existing = await db.users.find_one({"id": user_id, "tenant_id": current_user['tenant_id']})
@@ -76,6 +90,16 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: dict 
     if user_update.role and user_update.role not in ["admin", "pharmacien", "caissier"]:
         raise HTTPException(status_code=400, detail="Invalid role. Must be: admin, pharmacien, or caissier")
     
+    # Vérifier l'unicité du code employé si modifié
+    if user_update.employee_code:
+        existing_code = await db.users.find_one({
+            "employee_code": user_update.employee_code, 
+            "tenant_id": current_user['tenant_id'],
+            "id": {"$ne": user_id}
+        })
+        if existing_code:
+            raise HTTPException(status_code=400, detail="Ce code employé est déjà utilisé")
+    
     update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
     
     if update_data:
@@ -87,7 +111,9 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: dict 
     if 'is_active' not in updated_user:
         updated_user['is_active'] = True
     
-    return UserResponse(**updated_user)
+    # Normaliser les données
+    updated_user = normalize_user_data(updated_user)
+    return updated_user
 
 @router.delete("/{user_id}")
 async def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
