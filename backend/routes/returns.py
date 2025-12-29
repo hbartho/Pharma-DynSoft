@@ -99,17 +99,25 @@ async def get_returns_for_sale(sale_id: str, current_user: dict = Depends(get_cu
 
 @router.get("/history")
 async def get_operations_history(current_user: dict = Depends(get_current_user)):
-    """Obtenir l'historique complet des opérations (ventes + retours)"""
+    """Obtenir l'historique complet des opérations (ventes + retours) avec informations agent"""
     # Récupérer les ventes
     sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
     
     # Récupérer les retours
     returns = await db.returns.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
     
+    # Récupérer tous les utilisateurs pour enrichir les données
+    users = await db.users.find({"tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0}).to_list(1000)
+    users_map = {u['id']: u for u in users}
+    
     # Créer l'historique unifié
     history = []
     
     for sale in sales:
+        user_name = 'Inconnu'
+        if sale.get('user_id') and sale['user_id'] in users_map:
+            user_name = users_map[sale['user_id']]['name']
+        
         history.append({
             "id": sale['id'],
             "type": "sale",
@@ -117,10 +125,16 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
             "amount": sale['total'],
             "items_count": len(sale.get('items', [])),
             "customer_id": sale.get('customer_id'),
+            "user_id": sale.get('user_id'),
+            "user_name": user_name,
             "details": sale
         })
     
     for ret in returns:
+        user_name = 'Inconnu'
+        if ret.get('user_id') and ret['user_id'] in users_map:
+            user_name = users_map[ret['user_id']]['name']
+        
         history.append({
             "id": ret['id'],
             "type": "return",
@@ -129,6 +143,8 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
             "items_count": len(ret.get('items', [])),
             "sale_id": ret['sale_id'],
             "reason": ret.get('reason'),
+            "user_id": ret.get('user_id'),
+            "user_name": user_name,
             "details": ret
         })
     
