@@ -543,13 +543,23 @@ const Sales = () => {
               Gestion des ventes et facturation
             </p>
           </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button data-testid="new-sale-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
-                <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
-                Nouvelle vente
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={loadOperationsHistory}
+              data-testid="history-button"
+              className="rounded-full"
+            >
+              <History className="w-4 h-4 mr-2" strokeWidth={1.5} />
+              Historique
+            </Button>
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+              <DialogTrigger asChild>
+                <Button data-testid="new-sale-button" className="bg-teal-700 hover:bg-teal-800 rounded-full">
+                  <Plus className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                  Nouvelle vente
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Nouvelle vente</DialogTitle>
