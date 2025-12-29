@@ -11,10 +11,12 @@ import api from '../services/api';
 import { addItem, getAllItems, addLocalChange, deleteItem as deleteFromDB, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { toast } from 'sonner';
 
 const Sales = () => {
   const { user } = useAuth();
+  const { formatAmount } = useSettings();
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
