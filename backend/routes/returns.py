@@ -110,13 +110,32 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
     users = await db.users.find({"tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0}).to_list(1000)
     users_map = {u['id']: u for u in users}
     
+    def get_user_info(user_id):
+        """Récupère les informations de l'agent"""
+        if user_id and user_id in users_map:
+            user = users_map[user_id]
+            if 'employee_code' in user and user['employee_code']:
+                employee_code = user['employee_code']
+            else:
+                role_prefix = {'admin': 'ADM', 'pharmacien': 'PHA', 'caissier': 'CAI'}.get(user.get('role', ''), 'EMP')
+                employee_code = f"{role_prefix}-{user['id'][:4].upper()}"
+            user_name = user.get('name') or f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+            return {
+                'employee_code': employee_code,
+                'user_role': user.get('role', 'unknown'),
+                'user_name': user_name or 'Inconnu'
+            }
+        return {
+            'employee_code': 'N/A',
+            'user_role': 'unknown',
+            'user_name': 'Inconnu'
+        }
+    
     # Créer l'historique unifié
     history = []
     
     for sale in sales:
-        user_name = 'Inconnu'
-        if sale.get('user_id') and sale['user_id'] in users_map:
-            user_name = users_map[sale['user_id']]['name']
+        user_info = get_user_info(sale.get('user_id'))
         
         history.append({
             "id": sale['id'],
@@ -126,14 +145,12 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
             "items_count": len(sale.get('items', [])),
             "customer_id": sale.get('customer_id'),
             "user_id": sale.get('user_id'),
-            "user_name": user_name,
+            **user_info,
             "details": sale
         })
     
     for ret in returns:
-        user_name = 'Inconnu'
-        if ret.get('user_id') and ret['user_id'] in users_map:
-            user_name = users_map[ret['user_id']]['name']
+        user_info = get_user_info(ret.get('user_id'))
         
         history.append({
             "id": ret['id'],
@@ -144,7 +161,7 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
             "sale_id": ret['sale_id'],
             "reason": ret.get('reason'),
             "user_id": ret.get('user_id'),
-            "user_name": user_name,
+            **user_info,
             "details": ret
         })
     
