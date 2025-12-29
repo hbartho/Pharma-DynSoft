@@ -136,6 +136,7 @@ const Products = () => {
 
   useEffect(() => {
     const init = async () => {
+      await loadAppSettings();
       await loadProducts();
       await loadCategories();
     };
