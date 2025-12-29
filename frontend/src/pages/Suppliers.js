@@ -156,7 +156,8 @@ const Suppliers = () => {
         await refreshData();
       } else {
         await deleteFromDB('suppliers', supplierToDelete.id);
-        toast.success('Fournisseur supprimé (hors ligne)');
+        await addLocalChange('supplier', 'delete', { id: supplierToDelete.id });
+        toast.success('Fournisseur supprimé (synchronisation en attente)');
         await loadSuppliers();
       }
       setShowDeleteDialog(false);
