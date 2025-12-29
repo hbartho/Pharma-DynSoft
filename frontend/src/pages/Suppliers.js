@@ -99,7 +99,8 @@ const Suppliers = () => {
         } else {
           const updatedSupplier = { ...formData, id: editingSupplier.id };
           await updateItem('suppliers', updatedSupplier);
-          toast.success('Fournisseur mis à jour (hors ligne)');
+          await addLocalChange('supplier', 'update', updatedSupplier);
+          toast.success('Fournisseur mis à jour (synchronisation en attente)');
           setShowDialog(false);
           resetForm();
           await loadSuppliers();
@@ -114,9 +115,10 @@ const Suppliers = () => {
           resetForm();
           await refreshData();
         } else {
-          const newSupplier = { ...formData, id: Date.now().toString() };
+          const newSupplier = { ...formData, id: crypto.randomUUID() };
           await addItem('suppliers', newSupplier);
-          toast.success('Fournisseur ajouté (hors ligne)');
+          await addLocalChange('supplier', 'create', newSupplier);
+          toast.success('Fournisseur ajouté (synchronisation en attente)');
           setShowDialog(false);
           resetForm();
           await loadSuppliers();
