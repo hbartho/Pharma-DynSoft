@@ -824,6 +824,16 @@ const Sales = () => {
                         >
                           <FileText className="w-4 h-4" strokeWidth={1.5} />
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReturnClick(sale)}
+                          data-testid={`return-sale-${sale.id}`}
+                          className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          title="Retour d'articles"
+                        >
+                          <RotateCcw className="w-4 h-4" strokeWidth={1.5} />
+                        </Button>
                       </div>
                     </td>
                   </tr>
