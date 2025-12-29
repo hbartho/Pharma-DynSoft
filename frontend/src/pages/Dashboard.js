@@ -7,7 +7,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
-  const { formatAmount, refreshSettings, currency } = useSettings();
+  const { formatAmount, refreshSettings, currency, loading: settingsLoading } = useSettings();
   const [stats, setStats] = useState({
     today_sales_count: 0,
     today_revenue: 0,
@@ -20,17 +20,17 @@ const Dashboard = () => {
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Charger les settings au montage
   useEffect(() => {
-    refreshSettings(); // Charger les settings au montage
-    loadDashboardData();
+    refreshSettings();
   }, []); // eslint-disable-line
 
-  // Recharger quand la devise change
+  // Charger les données du dashboard quand les settings sont prêts
   useEffect(() => {
-    if (currency) {
+    if (!settingsLoading) {
       loadDashboardData();
     }
-  }, [currency]); // eslint-disable-line
+  }, [settingsLoading, currency]); // eslint-disable-line
 
   const loadDashboardData = async () => {
     try {
