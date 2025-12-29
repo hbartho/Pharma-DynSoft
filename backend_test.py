@@ -1938,11 +1938,14 @@ def main():
             success = tester.run_customers_sales_crud_tests()
         elif sys.argv[1] == "--categories":
             success = tester.run_categories_crud_tests()
+        elif sys.argv[1] == "--modular":
+            success = tester.run_modularized_backend_tests()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular]")
             return 1
     else:
-        success = tester.run_all_tests()
+        # Default to modularized backend tests for this review
+        success = tester.run_modularized_backend_tests()
     
     return 0 if success else 1
 
