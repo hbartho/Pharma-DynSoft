@@ -346,6 +346,18 @@ frontend:
         agent: "testing"
         comment: "✅ TESTÉ - Recherche d'utilisateurs fonctionne parfaitement. Barre de recherche avec icône, filtrage en temps réel par nom, email et rôle. Test avec 'demo' affiche résultats filtrés. Effacement de recherche restaure tous les utilisateurs."
 
+  - task: "Page Produits - Mise à jour automatique liste catégories"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/Products.js"
+    stuck_count: 1
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ PROBLÈME CRITIQUE - Mécanisme de refresh automatique des catégories défaillant. Test complet effectué: 1) Connexion admin réussie, 2) Navigation vers produits OK, 3) Dialogue catégories s'ouvre correctement, 4) Ajout catégorie 'Test Refresh' semble réussir (toast 'Catégorie ajoutée' affiché), 5) MAIS catégorie n'apparaît ni dans la liste des catégories (compteur passe de 8 à 0) ni dans le dropdown du formulaire produit. Catégories disponibles dans dropdown: Sans catégorie, Antibiotiques, Antidouleurs, Vitamines, Dermato, Cardio, Gastro, Respiratoire, Hygiène - 'Test Refresh' manquante."
+
   - task: "Layout - Contrôle d'accès par rôle dans navigation"
     implemented: true
     working: true
