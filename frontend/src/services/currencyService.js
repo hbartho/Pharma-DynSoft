@@ -1,97 +1,91 @@
 /**
- * Service de gestion des devises et formatage monétaire
+ * Service de gestion des devises pour l'application
  */
 
 // Symboles des devises
 const CURRENCY_SYMBOLS = {
+  EUR: '€',
   USD: '$',
   CAD: '$ CAD',
-  EUR: '€',
   XOF: 'FCFA',
   GNF: 'GNF',
 };
 
-// Noms complets des devises
+// Noms des devises
 const CURRENCY_NAMES = {
-  USD: 'Dollar US',
-  CAD: 'Dollar Canadien',
   EUR: 'Euro',
+  USD: 'Dollar US',
+  CAD: 'Dollar CAD',
   XOF: 'Franc CFA',
   GNF: 'Franc Guinéen',
 };
 
-// Position du symbole (avant ou après le montant)
-const CURRENCY_POSITION = {
-  USD: 'before',
-  CAD: 'after',
-  EUR: 'after',
-  XOF: 'after',
-  GNF: 'after',
-};
-
 // Nombre de décimales par devise
 const CURRENCY_DECIMALS = {
+  EUR: 2,
   USD: 2,
   CAD: 2,
-  EUR: 2,
-  XOF: 0, // FCFA n'a pas de centimes
-  GNF: 0, // GNF n'a pas de centimes
+  XOF: 0,
+  GNF: 0,
 };
 
 /**
- * Formate un montant selon la devise
- * @param {number} amount - Le montant à formater
- * @param {string} currency - Le code de la devise (USD, EUR, etc.)
- * @returns {string} - Le montant formaté avec le symbole
+ * Obtient le nombre de décimales pour une devise
+ * @param {string} currency - Code de la devise
+ * @returns {number} Nombre de décimales (0-2)
  */
-export const formatCurrency = (amount, currency = 'EUR') => {
+const getCurrencyDecimals = (currency) => {
+  return CURRENCY_DECIMALS[currency] ?? 2;
+};
+
+/**
+ * Formate un montant avec le bon nombre de décimales selon la devise
+ * - Maximum 2 décimales pour EUR, USD, CAD
+ * - 0 décimales pour GNF, XOF (pas de centimes)
+ * 
+ * @param {number} amount - Le montant à formater
+ * @param {string} currency - Le code de la devise (EUR, USD, etc.)
+ * @returns {string} Le montant formaté avec le symbole de la devise
+ */
+const formatCurrency = (amount, currency = 'GNF') => {
   const symbol = CURRENCY_SYMBOLS[currency] || currency;
-  const decimals = CURRENCY_DECIMALS[currency] ?? 2;
-  const position = CURRENCY_POSITION[currency] || 'after';
+  const decimals = getCurrencyDecimals(currency);
   
-  const formattedAmount = amount.toLocaleString('fr-FR', {
-    minimumFractionDigits: decimals,
+  // Arrondir le montant selon le nombre de décimales de la devise
+  const roundedAmount = Math.round(amount * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  
+  const formatted = roundedAmount.toLocaleString('fr-FR', {
+    minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
   
-  if (position === 'before') {
-    return `${symbol}${formattedAmount}`;
-  }
-  return `${formattedAmount} ${symbol}`;
+  return `${formatted} ${symbol}`;
+};
+
+/**
+ * Arrondit un montant à 2 décimales maximum
+ * @param {number} amount - Le montant à arrondir
+ * @returns {number} Le montant arrondi
+ */
+const roundAmount = (amount) => {
+  return Math.round((amount || 0) * 100) / 100;
 };
 
 /**
  * Obtient le symbole d'une devise
- * @param {string} currency - Le code de la devise
- * @returns {string} - Le symbole
+ * @param {string} currency - Code de la devise
+ * @returns {string} Symbole de la devise
  */
-export const getCurrencySymbol = (currency = 'EUR') => {
+const getCurrencySymbol = (currency) => {
   return CURRENCY_SYMBOLS[currency] || currency;
 };
 
-/**
- * Obtient le nom complet d'une devise
- * @param {string} currency - Le code de la devise
- * @returns {string} - Le nom complet
- */
-export const getCurrencyName = (currency = 'EUR') => {
-  return CURRENCY_NAMES[currency] || currency;
-};
-
-/**
- * Obtient le nombre de décimales d'une devise
- * @param {string} currency - Le code de la devise
- * @returns {number} - Le nombre de décimales
- */
-export const getCurrencyDecimals = (currency = 'EUR') => {
-  return CURRENCY_DECIMALS[currency] ?? 2;
-};
-
-export default {
+export {
   formatCurrency,
+  roundAmount,
   getCurrencySymbol,
-  getCurrencyName,
   getCurrencyDecimals,
   CURRENCY_SYMBOLS,
   CURRENCY_NAMES,
+  CURRENCY_DECIMALS,
 };
