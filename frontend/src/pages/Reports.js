@@ -34,8 +34,8 @@ const Reports = () => {
     const decimals = { USD: 2, CAD: 2, EUR: 2, XOF: 0, GNF: 0 };
     const dec = decimals[currency] ?? 2;
     const formatted = (amount || 0).toLocaleString('fr-FR', { 
-      minimumFractionDigits: dec, 
-      maximumFractionDigits: 2 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: dec 
     });
     return `${formatted} ${symbols[currency] || currency}`;
   };
