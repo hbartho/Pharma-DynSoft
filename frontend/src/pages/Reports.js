@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import api from '../services/api';
-import { BarChart3 } from 'lucide-react';
 
 const Reports = () => {
   const [salesData, setSalesData] = useState(null);
+  const [settings, setSettings] = useState({ currency: 'GNF' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,13 +14,30 @@ const Reports = () => {
 
   const loadReports = async () => {
     try {
-      const response = await api.get('/reports/sales?days=30');
-      setSalesData(response.data);
+      const [salesRes, settingsRes] = await Promise.all([
+        api.get('/reports/sales?days=30'),
+        api.get('/settings')
+      ]);
+      setSalesData(salesRes.data);
+      setSettings(settingsRes.data);
     } catch (error) {
       console.error('Error loading reports:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fonction de formatage des montants avec 2 décimales max
+  const formatAmount = (amount) => {
+    const currency = settings?.currency || 'GNF';
+    const symbols = { USD: '$', CAD: '$ CAD', EUR: '€', XOF: 'FCFA', GNF: 'GNF' };
+    const decimals = { USD: 2, CAD: 2, EUR: 2, XOF: 0, GNF: 0 };
+    const dec = decimals[currency] ?? 2;
+    const formatted = (amount || 0).toLocaleString('fr-FR', { 
+      minimumFractionDigits: dec, 
+      maximumFractionDigits: 2 
+    });
+    return `${formatted} ${symbols[currency] || currency}`;
   };
 
   // Transformer et trier les données par date croissante
@@ -29,7 +46,7 @@ const Reports = () => {
         .map(([date, data]) => ({
           date,
           dateFormatted: new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-          revenue: data.revenue,
+          revenue: Math.round(data.revenue * 100) / 100,
           count: data.count,
         }))
         .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -67,7 +84,7 @@ const Reports = () => {
                 Revenu total (30j)
               </p>
               <p className="text-3xl font-bold text-teal-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                {salesData.total_revenue.toFixed(2)} €
+                {formatAmount(salesData.total_revenue)}
               </p>
             </div>
             <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
@@ -75,10 +92,7 @@ const Reports = () => {
                 Moyenne par vente
               </p>
               <p className="text-3xl font-bold text-emerald-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                {salesData.total_sales > 0
-                  ? (salesData.total_revenue / salesData.total_sales).toFixed(2)
-                  : '0.00'}{' '}
-                €
+                {formatAmount(salesData.total_sales > 0 ? salesData.total_revenue / salesData.total_sales : 0)}
               </p>
             </div>
           </div>
@@ -101,6 +115,7 @@ const Reports = () => {
                     borderRadius: '8px',
                     fontFamily: 'Inter, sans-serif',
                   }}
+                  formatter={(value) => [formatAmount(value), 'Revenu']}
                 />
                 <Line type="monotone" dataKey="revenue" stroke="#0F766E" strokeWidth={2} dot={{ fill: '#0F766E' }} />
               </LineChart>
@@ -129,6 +144,7 @@ const Reports = () => {
                     borderRadius: '8px',
                     fontFamily: 'Inter, sans-serif',
                   }}
+                  formatter={(value) => [value, 'Ventes']}
                 />
                 <Bar dataKey="count" fill="#10B981" radius={[8, 8, 0, 0]} />
               </BarChart>
