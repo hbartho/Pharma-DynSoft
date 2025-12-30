@@ -46,7 +46,7 @@ async def create_return(return_data: SaleReturnCreate, current_user: dict = Depe
                 detail=f"Quantité totale retournée ({already_returned + return_item['quantity']}) dépasse la quantité vendue ({sale_item['quantity']}) pour {sale_item['name']}"
             )
         
-        item_refund = sale_item['price'] * return_item['quantity']
+        item_refund = round(sale_item['price'] * return_item['quantity'], 2)
         total_refund += item_refund
         
         return_items.append({
