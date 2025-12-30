@@ -13,6 +13,8 @@ async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(get_cu
     sale_dict = sale_data.model_dump()
     sale_dict['tenant_id'] = current_user['tenant_id']
     sale_dict['user_id'] = current_user['user_id']
+    # Arrondir le total à 2 décimales
+    sale_dict['total'] = round(sale_dict['total'], 2)
     sale_obj = Sale(**sale_dict)
     
     for item in sale_data.items:
