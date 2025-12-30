@@ -565,7 +565,7 @@ const Products = () => {
                                   <p className="text-xs text-slate-500">{product.barcode}</p>
                                 )}
                               </div>
-                              <span className="text-teal-700 font-medium">{product.price?.toFixed(2)} €</span>
+                              <span className="text-teal-700 font-medium">{formatAmount(product.price)}</span>
                             </button>
                           ))}
                         </div>
