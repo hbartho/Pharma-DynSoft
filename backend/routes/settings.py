@@ -6,6 +6,21 @@ from models.settings import Settings, SettingsUpdate
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
+@router.get("/public")
+async def get_public_settings():
+    """Get public settings (pharmacy name) - No authentication required"""
+    # Récupérer les paramètres du tenant par défaut
+    settings = await db.settings.find_one({"tenant_id": "default"}, {"_id": 0})
+    if settings:
+        return {
+            "pharmacy_name": settings.get("pharmacy_name", "DynSoft Pharma"),
+            "currency": settings.get("currency", "GNF")
+        }
+    return {
+        "pharmacy_name": "DynSoft Pharma",
+        "currency": "GNF"
+    }
+
 @router.get("")
 async def get_settings(current_user: dict = Depends(get_current_user)):
     """Get application settings"""
