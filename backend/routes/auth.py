@@ -93,3 +93,28 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     user = normalize_user_data(user)
     
     return UserResponse(**user)
+
+@router.put("/change-password")
+async def change_password(password_data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    """Change the current user's password"""
+    # Récupérer l'utilisateur actuel
+    user = await db.users.find_one({"id": current_user['user_id']})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    # Vérifier le mot de passe actuel
+    if not verify_password(password_data.current_password, user['password']):
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect")
+    
+    # Valider le nouveau mot de passe
+    if len(password_data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 6 caractères")
+    
+    # Mettre à jour le mot de passe
+    new_hashed_password = hash_password(password_data.new_password)
+    await db.users.update_one(
+        {"id": current_user['user_id']},
+        {"$set": {"password": new_hashed_password}}
+    )
+    
+    return {"message": "Mot de passe mis à jour avec succès"}
