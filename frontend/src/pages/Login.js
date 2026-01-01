@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Building2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -14,6 +17,37 @@ const Login = () => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+  const [pharmacyName, setPharmacyName] = useState('DynSoft Pharma');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // État pour le dialogue de changement de mot de passe
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordChangeData, setPasswordChangeData] = useState({
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Charger le nom de la pharmacie depuis les paramètres
+  useEffect(() => {
+    const loadPharmacyName = async () => {
+      try {
+        // Essayer de charger le nom sans authentification (endpoint public)
+        const response = await api.get('/settings/public');
+        if (response.data?.pharmacy_name) {
+          setPharmacyName(response.data.pharmacy_name);
+        }
+      } catch (error) {
+        // Si l'endpoint public n'existe pas, garder le nom par défaut
+        console.log('Using default pharmacy name');
+      }
+    };
+    loadPharmacyName();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,6 +67,61 @@ const Login = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePasswordChangeSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validations
+    if (passwordChangeData.newPassword !== passwordChangeData.confirmPassword) {
+      toast.error('Les nouveaux mots de passe ne correspondent pas');
+      return;
+    }
+    
+    if (passwordChangeData.newPassword.length < 6) {
+      toast.error('Le nouveau mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    
+    setChangingPassword(true);
+    
+    try {
+      // D'abord, se connecter pour vérifier les identifiants actuels
+      const loginResult = await login(passwordChangeData.email, passwordChangeData.currentPassword);
+      
+      if (!loginResult.success) {
+        toast.error('Email ou mot de passe actuel incorrect');
+        setChangingPassword(false);
+        return;
+      }
+      
+      // Ensuite, changer le mot de passe
+      await api.put('/auth/change-password', {
+        current_password: passwordChangeData.currentPassword,
+        new_password: passwordChangeData.newPassword,
+      });
+      
+      toast.success('Mot de passe mis à jour avec succès');
+      setShowPasswordDialog(false);
+      setPasswordChangeData({
+        email: '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      
+      // Pré-remplir le formulaire de connexion avec le nouvel email
+      setFormData({
+        email: passwordChangeData.email,
+        password: '',
+      });
+      
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors du changement de mot de passe');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -58,6 +147,21 @@ const Login = () => {
       {/* Right side - Form */}
       <div className="flex-1 flex items-center justify-center px-8 bg-white">
         <div className="w-full max-w-md">
+          {/* Agence / Nom de la pharmacie */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-teal-100 rounded-lg">
+                <Building2 className="w-6 h-6 text-teal-700" />
+              </div>
+              <div>
+                <p className="text-xs text-teal-600 font-medium uppercase tracking-wide">Agence</p>
+                <p className="text-lg font-bold text-teal-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                  {pharmacyName}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Connexion
@@ -82,18 +186,37 @@ const Login = () => {
             </div>
 
             <div>
-              <Label htmlFor="password">Mot de passe</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                data-testid="password-input"
-                className="mt-2"
-                placeholder="••••••••"
-              />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordDialog(true)}
+                  className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  Changer
+                </button>
+              </div>
+              <div className="relative mt-2">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  data-testid="password-input"
+                  placeholder="••••••••"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <Button
@@ -125,7 +248,7 @@ const Login = () => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Admin</span>
+                    <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">ADM-001</span>
                     <p className="text-sm text-slate-700 mt-1">admin@pharmaflow.com</p>
                   </div>
                   <span className="text-xs text-slate-400">admin123</span>
@@ -138,7 +261,7 @@ const Login = () => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Pharmacien</span>
+                    <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">PHA-001</span>
                     <p className="text-sm text-slate-700 mt-1">pharmacien@pharmaflow.com</p>
                   </div>
                   <span className="text-xs text-slate-400">pharma123</span>
@@ -151,7 +274,7 @@ const Login = () => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Caissier</span>
+                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">CAI-001</span>
                     <p className="text-sm text-slate-700 mt-1">caissier@pharmaflow.com</p>
                   </div>
                   <span className="text-xs text-slate-400">caisse123</span>
@@ -168,6 +291,112 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Dialog de changement de mot de passe */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              <KeyRound className="w-5 h-5 text-teal-600" />
+              Changer le mot de passe
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handlePasswordChangeSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="change-email">Email</Label>
+              <Input
+                id="change-email"
+                type="email"
+                value={passwordChangeData.email}
+                onChange={(e) => setPasswordChangeData({...passwordChangeData, email: e.target.value})}
+                required
+                className="mt-1"
+                placeholder="votre@email.com"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="current-password">Mot de passe actuel</Label>
+              <div className="relative mt-1">
+                <Input
+                  id="current-password"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={passwordChangeData.currentPassword}
+                  onChange={(e) => setPasswordChangeData({...passwordChangeData, currentPassword: e.target.value})}
+                  required
+                  placeholder="••••••••"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="new-password">Nouveau mot de passe</Label>
+              <div className="relative mt-1">
+                <Input
+                  id="new-password"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={passwordChangeData.newPassword}
+                  onChange={(e) => setPasswordChangeData({...passwordChangeData, newPassword: e.target.value})}
+                  required
+                  placeholder="••••••••"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Minimum 6 caractères</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={passwordChangeData.confirmPassword}
+                onChange={(e) => setPasswordChangeData({...passwordChangeData, confirmPassword: e.target.value})}
+                required
+                className="mt-1"
+                placeholder="••••••••"
+              />
+              {passwordChangeData.newPassword && passwordChangeData.confirmPassword && 
+                passwordChangeData.newPassword !== passwordChangeData.confirmPassword && (
+                <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
+              )}
+            </div>
+            
+            <DialogFooter className="mt-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowPasswordDialog(false)}
+              >
+                Annuler
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={changingPassword || !passwordChangeData.email || !passwordChangeData.currentPassword || !passwordChangeData.newPassword || !passwordChangeData.confirmPassword}
+                className="bg-teal-700 hover:bg-teal-800"
+              >
+                {changingPassword ? 'Modification...' : 'Modifier'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
