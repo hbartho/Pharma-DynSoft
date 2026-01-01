@@ -1,10 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from datetime import datetime
 from database import db
 from auth import hash_password, verify_password, create_access_token, get_current_user
 from models.user import User, UserCreate, UserLogin, Token, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 def normalize_user_data(user: dict) -> dict:
     """Normalise les données utilisateur pour la compatibilité avec l'ancien format"""
