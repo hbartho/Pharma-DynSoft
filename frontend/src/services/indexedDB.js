@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'DynSoftPharmaDB';
-const DB_VERSION = 2; // Increment version for upgrade
+const DB_VERSION = 3; // Increment version for new stores
 
 let dbInstance = null;
 
@@ -12,7 +12,11 @@ export const SYNC_STORES = [
   'sales',
   'customers',
   'suppliers',
-  'prescriptions'
+  'prescriptions',
+  'supplies',
+  'returns',
+  'units',
+  'settings'
 ];
 
 export const initDB = async () => {
