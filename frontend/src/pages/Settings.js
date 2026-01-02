@@ -474,6 +474,186 @@ const Settings = () => {
             </div>
           </div>
         )}
+
+        {/* Section PWA / Mode Hors Ligne */}
+        <div className="p-6 rounded-xl bg-white border border-slate-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              {isOnline ? (
+                <Wifi className="w-5 h-5 text-blue-600" strokeWidth={1.5} />
+              ) : (
+                <WifiOff className="w-5 h-5 text-red-600" strokeWidth={1.5} />
+              )}
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Mode Hors Ligne (PWA)
+              </h2>
+              <p className="text-sm text-slate-500">
+                Gérez la synchronisation et les données hors ligne
+              </p>
+            </div>
+          </div>
+
+          {/* Statut de connexion */}
+          <OfflineIndicator showDetails={true} className="mb-6" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Statistiques des données locales */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Données en cache local
+              </h3>
+              
+              {storeCounts && (
+                <div className="space-y-2">
+                  {Object.entries(storeCounts).map(([store, counts]) => (
+                    <div key={store} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <span className="text-sm text-slate-700 capitalize">
+                        {store === 'products' ? 'Produits' :
+                         store === 'categories' ? 'Catégories' :
+                         store === 'customers' ? 'Clients' :
+                         store === 'suppliers' ? 'Fournisseurs' :
+                         store === 'sales' ? 'Ventes' :
+                         store === 'supplies' ? 'Approvisionnements' :
+                         store === 'returns' ? 'Retours' :
+                         store === 'units' ? 'Unités' :
+                         store === 'prescriptions' ? 'Ordonnances' :
+                         store}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-900">{counts.total}</span>
+                        {counts.unsynced > 0 && (
+                          <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                            {counts.unsynced} non sync
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Modifications en attente */}
+              {offlineStats && offlineStats.totalPending > 0 && (
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-amber-800">
+                      Modifications en attente
+                    </span>
+                    <span className="text-lg font-bold text-amber-900">
+                      {offlineStats.totalPending}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(offlineStats.byType).map(([type, count]) => (
+                      <span key={type} className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded">
+                        {type}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Actions de synchronisation
+              </h3>
+
+              <div className="space-y-3">
+                {/* Précharger les données */}
+                <Button
+                  onClick={handlePreloadData}
+                  disabled={preloading || !isOnline}
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  {preloading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      {preloadProgress 
+                        ? `${preloadProgress.store} (${preloadProgress.current}/${preloadProgress.total})`
+                        : 'Préchargement...'}
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Précharger les données pour le mode hors ligne
+                    </>
+                  )}
+                </Button>
+
+                {/* Synchroniser maintenant */}
+                <Button
+                  onClick={() => performSync()}
+                  disabled={isSyncing || !isOnline}
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Synchronisation en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Cloud className="w-4 h-4" />
+                      Synchroniser maintenant
+                    </>
+                  )}
+                </Button>
+
+                {/* Synchronisation complète */}
+                <Button
+                  onClick={() => forceFullSync()}
+                  disabled={isSyncing || !isOnline}
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                >
+                  <Database className="w-4 h-4" />
+                  Synchronisation complète (re-télécharger tout)
+                </Button>
+
+                {/* Supprimer les modifications en attente */}
+                {pendingChangesCount > 0 && (
+                  <Button
+                    onClick={handleClearPendingChanges}
+                    variant="outline"
+                    className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <CloudOff className="w-4 h-4" />
+                    Supprimer les modifications en attente ({pendingChangesCount})
+                  </Button>
+                )}
+              </div>
+
+              {/* Dernière synchronisation */}
+              {lastSyncTime && (
+                <div className="flex items-center gap-2 text-sm text-slate-500 mt-4">
+                  <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  <span>Dernière synchronisation: {getTimeSinceLastSync()}</span>
+                </div>
+              )}
+
+              {/* Info mode offline */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mt-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Mode hors ligne activé</strong>
+                </p>
+                <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
+                  <li>Les données sont automatiquement mises en cache</li>
+                  <li>Vous pouvez créer des ventes même sans connexion</li>
+                  <li>Les modifications sont synchronisées au retour en ligne</li>
+                  <li>Synchronisation automatique toutes les 15 minutes</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </Layout>
   );
