@@ -52,12 +52,14 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      const [statsResponse, salesResponse] = await Promise.all([
+      const [statsResponse, salesResponse, suppliesResponse] = await Promise.all([
         api.get('/reports/dashboard'),
         api.get('/reports/sales?days=7'),
+        api.get('/supplies?status=pending'),
       ]);
 
       setStats(statsResponse.data);
+      setPendingSupplies(suppliesResponse.data.length);
 
       // Transformer et trier les données par date croissante
       const chartData = Object.entries(salesResponse.data.daily_stats)
