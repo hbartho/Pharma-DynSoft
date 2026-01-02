@@ -949,6 +949,11 @@ const Sales = () => {
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
               Retour d&apos;articles
+              {selectedSale && (
+                <span className="ml-2 font-mono text-sm font-normal text-teal-600 bg-teal-50 px-2 py-1 rounded">
+                  {selectedSale.sale_number || `VNT-${selectedSale.id?.substring(0, 8).toUpperCase()}`}
+                </span>
+              )}
             </DialogTitle>
           </DialogHeader>
           {selectedSale && (
