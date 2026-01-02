@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -6,7 +6,6 @@ import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { 
   Plus, 
   Search, 
@@ -19,11 +18,12 @@ import {
   FileText,
   Calendar,
   User,
-  Hash,
   ShoppingCart,
   AlertTriangle,
   Eye,
-  X
+  X,
+  RefreshCw,
+  PlusCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -41,11 +41,14 @@ const Supplies = () => {
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showValidateDialog, setShowValidateDialog] = useState(false);
+  const [showAddSupplierDialog, setShowAddSupplierDialog] = useState(false);
+  const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [editingSupply, setEditingSupply] = useState(null);
   const [viewingSupply, setViewingSupply] = useState(null);
   const [supplyToDelete, setSupplyToDelete] = useState(null);
   const [supplyToValidate, setSupplyToValidate] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -66,6 +69,29 @@ const Supplies = () => {
     unit_price: ''
   });
   const [productSearch, setProductSearch] = useState('');
+
+  // Quick add supplier form
+  const [supplierForm, setSupplierForm] = useState({
+    name: '',
+    contact: '',
+    phone: '',
+    email: '',
+    address: ''
+  });
+
+  // Quick add product form
+  const [productForm, setProductForm] = useState({
+    name: '',
+    internal_reference: '',
+    barcode: '',
+    purchase_price: '',
+    price: '',
+    stock: '0',
+    min_stock: '10'
+  });
+
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
   // Load settings
   const loadAppSettings = async () => {
@@ -99,23 +125,23 @@ const Supplies = () => {
     }
   };
 
-  const loadSuppliers = async () => {
+  const loadSuppliers = useCallback(async () => {
     try {
       const response = await api.get('/suppliers');
       setSuppliers(response.data);
     } catch (error) {
       console.error('Error loading suppliers:', error);
     }
-  };
+  }, []);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await api.get('/products');
       setProducts(response.data.filter(p => p.is_active !== false));
     } catch (error) {
       console.error('Error loading products:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -123,6 +149,12 @@ const Supplies = () => {
       await Promise.all([loadSupplies(), loadSuppliers(), loadProducts()]);
     };
     init();
+  }, [loadSuppliers, loadProducts]);
+
+  // Rafraîchir le formulaire
+  const refreshForm = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    toast.success('Liste mise à jour');
   }, []);
 
   const resetForm = () => {
@@ -163,6 +195,7 @@ const Supplies = () => {
         total_price: parseInt(itemForm.quantity) * parseFloat(itemForm.unit_price)
       };
       setFormData({ ...formData, items: updatedItems });
+      toast.success(`Produit "${product.name}" mis à jour`);
     } else {
       // Add new item
       const newItem = {
@@ -174,17 +207,31 @@ const Supplies = () => {
         total_price: parseInt(itemForm.quantity) * parseFloat(itemForm.unit_price)
       };
       setFormData({ ...formData, items: [...formData.items, newItem] });
+      toast.success(`Produit "${product.name}" ajouté`);
     }
     
     setItemForm({ product_id: '', quantity: '', unit_price: '' });
     setProductSearch('');
+    refreshForm();
   };
 
   const handleRemoveItem = (itemId) => {
+    const item = formData.items.find(i => i.id === itemId);
     setFormData({
       ...formData,
       items: formData.items.filter(item => item.id !== itemId)
     });
+    toast.success(`Produit "${item?.product_name}" retiré`);
+    refreshForm();
+  };
+
+  const handleEditItem = (item) => {
+    setItemForm({
+      product_id: item.product_id,
+      quantity: item.quantity.toString(),
+      unit_price: item.unit_price.toString()
+    });
+    setProductSearch(item.product_name);
   };
 
   const handleSelectProduct = (productId) => {
@@ -201,6 +248,54 @@ const Supplies = () => {
 
   const calculateTotal = () => {
     return formData.items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+  };
+
+  // Quick add supplier
+  const handleAddSupplier = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await api.post('/suppliers', supplierForm);
+      toast.success('Fournisseur ajouté avec succès');
+      setShowAddSupplierDialog(false);
+      setSupplierForm({ name: '', contact: '', phone: '', email: '', address: '' });
+      await loadSuppliers();
+      // Sélectionner automatiquement le nouveau fournisseur
+      setFormData({ ...formData, supplier_id: response.data.id });
+    } catch (error) {
+      console.error('Error adding supplier:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'ajout du fournisseur');
+    }
+  };
+
+  // Quick add product
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const productData = {
+        name: productForm.name,
+        internal_reference: productForm.internal_reference || null,
+        barcode: productForm.barcode || null,
+        purchase_price: parseFloat(productForm.purchase_price) || 0,
+        price: parseFloat(productForm.price) || 0,
+        stock: parseInt(productForm.stock) || 0,
+        min_stock: parseInt(productForm.min_stock) || 10
+      };
+      const response = await api.post('/products', productData);
+      toast.success('Produit ajouté avec succès');
+      setShowAddProductDialog(false);
+      setProductForm({ name: '', internal_reference: '', barcode: '', purchase_price: '', price: '', stock: '0', min_stock: '10' });
+      await loadProducts();
+      // Pré-sélectionner le nouveau produit
+      setItemForm({
+        product_id: response.data.id,
+        quantity: '',
+        unit_price: productData.purchase_price.toString()
+      });
+      setProductSearch(response.data.name);
+    } catch (error) {
+      console.error('Error adding product:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'ajout du produit');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -294,6 +389,10 @@ const Supplies = () => {
   };
 
   const handleValidate = (supply) => {
+    if (!isAdmin) {
+      toast.error('Seul un administrateur peut valider un approvisionnement');
+      return;
+    }
     setSupplyToValidate(supply);
     setShowValidateDialog(true);
   };
@@ -321,11 +420,6 @@ const Supplies = () => {
       month: 'short', 
       year: 'numeric' 
     });
-  };
-
-  const getSupplierName = (supplierId) => {
-    const supplier = suppliers.find(s => s.id === supplierId);
-    return supplier?.name || 'Fournisseur inconnu';
   };
 
   const filteredSupplies = supplies.filter(supply => {
@@ -398,7 +492,19 @@ const Supplies = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="supplier">Fournisseur</Label>
+                    <Label htmlFor="supplier" className="flex items-center justify-between">
+                      Fournisseur
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddSupplierDialog(true)}
+                        className="h-6 px-2 text-xs text-teal-600 hover:text-teal-700"
+                      >
+                        <PlusCircle className="w-3 h-3 mr-1" />
+                        Nouveau
+                      </Button>
+                    </Label>
                     <Select 
                       value={formData.supplier_id || 'none'} 
                       onValueChange={(value) => setFormData({ ...formData, supplier_id: value === 'none' ? '' : value })}
@@ -475,15 +581,27 @@ const Supplies = () => {
 
                 {/* Section Produits */}
                 <div className="border-t pt-4">
-                  <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
-                    <Package className="w-5 h-5 text-teal-600" />
-                    Produits à approvisionner
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-medium text-slate-900 flex items-center gap-2">
+                      <Package className="w-5 h-5 text-teal-600" />
+                      Produits à approvisionner
+                    </h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddProductDialog(true)}
+                      className="text-teal-600 hover:text-teal-700"
+                    >
+                      <PlusCircle className="w-4 h-4 mr-1" />
+                      Nouveau produit
+                    </Button>
+                  </div>
                   
                   {/* Formulaire d'ajout de produit */}
-                  <div className="p-4 bg-slate-50 rounded-lg mb-4">
+                  <div className="p-4 bg-slate-50 rounded-lg mb-4" key={refreshKey}>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <div className="md:col-span-2">
+                      <div className="md:col-span-2 relative">
                         <Label className="text-sm">Rechercher un produit</Label>
                         <div className="relative mt-1">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -495,7 +613,7 @@ const Supplies = () => {
                           />
                         </div>
                         {productSearch && filteredProducts.length > 0 && (
-                          <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                             {filteredProducts.slice(0, 8).map(product => (
                               <button
                                 key={product.id}
@@ -576,7 +694,7 @@ const Supplies = () => {
                             <th className="text-right px-4 py-2 font-medium text-slate-600">Qté</th>
                             <th className="text-right px-4 py-2 font-medium text-slate-600">Prix unit.</th>
                             <th className="text-right px-4 py-2 font-medium text-slate-600">Total</th>
-                            <th className="px-4 py-2 w-10"></th>
+                            <th className="px-4 py-2 w-20"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -587,22 +705,37 @@ const Supplies = () => {
                               <td className="px-4 py-2 text-right">{formatAmount(item.unit_price)}</td>
                               <td className="px-4 py-2 text-right font-medium">{formatAmount(item.total_price)}</td>
                               <td className="px-4 py-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveItem(item.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
+                                <div className="flex gap-1 justify-end">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditItem(item)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 p-0"
+                                    title="Modifier"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveItem(item.id)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                                    title="Supprimer"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot className="bg-teal-50">
                           <tr>
-                            <td colSpan="3" className="px-4 py-3 font-medium text-slate-700">Total approvisionnement</td>
+                            <td colSpan="3" className="px-4 py-3 font-medium text-slate-700">
+                              Total approvisionnement ({formData.items.length} produit{formData.items.length > 1 ? 's' : ''})
+                            </td>
                             <td className="px-4 py-3 text-right font-bold text-teal-700 text-lg">{formatAmount(calculateTotal())}</td>
                             <td></td>
                           </tr>
@@ -807,15 +940,17 @@ const Supplies = () => {
                     </Button>
                     {!supply.is_validated && (
                       <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleValidate(supply)}
-                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          title="Valider"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleValidate(supply)}
+                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            title="Valider (Admin uniquement)"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -941,6 +1076,191 @@ const Supplies = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Supplier Dialog */}
+      <Dialog open={showAddSupplierDialog} onOpenChange={setShowAddSupplierDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-teal-600" />
+              Nouveau fournisseur
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddSupplier} className="space-y-4">
+            <div>
+              <Label htmlFor="supplier-name">Nom *</Label>
+              <Input
+                id="supplier-name"
+                value={supplierForm.name}
+                onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                required
+                placeholder="Nom du fournisseur"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="supplier-contact">Contact</Label>
+              <Input
+                id="supplier-contact"
+                value={supplierForm.contact}
+                onChange={(e) => setSupplierForm({ ...supplierForm, contact: e.target.value })}
+                placeholder="Personne de contact"
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="supplier-phone">Téléphone</Label>
+                <Input
+                  id="supplier-phone"
+                  value={supplierForm.phone}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                  placeholder="+224 xxx"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="supplier-email">Email</Label>
+                <Input
+                  id="supplier-email"
+                  type="email"
+                  value={supplierForm.email}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                  placeholder="email@exemple.com"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="supplier-address">Adresse</Label>
+              <Input
+                id="supplier-address"
+                value={supplierForm.address}
+                onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                placeholder="Adresse complète"
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowAddSupplierDialog(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-teal-700 hover:bg-teal-800">
+                Ajouter
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Product Dialog */}
+      <Dialog open={showAddProductDialog} onOpenChange={setShowAddProductDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-teal-600" />
+              Nouveau produit
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddProduct} className="space-y-4">
+            <div>
+              <Label htmlFor="product-name">Nom du produit *</Label>
+              <Input
+                id="product-name"
+                value={productForm.name}
+                onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                required
+                placeholder="Nom du produit"
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="product-ref">Référence interne</Label>
+                <Input
+                  id="product-ref"
+                  value={productForm.internal_reference}
+                  onChange={(e) => setProductForm({ ...productForm, internal_reference: e.target.value.toUpperCase() })}
+                  placeholder="MED-001"
+                  className="mt-1 font-mono"
+                />
+              </div>
+              <div>
+                <Label htmlFor="product-barcode">Code-barres</Label>
+                <Input
+                  id="product-barcode"
+                  value={productForm.barcode}
+                  onChange={(e) => setProductForm({ ...productForm, barcode: e.target.value })}
+                  placeholder="123456789"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="product-purchase">Prix d'achat *</Label>
+                <Input
+                  id="product-purchase"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={productForm.purchase_price}
+                  onChange={(e) => setProductForm({ ...productForm, purchase_price: e.target.value })}
+                  required
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="product-price">Prix de vente *</Label>
+                <Input
+                  id="product-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={productForm.price}
+                  onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                  required
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="product-stock">Stock initial</Label>
+                <Input
+                  id="product-stock"
+                  type="number"
+                  min="0"
+                  value={productForm.stock}
+                  onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="product-minstock">Stock minimum</Label>
+                <Input
+                  id="product-minstock"
+                  type="number"
+                  min="0"
+                  value={productForm.min_stock}
+                  onChange={(e) => setProductForm({ ...productForm, min_stock: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowAddProductDialog(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-teal-700 hover:bg-teal-800">
+                Ajouter
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
