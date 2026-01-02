@@ -16,6 +16,7 @@ import OfflineIndicator from '../components/OfflineIndicator';
 
 const Settings = () => {
   const { refreshSettings } = useSettings();
+  const { isOnline, isSyncing, performSync, forceFullSync, pendingChangesCount, lastSyncTime, getTimeSinceLastSync } = useOffline();
   const [settings, setSettings] = useState({
     stock_valuation_method: 'weighted_average',
     currency: 'GNF',
@@ -27,6 +28,10 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [stockValuation, setStockValuation] = useState(null);
+  const [offlineStats, setOfflineStats] = useState(null);
+  const [storeCounts, setStoreCounts] = useState(null);
+  const [preloading, setPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(null);
 
   useEffect(() => {
     loadSettings();
