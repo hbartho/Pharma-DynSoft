@@ -258,7 +258,7 @@ async def validate_supply(
         {"$set": {
             "is_validated": True,
             "validated_at": datetime.now(timezone.utc).isoformat(),
-            "validated_by": current_user["id"]
+            "validated_by": current_user["user_id"]
         }}
     )
     
