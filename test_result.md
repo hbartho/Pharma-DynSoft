@@ -5,11 +5,12 @@
 **Task**: Supplies (Approvisionnements) Employee Code Display Fix Testing
 
 ## Test Objectives
-1. Verify price_history model uses new field names (prix_appro, prix_vente_prod, date_maj_prix, date_peremption)
-2. Verify all user tracking fields use employee_code instead of user_id
-3. Verify JWT token includes employee_code
-4. Verify backward compatibility with existing data
-5. Verify all API endpoints work correctly with the new model
+1. Verify employee code fields in supplies API responses (created_by_name, updated_by_name, validated_by_name)
+2. Verify employee codes show ADM-001 format instead of "Inconnu" or "N/A"
+3. Verify new supply creation shows correct employee code
+4. Verify supply editing shows correct employee code
+5. Verify supply validation shows correct employee code
+6. Verify backward compatibility with old UUID data resolves to employee codes
 
 ## Test Credentials
 - Admin: admin@pharmaflow.com / admin123
