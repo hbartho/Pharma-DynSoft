@@ -2,20 +2,84 @@
 
 ## Current Test Session
 **Date**: 2026-01-02
-**Task**: Supplies (Approvisionnements) Employee Code Display Fix Testing
+**Task**: Supplier Activation/Deactivation and Deletion Rules Testing
 
 ## Test Objectives
-1. Verify employee code fields in supplies API responses (created_by_name, updated_by_name, validated_by_name)
-2. Verify employee codes show ADM-001 format instead of "Inconnu" or "N/A"
-3. Verify new supply creation shows correct employee code
-4. Verify supply editing shows correct employee code
-5. Verify supply validation shows correct employee code
-6. Verify backward compatibility with old UUID data resolves to employee codes
+1. Test supplier status toggle (admin only) - PATCH /api/suppliers/{id}/toggle-status
+2. Test supplier deletion with supplies (should fail with 400)
+3. Test supplier deletion without supplies (should succeed)
+4. Test visibility rules (admin sees all, non-admin sees only active)
+5. Test can-delete endpoint - GET /api/suppliers/{id}/can-delete
 
 ## Test Credentials
 - Admin: admin@pharmaflow.com / admin123
 - Pharmacien: pharmacien@pharmaflow.com / pharma123
-- Caissier: caissier@pharmaflow.com / caisse123
+
+## Backend Test Results
+
+### Supplier Activation/Deactivation & Deletion Rules (routes/suppliers.py)
+- **Status**: ✅ FULLY WORKING
+- **Tests Passed**: 17/17 (100% success rate)
+- **Working Endpoints**:
+  - PATCH /api/suppliers/{id}/toggle-status (admin only) ✅
+  - GET /api/suppliers (visibility rules working) ✅
+  - DELETE /api/suppliers/{id} (with supply validation) ✅
+  - GET /api/suppliers/{id}/can-delete (supply count check) ✅
+
+#### Detailed Test Results:
+1. **Admin Status Toggle**: ✅ WORKING
+   - Admin can toggle supplier status (active ↔ inactive)
+   - Status changes correctly reflected in database
+   - Toggle works both ways (activate and deactivate)
+
+2. **Access Control**: ✅ WORKING
+   - Non-admin (pharmacien) correctly denied access to toggle status (403)
+   - Admin has full access to status toggle functionality
+
+3. **Visibility Rules**: ✅ WORKING
+   - Admin sees all suppliers (active + inactive): 10 total suppliers
+   - Pharmacien sees only active suppliers: 1 supplier (filtered correctly)
+   - Inactive suppliers properly hidden from non-admin users
+
+4. **Supplier Deletion with Supplies**: ✅ WORKING
+   - Created test supplier and linked supply successfully
+   - Deletion correctly blocked with 400 error
+   - Error message: "Impossible de supprimer ce fournisseur : il a effectué 1 approvisionnement(s). Vous pouvez le désactiver à la place."
+
+5. **Can-Delete Endpoint**: ✅ WORKING
+   - Returns correct can_delete: false for suppliers with supplies
+   - Returns supplies_count: 1 (accurate count)
+   - Provides helpful message about supply count
+
+6. **Supplier Deletion without Supplies**: ✅ WORKING
+   - Created clean supplier without supplies
+   - Can-delete endpoint returns can_delete: true, supplies_count: 0
+   - Deletion succeeds with 200 status
+   - Deleted supplier returns 404 when accessed (proper cleanup)
+
+#### Technical Implementation Verified:
+- **Role-Based Access Control**: Admin-only toggle-status endpoint working correctly
+- **Supply Count Validation**: Proper checking of linked supplies before deletion
+- **Visibility Filtering**: Query filtering based on user role and is_active field
+- **Error Handling**: Appropriate HTTP status codes and French error messages
+- **Data Integrity**: Proper validation prevents orphaned data
+
+#### Key Features Confirmed Working:
+1. **Status Toggle (Admin Only)**: ✅ PATCH /api/suppliers/{id}/toggle-status
+2. **Visibility Rules**: ✅ Admin sees all, non-admin sees only active
+3. **Deletion Protection**: ✅ Suppliers with supplies cannot be deleted
+4. **Clean Deletion**: ✅ Suppliers without supplies can be deleted
+5. **Can-Delete Check**: ✅ Endpoint provides deletion eligibility info
+6. **Access Control**: ✅ Non-admin properly denied toggle access
+
+### No Critical Issues Found:
+- All supplier activation/deactivation rules working correctly
+- All deletion rules properly enforced
+- Proper access control implementation
+- Accurate supply count validation
+- Appropriate error messages in French
+
+## Previous Test Sessions
 
 ## Backend Structure After Modularization
 - server.py: 77 lines (main entry point)
