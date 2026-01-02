@@ -939,7 +939,7 @@ const Products = () => {
                       {formData.category_id && (
                         <p className="text-xs text-teal-600 mt-1 flex items-center gap-1">
                           <Calculator className="w-3 h-3" />
-                          Coefficient: ×{getSelectedCategoryCoefficient()}
+                          Le prix de vente sera calculé automatiquement
                         </p>
                       )}
                     </div>
