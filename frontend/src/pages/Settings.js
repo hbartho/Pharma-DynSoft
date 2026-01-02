@@ -38,6 +38,7 @@ const Settings = () => {
         pharmacy_name: response.data.pharmacy_name || '',
         low_stock_threshold: response.data.low_stock_threshold || 10,
         return_delay_days: response.data.return_delay_days || 3,
+        expiration_alert_days: response.data.expiration_alert_days || 30,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
