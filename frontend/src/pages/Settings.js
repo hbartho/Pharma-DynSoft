@@ -36,7 +36,72 @@ const Settings = () => {
   useEffect(() => {
     loadSettings();
     loadStockValuation();
+    loadOfflineStats();
   }, []);
+
+  const loadOfflineStats = async () => {
+    try {
+      const stats = await getOfflineStats();
+      const counts = await getStoreCounts();
+      setOfflineStats(stats);
+      setStoreCounts(counts);
+    } catch (error) {
+      console.error('Error loading offline stats:', error);
+    }
+  };
+
+  const handlePreloadData = async () => {
+    setPreloading(true);
+    setPreloadProgress({ current: 0, total: 5, store: 'Initialisation...' });
+    
+    try {
+      const results = await preloadDataForOffline((progress) => {
+        setPreloadProgress(progress);
+      });
+      
+      let totalItems = 0;
+      let failedStores = [];
+      
+      for (const [store, result] of Object.entries(results)) {
+        if (result.success) {
+          totalItems += result.count;
+        } else {
+          failedStores.push(store);
+        }
+      }
+      
+      if (failedStores.length === 0) {
+        toast.success('Données préchargées avec succès', {
+          description: `${totalItems} éléments mis en cache pour le mode hors ligne`
+        });
+      } else {
+        toast.warning('Préchargement partiel', {
+          description: `Échec pour: ${failedStores.join(', ')}`
+        });
+      }
+      
+      await loadOfflineStats();
+    } catch (error) {
+      toast.error('Erreur de préchargement', {
+        description: error.message
+      });
+    } finally {
+      setPreloading(false);
+      setPreloadProgress(null);
+    }
+  };
+
+  const handleClearPendingChanges = async () => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer toutes les modifications en attente ? Cette action est irréversible.')) {
+      try {
+        await clearLocalChanges();
+        toast.success('Modifications en attente supprimées');
+        await loadOfflineStats();
+      } catch (error) {
+        toast.error('Erreur lors de la suppression');
+      }
+    }
+  };
 
   const loadSettings = async () => {
     try {
