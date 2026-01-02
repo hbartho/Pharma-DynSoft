@@ -165,6 +165,70 @@ const Settings = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div>
+                <Label htmlFor="low_stock_threshold">Seuil d'alerte stock bas</Label>
+                <Input
+                  id="low_stock_threshold"
+                  type="number"
+                  min="1"
+                  value={settings.low_stock_threshold}
+                  onChange={(e) => setSettings({ ...settings, low_stock_threshold: parseInt(e.target.value) || 10 })}
+                  className="mt-1"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Alerte affichée quand le stock d'un produit est en dessous de ce seuil
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Politique de retours */}
+          <div className="p-6 rounded-xl bg-white border border-slate-100">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-amber-50 rounded-lg">
+                <RotateCcw className="w-5 h-5 text-amber-600" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Politique de retours
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="return_delay_days">Délai maximum pour les retours (jours)</Label>
+                <div className="flex items-center gap-3 mt-1">
+                  <Input
+                    id="return_delay_days"
+                    type="number"
+                    min="0"
+                    max="365"
+                    value={settings.return_delay_days}
+                    onChange={(e) => setSettings({ ...settings, return_delay_days: parseInt(e.target.value) || 3 })}
+                    className="w-24"
+                  />
+                  <span className="text-slate-600">jour(s)</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-600 mt-0.5" strokeWidth={1.5} />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">
+                      Règle actuelle
+                    </p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      {settings.return_delay_days === 0 
+                        ? "Les retours sont désactivés (délai de 0 jour)."
+                        : settings.return_delay_days === 1
+                          ? "Les retours sont autorisés uniquement le jour même de la vente."
+                          : `Les retours sont autorisés jusqu'à ${settings.return_delay_days} jours après la vente.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
