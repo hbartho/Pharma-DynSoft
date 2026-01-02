@@ -216,9 +216,9 @@ async def update_supply(
 @router.post("/{supply_id}/validate", response_model=Supply)
 async def validate_supply(
     supply_id: str,
-    current_user: dict = Depends(require_role(["admin", "pharmacien"]))
+    current_user: dict = Depends(require_role(["admin"]))  # Seul l'admin peut valider
 ):
-    """Valider un approvisionnement et mettre à jour les stocks"""
+    """Valider un approvisionnement et mettre à jour les stocks (Admin uniquement)"""
     tenant_id = current_user["tenant_id"]
     
     # Vérifier que l'appro existe
