@@ -88,10 +88,13 @@ class ProductExpirationTester:
         """Test 1: Sale Number Format - VNT-XXXXXXXX (8 chars from UUID)"""
         print("\n=== TEST 1: SALE NUMBER FORMAT ===")
         
+        # Generate unique product name
+        unique_id = str(uuid.uuid4())[:8]
+        
         # First create a product to sell
         product_data = {
-            "name": "Test Product for Sale",
-            "barcode": "SALE123456",
+            "name": f"Test Product for Sale {unique_id}",
+            "barcode": f"SALE{unique_id}",
             "description": "Product for sale number test",
             "price": 10.0,
             "stock": 100,
