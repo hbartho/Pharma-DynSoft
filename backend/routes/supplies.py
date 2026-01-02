@@ -25,23 +25,19 @@ async def get_supplier_name(supplier_id: str, tenant_id: str) -> str:
     return supplier.get("name", "Fournisseur inconnu") if supplier else "Fournisseur inconnu"
 
 
-async def get_user_name(user_id: str, tenant_id: str) -> str:
-    """Récupérer le nom d'un utilisateur"""
+async def get_employee_code_from_user_id(user_id: str, tenant_id: str) -> str:
+    """Récupérer le code employé à partir de l'ID utilisateur (pour compatibilité)"""
     if not user_id:
-        return None
+        return "N/A"
     user = await db.users.find_one({"id": user_id, "tenant_id": tenant_id})
     if user:
-        first = user.get("first_name", "")
-        last = user.get("last_name", "")
-        return f"{first} {last}".strip() or user.get("name", "Utilisateur")
-    return "Utilisateur inconnu"
+        return user.get("employee_code", "N/A")
+    return "N/A"
 
 
 async def enrich_supply(supply: dict, tenant_id: str) -> dict:
     """Enrichir un approvisionnement avec les noms"""
     supply["supplier_name"] = await get_supplier_name(supply.get("supplier_id"), tenant_id)
-    supply["created_by_name"] = await get_user_name(supply.get("created_by"), tenant_id)
-    supply["updated_by_name"] = await get_user_name(supply.get("updated_by"), tenant_id)
     
     # Enrichir les items
     for item in supply.get("items", []):
@@ -54,6 +50,7 @@ async def enrich_supply(supply: dict, tenant_id: str) -> dict:
 async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(get_current_user)):
     """Créer un nouvel approvisionnement (en attente de validation) - Tous les utilisateurs"""
     tenant_id = current_user["tenant_id"]
+    employee_code = current_user.get("employee_code", "N/A")
     
     # Préparer les items avec les noms de produits
     items = []
@@ -68,19 +65,24 @@ async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(
         item_total = item_data.quantity * item_data.unit_price
         total_amount += item_total
         
-        items.append(SupplyItem(
-            id=str(uuid.uuid4()),
-            product_id=item_data.product_id,
-            product_name=product.get("name"),
-            quantity=item_data.quantity,
-            unit_price=item_data.unit_price,
-            total_price=item_total
-        ))
+        item_dict = {
+            "id": str(uuid.uuid4()),
+            "product_id": item_data.product_id,
+            "product_name": product.get("name"),
+            "quantity": item_data.quantity,
+            "unit_price": item_data.unit_price,
+            "total_price": item_total
+        }
+        # Ajouter date_peremption si fournie
+        if item_data.date_peremption:
+            item_dict["date_peremption"] = item_data.date_peremption.isoformat()
+        
+        items.append(item_dict)
     
-    # Créer l'approvisionnement
+    # Créer l'approvisionnement avec employee_code
     supply = Supply(
         supply_date=supply_data.supply_date or datetime.now(timezone.utc),
-        is_validated=False,  # Toujours en attente à la création
+        is_validated=False,
         supplier_id=supply_data.supplier_id,
         total_amount=total_amount,
         purchase_order_ref=supply_data.purchase_order_ref,
@@ -88,9 +90,9 @@ async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(
         invoice_number=supply_data.invoice_number,
         is_credit_note=supply_data.is_credit_note,
         notes=supply_data.notes,
-        items=[item.model_dump() for item in items],
+        items=items,
         tenant_id=tenant_id,
-        created_by=current_user["user_id"]
+        created_by=employee_code  # Utiliser employee_code au lieu de user_id
     )
     
     # Convertir les dates en ISO string pour MongoDB
@@ -107,7 +109,7 @@ async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(
 
 @router.get("", response_model=List[Supply])
 async def get_supplies(
-    status: Optional[str] = None,  # "pending" ou "validated"
+    status: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
     """Récupérer tous les approvisionnements"""
@@ -159,6 +161,7 @@ async def update_supply(
 ):
     """Modifier un approvisionnement (seulement si non validé)"""
     tenant_id = current_user["tenant_id"]
+    employee_code = current_user.get("employee_code", "N/A")
     
     # Vérifier que l'appro existe et n'est pas validé
     existing = await db.supplies.find_one({"id": supply_id, "tenant_id": tenant_id})
@@ -180,16 +183,20 @@ async def update_supply(
         item_total = item_data.quantity * item_data.unit_price
         total_amount += item_total
         
-        items.append({
+        item_dict = {
             "id": str(uuid.uuid4()),
             "product_id": item_data.product_id,
             "product_name": product.get("name"),
             "quantity": item_data.quantity,
             "unit_price": item_data.unit_price,
             "total_price": item_total
-        })
+        }
+        if item_data.date_peremption:
+            item_dict["date_peremption"] = item_data.date_peremption.isoformat()
+        
+        items.append(item_dict)
     
-    # Mettre à jour
+    # Mettre à jour avec employee_code
     update_data = {
         "supply_date": supply_data.supply_date.isoformat() if supply_data.supply_date else existing.get("supply_date"),
         "supplier_id": supply_data.supplier_id,
@@ -201,7 +208,7 @@ async def update_supply(
         "items": items,
         "total_amount": total_amount,
         "updated_at": datetime.now(timezone.utc).isoformat(),
-        "updated_by": current_user["user_id"]
+        "updated_by": employee_code  # Utiliser employee_code
     }
     
     await db.supplies.update_one({"id": supply_id}, {"$set": update_data})
@@ -218,11 +225,11 @@ async def update_supply(
 @router.post("/{supply_id}/validate", response_model=Supply)
 async def validate_supply(
     supply_id: str,
-    current_user: dict = Depends(require_role(["admin"]))  # Seul l'admin peut valider
+    current_user: dict = Depends(require_role(["admin"]))
 ):
     """Valider un approvisionnement et mettre à jour les stocks (Admin uniquement)"""
     tenant_id = current_user["tenant_id"]
-    user_id = current_user.get("id") or current_user.get("user_id")
+    employee_code = current_user.get("employee_code", "N/A")
     
     # Vérifier que l'appro existe
     supply = await db.supplies.find_one({"id": supply_id, "tenant_id": tenant_id})
@@ -235,11 +242,17 @@ async def validate_supply(
     if not supply.get("items") or len(supply.get("items", [])) == 0:
         raise HTTPException(status_code=400, detail="Impossible de valider un approvisionnement sans produits")
     
+    # Récupérer la date d'approvisionnement
+    supply_date = supply.get("supply_date")
+    if supply_date and isinstance(supply_date, str):
+        supply_date = datetime.fromisoformat(supply_date)
+    
     # Mettre à jour les stocks des produits et créer l'historique
     for item in supply.get("items", []):
         product_id = item.get("product_id")
         quantity = item.get("quantity", 0)
         unit_price = item.get("unit_price", 0)
+        item_date_peremption = item.get("date_peremption")
         
         # Récupérer le produit actuel
         product = await db.products.find_one({"id": product_id, "tenant_id": tenant_id})
@@ -251,7 +264,7 @@ async def validate_supply(
         purchase_price_before = product.get("purchase_price", 0)
         selling_price_before = product.get("price", 0)
         
-        # 1. Créer l'entrée dans l'historique de STOCK
+        # 1. Créer l'entrée dans l'historique de STOCK avec employee_code
         stock_movement = {
             "id": str(uuid.uuid4()),
             "product_id": product_id,
@@ -265,30 +278,35 @@ async def validate_supply(
             "notes": f"Approvisionnement - BL: {supply.get('delivery_note_number') or 'N/A'}",
             "tenant_id": tenant_id,
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "created_by": user_id
+            "created_by": employee_code  # Utiliser employee_code
         }
         await db.stock_movements.insert_one(stock_movement)
         
-        # 2. Créer l'entrée dans l'historique de PRIX (si le prix change)
-        if unit_price != purchase_price_before:
-            price_history = {
-                "id": str(uuid.uuid4()),
-                "product_id": product_id,
-                "product_name": product.get("name"),
-                "purchase_price": unit_price,
-                "selling_price": selling_price_before,  # Le prix de vente reste inchangé
-                "purchase_price_before": purchase_price_before,
-                "selling_price_before": selling_price_before,
-                "change_type": PriceChangeType.SUPPLY.value,
-                "reference_type": "supply",
-                "reference_id": supply_id,
-                "notes": f"Mise à jour via approvisionnement - Facture: {supply.get('invoice_number') or 'N/A'}",
-                "effective_date": datetime.now(timezone.utc).isoformat(),
-                "tenant_id": tenant_id,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "created_by": user_id
-            }
-            await db.price_history.insert_one(price_history)
+        # 2. Créer l'entrée dans l'historique de PRIX avec les nouveaux champs
+        price_history = {
+            "id": str(uuid.uuid4()),
+            "product_id": product_id,
+            "product_name": product.get("name"),
+            "product_reference": product.get("internal_reference"),
+            # Nouveaux champs demandés
+            "prix_appro": unit_price,
+            "prix_vente_prod": selling_price_before,
+            "prix_appro_avant": purchase_price_before,
+            "prix_vente_avant": selling_price_before,
+            # Dates demandées
+            "date_maj_prix": datetime.now(timezone.utc).isoformat(),
+            "date_appro": supply_date.isoformat() if supply_date else None,
+            "date_peremption": item_date_peremption,
+            # Type et référence
+            "change_type": PriceChangeType.SUPPLY.value,
+            "reference_type": "supply",
+            "reference_id": supply_id,
+            "notes": f"Mise à jour via approvisionnement - Facture: {supply.get('invoice_number') or 'N/A'}",
+            "tenant_id": tenant_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": employee_code  # Utiliser employee_code uniquement
+        }
+        await db.price_history.insert_one(price_history)
         
         # 3. Mettre à jour le produit
         await db.products.update_one(
@@ -300,13 +318,13 @@ async def validate_supply(
             }}
         )
     
-    # Marquer l'approvisionnement comme validé
+    # Marquer l'approvisionnement comme validé avec employee_code
     await db.supplies.update_one(
         {"id": supply_id},
         {"$set": {
             "is_validated": True,
             "validated_at": datetime.now(timezone.utc).isoformat(),
-            "validated_by": user_id
+            "validated_by": employee_code  # Utiliser employee_code
         }}
     )
     
@@ -347,6 +365,7 @@ async def add_item_to_supply(
 ):
     """Ajouter un produit à un approvisionnement non validé"""
     tenant_id = current_user["tenant_id"]
+    employee_code = current_user.get("employee_code", "N/A")
     
     supply = await db.supplies.find_one({"id": supply_id, "tenant_id": tenant_id})
     if not supply:
@@ -369,6 +388,8 @@ async def add_item_to_supply(
         "unit_price": item_data.unit_price,
         "total_price": item_total
     }
+    if item_data.date_peremption:
+        new_item["date_peremption"] = item_data.date_peremption.isoformat()
     
     # Ajouter l'item et mettre à jour le total
     new_total = supply.get("total_amount", 0) + item_total
@@ -380,7 +401,7 @@ async def add_item_to_supply(
             "$set": {
                 "total_amount": new_total,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-                "updated_by": current_user["user_id"]
+                "updated_by": employee_code  # Utiliser employee_code
             }
         }
     )
@@ -402,6 +423,7 @@ async def remove_item_from_supply(
 ):
     """Supprimer un produit d'un approvisionnement non validé"""
     tenant_id = current_user["tenant_id"]
+    employee_code = current_user.get("employee_code", "N/A")
     
     supply = await db.supplies.find_one({"id": supply_id, "tenant_id": tenant_id})
     if not supply:
@@ -427,7 +449,7 @@ async def remove_item_from_supply(
             "$set": {
                 "total_amount": max(0, new_total),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-                "updated_by": current_user["user_id"]
+                "updated_by": employee_code  # Utiliser employee_code
             }
         }
     )
