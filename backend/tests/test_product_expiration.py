@@ -113,7 +113,7 @@ class ProductExpirationTester:
             "items": [
                 {
                     "product_id": product_id,
-                    "name": "Test Product for Sale",
+                    "name": f"Test Product for Sale {unique_id}",
                     "price": 10.0,
                     "quantity": 1
                 }
