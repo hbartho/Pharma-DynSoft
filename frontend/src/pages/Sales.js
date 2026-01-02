@@ -791,15 +791,37 @@ const Sales = () => {
         </div>
 
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
-          <Input
-            placeholder="Rechercher par client, mode de paiement..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            data-testid="sales-search-input"
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
+            <Input
+              placeholder="Rechercher par N° vente, client, agent..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="sales-search-input"
+              className="pl-10"
+            />
+          </div>
+          <div className="relative w-full sm:w-48">
+            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" strokeWidth={1.5} />
+            <Input
+              type="date"
+              value={searchDate}
+              onChange={(e) => setSearchDate(e.target.value)}
+              className="pl-10"
+              placeholder="Date"
+            />
+          </div>
+          {(searchQuery || searchDate) && (
+            <Button 
+              variant="outline" 
+              onClick={() => { setSearchQuery(''); setSearchDate(''); }}
+              className="whitespace-nowrap"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Effacer
+            </Button>
+          )}
         </div>
 
         {/* Sales List */}
