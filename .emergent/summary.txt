@@ -1,78 +1,104 @@
 <analysis>**original_problem_statement:**
-The user wants a comprehensive, offline-first, multi-tenant pharmacy management application named DynSoft Pharma.
+The user wants to build a comprehensive, offline-first, multi-tenant pharmacy management application named DynSoft Pharma.
 
 **PRODUCT REQUIREMENTS:**
-- **Architecture**: Offline-First, Multi-Tenant, with a log-based synchronization mechanism.
+- **Architecture**: Offline-First, Multi-Tenant, with a log-based synchronization mechanism. The user's original request was for a PostgreSQL backend, but the application currently uses MongoDB.
 - **Frontend**: A Progressive Web App (PWA) using React, capable of 100% offline functionality.
-- **Backend**: A server to handle dynamic database instance creation for each client and provide a REST API for synchronization.
-- **Databases**: PostgreSQL on the server (one per client) and IndexedDB on the client.
-- **Features**:
+- **Backend**: A server to handle dynamic database instance creation for each client (multi-tenancy) and provide a REST API for synchronization.
+- **Core Features**:
     - Full CRUD for Products, Customers, Suppliers, Sales, and Prescriptions.
     - Product Categories management.
-    - A comprehensive demo data seeder script.
-    - User authentication (JWT) with three roles: Admin, Pharmacist, and Cashier, each with specific permissions.
+    - User authentication (JWT) with three roles: Admin, Pharmacist, and Cashier.
     - UI for user management (Admin only).
-    - An intelligent synchronization engine for offline functionality, syncing periodically.
-    - UI enhancements, including a list of demo accounts on the login page for easy testing.
-- **Local Environment**: Simple-to-use scripts () for starting the backend and frontend on a Windows machine.
+    - An intelligent synchronization engine for offline functionality.
+    - Sales cannot be deleted; receipts are generated instead, and item returns are handled as separate operations.
+- **Recent Additions (from this and previous sessions)**:
+    - The User model includes , , and a unique .
+    - The login page features a dropdown to select the Agency (pharmacy name).
+    - A collapsible main navigation sidebar.
+    - Product categories have a  to automatically calculate the selling price from the purchase price.
+    - Products have an  field and a selectable  (e.g., Box, Bottle).
+    - A complete Approvisionnement (Supply/Procurement) module with a validation workflow that updates stock.
+    - The Dashboard displays quick-access, clickable cards for pending supplies, pending prescriptions, and products needing restock.
+    - Historical data for stock levels and price changes are stored in dedicated  and  collections.
+    - The latest request is to modify the  table structure and standardize the use of  for user tracking.
 
 **User's preferred language**: French
 
 **what currently exists?**
-A full-stack pharmacy management application with a React PWA frontend and a FastAPI backend using a single-tenant MongoDB database.
-- **Frontend**: The application supports full offline functionality with a completed synchronization engine that uses IndexedDB and a visual sync status indicator. It features full CRUD for Products, Categories, Suppliers, Customers, and Sales, with role-based access control. A new Settings page allows Admins to configure stock valuation methods and currency. All pages now dynamically display prices and totals in the selected currency (EUR, USD, CAD, XOF, GNF).
-- **Backend**: The FastAPI server provides a REST API with role-based JWT authentication. It now includes advanced business logic:
-    - **Stock Valuation**: Calculates total stock value using FIFO, LIFO, or Weighted Average methods.
-    - **Deletion Rules**: Prevents deletion of products that have been sold or suppliers that have made deliveries.
-    - **Product Management**: Includes product activation/deactivation and uniqueness validation for product names and barcodes.
-- **Data**: The  script seeds the database with comprehensive demo data, including users, products, sales (for today), and prescriptions with correct data structures.
+The project is a mature full-stack application with a modular FastAPI backend and a feature-rich React frontend. The application uses a single-tenant MongoDB database.
+- **Backend**: Fully modularized with JWT authentication, role-based access control, and comprehensive API endpoints for all features, including the new Supply, Unit, Stock History, and Price History modules.
+- **Frontend**: The React PWA is stable and has a polished UI. Key features implemented include:
+    - **Login**: A working agency/pharmacy dropdown.
+    - **Layout**: A collapsible sidebar to maximize screen space.
+    - **User Management**: A complete admin interface to create, edit, and manage users, their roles, and passwords.
+    - **Products**: A page to manage products, categories, and units. Price calculation is automated based on the category's markup coefficient.
+    - **Supplies**: A full-featured module for managing stock procurement, from creation to admin validation, which automatically updates product stock and logs historical data.
+    - **Dashboard**: An information hub with clickable cards that provide quick summaries and navigation to key areas.
 
 **Last working item**:
-- **Last item agent was working**: The agent implemented and tested the validation to ensure uniqueness for product names and barcodes during creation and updates. The backend was modified to raise an  with a specific error message if a duplicate is found, and the frontend was updated to display this user-friendly message in a toast notification.
-- **Status**: COMPLETED
-- **Agent Testing Done**: Y
-- **Which testing method agent to use?**: NA
-- **User Testing Done**: Y
+- **Last item agent was working**: The user requested to modify the backend data models. Specifically:
+    1. Merge several fields into the  model (, , , , etc.).
+    2. Change all user tracking fields (like , ) to store the user's  instead of their full name or .
+- **Status**: NOT STARTED
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: backend testing agent. The agent should write a test script to:
+    1. Create a new supply with a product.
+    2. Validate the supply.
+    3. Query the  endpoint.
+    4. Assert that the response contains the newly requested fields and that the  field contains the admin's .
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
 - **Issue 1: Architectural Mismatch (MongoDB vs. PostgreSQL) (P1)**
-    - **Description**: The application is built on a single-tenant MongoDB stack, which contradicts the user's original and core requirement for a multi-tenant PostgreSQL architecture for data isolation and scalability. This is a carry-over from the initial project setup.
+    - **Description**: The application is built on a single-tenant MongoDB stack, which contradicts the user's original and core requirement for a multi-tenant PostgreSQL architecture for data isolation and scalability. This is a major piece of technical debt.
+    - **Attempted fixes**: None. This requires a full migration.
+    - **Next debug checklist**:
+        1. Discuss the migration plan and timeline with the user.
+        2. Set up a PostgreSQL connection in .
+        3. Rewrite all data access logic in  to use an ORM like SQLAlchemy.
+        4. Create a data migration script to move data from MongoDB to PostgreSQL.
+    - **Why fix this issue and what will be achieved with the fix?**: Fulfills the user's primary architectural requirement, enabling true multi-tenancy and data isolation between pharmacies.
     - **Status**: NOT STARTED
-    - **Is recurring issue?**: N
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: both
+    - **Blocked on other issue**: No
 
 **In progress Task List**:
 - None.
 
 **Upcoming and Future Tasks**
-
+- **Upcoming Tasks:**
+    - **P0: Implement Price History and Employee Code Changes**: This is the highest priority task, based on the user's last request.
+        - **Files to modify**: , and any file that logs user actions, such as , , etc.
+        - **Goal**: Standardize data tracking and auditing as per user specification.
 - **Future Tasks:**
-    - **P1: Migrate Backend to Multi-Tenant PostgreSQL**: This is a major architectural overhaul to align with the original problem statement. It will involve creating a new database provisioning system for tenants and rewriting all backend data access logic in .
-    - **P2: Refactor Frontend State Management**: The global  was removed due to timing issues with authentication. Settings are now fetched individually in each component (, , ). This could be refactored into a more robust global state solution that loads correctly after authentication.
+    - **P0: Migrate Backend to Multi-Tenant PostgreSQL**: The most significant pending task. This is a foundational requirement that has not yet been addressed.
+    - **P1: Refactor Frontend State Management**: Currently, some global settings are re-fetched in multiple components. This should be refactored into a more robust global state solution (e.g., a revised Context or a library like Zustand/Redux) to improve performance and consistency.
 
 **Completed work in this session**
-- **Offline-First Sync Engine**: Completed full integration into all data pages (, , etc.) and added a visual sync status indicator.
-- **Bug Fixes & Data Integrity**:
-    - Resolved backend errors caused by missing fields in older data by making Pydantic model fields optional (, ).
-    - Fixed data inconsistencies between the dashboard and detail pages by regenerating clean demo data using an improved seeder script.
-- **Feature: Sales Page Enhancement**: Implemented searchable inputs for customers and products in the New Sale form.
-- **Feature: Category Management UI**: Implemented automatic refresh of the category list on the  page after any CRUD operation on categories.
-- **Feature: Chart Sorting**: Corrected graph sorting on the  and  pages to be chronological.
-- **Feature: Business Rules (Deletion Prevention)**:
-    - Implemented backend logic to prevent deletion of products if sold or suppliers if they've made a delivery.
-    - Updated frontend to display specific error messages for these cases.
-- **Feature: Product Activation/Deactivation**: Added functionality for Admins to activate/deactivate products, with UI filters and exclusion from the sales form for inactive items.
-- **Feature: Product Uniqueness Validation**: Added backend and frontend logic to prevent the creation of products with duplicate names or barcodes.
-- **MAJOR FEATURE: Stock Valuation & Settings**:
-    - Created a new Settings page for Admins to manage stock valuation methods (FIFO, LIFO, Weighted Average) and currency.
-    - Implemented dynamic currency formatting (EUR, USD, CAD, XOF, GNF) across the entire application, including the Dashboard, Products, Sales, and Settings pages.
-    - Set the default currency to GNF as requested.
+- **Feature: Agency Dropdown on Login**: The static Agency text field on the login page was converted into a fully functional and tested dropdown menu.
+- **Feature: Collapsible Sidebar**: A toggle button was added to the main layout to allow users to collapse and expand the navigation sidebar, improving usability on smaller screens.
+- **MAJOR FEATURE: User Management UI**: A comprehensive user management interface was built for administrators, allowing them to view, edit, search, and manage all users and their roles.
+- **MAJOR FEATURE: Product Enhancements (Pricing & Units)**:
+    - Implemented a  in product categories to automate selling price calculation.
+    - Added an  field and a new  management system (e.g., Box, Bottle) for products.
+- **MAJOR FEATURE: Supply Management (Approvisionnement)**:
+    - Created a complete module for managing stock supplies, including a separate page, creation/edit forms, and a validation workflow.
+    - Implemented role-based permissions, where only admins can validate a supply to update product stock.
+    - Added UI shortcuts in the supply form to quickly add new suppliers or products.
+- **MAJOR FEATURE: Stock and Price History Tracking**:
+    - Created new backend models and APIs for  and .
+    - Integrated this logging into the supply validation process, ensuring a full audit trail for stock and price changes.
+- **Enhancement: Dashboard**: Made all three Informations rapides cards (Pending Supplies, Pending Prescriptions, Products to Restock) clickable, redirecting to the relevant pages.
+- **UI Refinements**: Removed the display of the  from all user-facing dropdowns and product cards, keeping the calculation logic in the background as requested.
 
 **Earlier issues found/mentioned but not fixed**
 - **Issue 1: Architectural Mismatch (MongoDB vs. PostgreSQL)**
-    - **Debug checklist**: Requires a full migration plan. This involves rewriting database logic in , creating a new database provisioning system for new tenants, and updating all Pydantic models and data access patterns.
-    - **Why to solve this issue and what will be achieved with this?**: To fulfill the user's original, explicit requirement for a scalable and data-isolated architecture.
+    - **Debug checklist**: This is a major migration task requiring a full backend overhaul of the data layer. It involves setting up PostgreSQL, rewriting all database queries (likely with an ORM), and migrating existing data.
+    - **Why to solve this issue and what will be achieved with this?**: To fulfill the user's original, explicit requirement for a scalable and data-isolated multi-tenant architecture.
     - **Should Test frontend/backend/both after fix**: Both
-    - **Is recurring issue?**: N
+    - **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
 - None.
@@ -81,89 +107,86 @@ A full-stack pharmacy management application with a React PWA frontend and a Fas
 
 
 **Key Technical Concepts**
-- **Frontend**: React, React Hooks, React Router, Tailwind CSS, Shadcn/UI, Axios,  library.
-- **State Management**: React Context API (, ). Local state management for settings within components.
+- **Frontend**: React, React Hooks, Tailwind CSS, Shadcn/UI, Axios,  (for IndexedDB).
 - **Backend**: FastAPI, Motor (async MongoDB driver), Pydantic, JWT.
-- **Authorization**: Role-Based Access Control (RBAC).
-- **Offline**: Completed offline-first strategy using IndexedDB and a custom sync service.
-- **Business Logic**: Stock valuation (FIFO, LIFO, Weighted Avg), deletion constraints, product uniqueness.
-- **Internationalization**: Dynamic currency formatting and display based on user settings.
+- **Architecture**: Modular backend with . Offline-First PWA. Single-tenant MongoDB.
+- **Business Logic**: Stock valuation, item returns, operations history, **markup-based pricing**, **multi-step procurement workflow**, **data auditing (stock/price history)**.
+- **Authorization**: Role-Based Access Control (RBAC) is used extensively for API access and UI visibility.
 
 **key DB schema**
-- **users**: {id, email, password, name, role, tenant_id, created_at}
-- **products**: {id, name, price, stock, min_stock, category_id, barcode, **is_active**, tenant_id, ...}
-- **sales**: {id, customer_id, user_id, items, payment_method, total, tenant_id, ...}
-- **prescriptions**: {id, customer_id, doctor_name, medications, status, tenant_id, ...}
-- **stock_movements**: {id, product_id, type, quantity, **supplier_id**, reason, ...}
-- **settings**: {id, tenant_id, stock_valuation_method, currency, pharmacy_name, ...} (New)
+- **users**: 
+- **products**: 
+- **categories**: 
+- **supplies**: 
+- **units**:  (New)
+- **stock_movements**:  (New)
+- **price_history**:  (New)
 
 **changes in tech stack**
-- None. The stack remains React/FastAPI/MongoDB, despite the original request for PostgreSQL.
+- None.
 
 **All files of reference**
-- : Heavily modified to add endpoints for settings, stock valuation, product activation, and to implement new business rules for deletion and uniqueness.
-- : New file for the application settings UI.
-- , , : Updated to consume and display data with the selected currency, and to implement new features (product status, search, etc.).
-- : New utility for formatting currency.
-- : Created and then refactored out of use for most components, but the file remains.
-- : Updated with the route for the new Settings page.
-- : Updated to add Paramètres to the navigation menu.
-- : Updated to clear old data and create new, consistent demo data, including sales for the current day.
+- , , , : Newly created model files.
+- , , , : Newly created API route files.
+- : New page for the supply management feature.
+- : Overwritten to create the user management UI.
+- : Overwritten to handle new fields and logic (units, pricing).
+- : Overwritten to implement the collapsible sidebar.
+- : Modified to add and link the pending supplies card.
+- : Modified to register all new API routers.
+- : Modified to add the new  route and adjust role-based access.
 
 **Areas that need refactoring**:
-- **Backend Architecture**: The entire backend should be migrated from single-tenant MongoDB to multi-tenant PostgreSQL to meet the user's primary requirement. The  file is now over 1000 lines and should be broken down into a modular structure (e.g., using FastAPI's  for each feature).
-- **Frontend State Management**: Settings are now fetched locally in each component. A more robust solution would be to fix the global context to load reliably after authentication, avoiding redundant API calls and simplifying component logic.
+- **Backend Architecture**: The highest priority is migrating from single-tenant MongoDB to multi-tenant PostgreSQL.
+- **Frontend State Management**: A robust global state solution is needed to avoid redundant data fetching and ensure state consistency, especially for settings like currency and user permissions.
 
 **key api endpoints**
--  (GET, PUT): Manage application settings.
--  (GET): Get the calculated total stock value.
--  (PUT): Activate or deactivate a product.
--  (POST),  (PUT): Logic updated to enforce uniqueness of name/barcode.
--  (DELETE),  (DELETE): Logic updated to prevent deletion based on sales/delivery history.
+-  (GET, POST, PUT, DELETE): Full CRUD for supplies.
+-  (POST): Endpoint for admins to validate a supply, triggering stock updates.
+-  (GET, POST, PUT, DELETE): Full CRUD for product units.
+-  (GET): Retrieves the stock movement history for a product.
+-  (GET): Retrieves the price change history for a product.
 
 **Critical Info for New Agent**
 - **User's Language is French**: You MUST communicate in French.
-- **Architectural Mismatch**: The application uses MongoDB, not the requested PostgreSQL. Be prepared for this discussion. The next logical major task is this migration.
-- **Settings & Currency**: A major feature for managing settings (stock valuation, currency) has been implemented. Currency formatting is handled on the frontend via  after fetching settings from the backend.
-- **Frontend State Workaround**: The global  was problematic. The current implementation fetches settings directly in each component that needs them. Be aware of this pattern when modifying related pages.
+- **Next Task is Backend Heavy**: The immediate task involves modifying Pydantic models () and FastAPI routes ( and others) to change the data structure and standardize user identifiers to .
+- **RBAC is Crucial**: Many features have different behaviors based on user roles (Admin, Pharmacist, Cashier). Be mindful of this when making changes. For example, only Admins can validate supplies.
+- **Architectural Debt**: The most important future task is the migration from MongoDB to PostgreSQL. Be prepared to discuss this with the user.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
-- 
+- None. Testing was performed by the  sub-agent, and results were consumed directly from the chat history.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request**: Check for product uniqueness (name, barcode) on creation/update. (Status: Completed)
-2.  **Request**: Set default currency to GNF. (Status: Completed)
-3.  **Request**: Fix bug where currency/method changes in Settings don't update app-wide. (Status: Completed)
-4.  **Request**: Add more currency options (USD, CAD, XOF, GNF). (Status: Completed)
-5.  **Confirmation**: User confirms the plan for the new Settings page. (Status: Handled)
-6.  **Request**: Add stock valuation methods (FIFO, LIFO, Weighted Avg) via a Settings page. (Status: Completed)
-7.  **Feedback**: User retracts a bug report about product filters, confirming they work as expected. (Status: Handled)
-8.  **Bug Report**: User reports an issue with product status filters. (Status: Resolved as user misunderstanding)
-9.  **Request**: Add the ability to activate/deactivate products. (Status: Completed)
-10. **Request**: Add business rules to prevent deleting products if sold or suppliers if they've delivered. (Status: Completed)
+10. **Request**: Modify the  table to include more fields (, , etc.) and use  for user tracking. (Status: **Pending - Next Task**)
+9. **Confirmation**: Agent confirms completion of previous task.
+8. **Request**: Make the pending prescriptions card on the dashboard clickable. (Status: Completed)
+7. **Confirmation**: Agent confirms completion of previous task.
+6. **Request**: Add a count of pending supplies to the dashboard's quick info section. (Status: Completed)
+5. **Confirmation**: Agent confirms completion of previous task.
+4. **Request**: Add 3 enhancements to the supply form: auto-refresh on change, quick-add buttons for suppliers/products, and restrict validation to Admins. (Status: Completed)
+3. **Confirmation**: Agent confirms completion of previous task.
+2. **Request**: Implement a full Approvisionnement (Supply/Procurement) system. (Status: Completed)
+1. **Confirmation**: Agent confirms completion of previous task.
 
 **Project Health Check:**
-- **Working**: The application is stable and feature-rich. All user requests from this session have been completed and verified.
-- **Broken**: None.
+- **Working**: The application is stable and all recently implemented features have been successfully tested by the testing sub-agent.
+- **Broken**: Nothing is currently broken.
 - **Mocked**: None.
 
 **3rd Party Integrations**
 - None.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES (for the offline sync feature)
+- **Testing agent used after significant changes**: YES. The frontend testing agent was used extensively and successfully after the implementation of the collapsible sidebar, user management UI, product enhancements, and the supply module. It was instrumental in verifying complex UI interactions and even caught a backend bug.
 - **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: None.
+- **Test files created**: []
 - **Known regressions**: None.
 
 **Credentials to test flow:**
-- Credentials are created by the  script and listed on the login page.
-    - **Admin**:  / 
-    - **Pharmacien**:  / 
-    - **Caissier**:  / 
+- Credentials are created by the  script and are listed on the login page for easy access.
+    - **Admin**:  /  (Code: ADM-001)
+    - **Pharmacien**:  /  (Code: PHA-001)
+    - **Caissier**:  /  (Code: CAI-001)
 
 **What agent forgot to execute**
-- Nothing was forgotten. The agent iteratively developed and fixed features, such as the currency context implementation, until they met the user's requirements.</analysis>
+- Nothing was forgotten. The agent successfully implemented a long and complex series of feature requests. The final user request of the session has been correctly identified as the next task to be executed.</analysis>
