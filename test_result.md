@@ -126,13 +126,16 @@
    - `created_by` now stores `employee_code`
 5. **Routes Updated**: `supplies.py`, `prices.py`, `stock.py`
 
-### Preliminary Test Results (Manual curl tests)
-- ✅ New supply created with `created_by: ADM-001` (employee_code)
-- ✅ Supply validated with `validated_by: ADM-001` (employee_code)
-- ✅ Price history created with new fields (prix_appro, prix_vente_prod, date_maj_prix)
-- ✅ Stock movement created with `created_by: ADM-001`
-- ✅ Backward compatibility: Old records with UUID still load correctly
-- ✅ Frontend login and dashboard working
+### Comprehensive Test Results (backend_test.py --employee-code)
+- ✅ **JWT Token Verification**: Admin (ADM-001) and Pharmacien (PHA-001) tokens contain correct employee_code
+- ✅ **Supply Creation**: New supply created with `created_by: ADM-001` (employee_code)
+- ✅ **Supply Validation**: Supply validated with `validated_by: ADM-001` (employee_code)
+- ✅ **Price History French Fields**: All required fields present (prix_appro, prix_vente_prod, date_maj_prix, date_peremption)
+- ✅ **Price History Employee Code**: `created_by: ADM-001` (employee_code format)
+- ✅ **Stock Movement Employee Code**: `created_by: ADM-001` (employee_code format)
+- ✅ **Stock Adjustment Employee Code**: `created_by: ADM-001` (employee_code format)
+- ✅ **Backward Compatibility**: Found 3 old UUID records + 2 new employee_code records, API handles mixed data correctly
+- ✅ **Test Results**: 11/11 tests passed (100% success rate)
 
 ## Testing Agent Status
 - **Agent**: testing
