@@ -192,7 +192,10 @@ const Dashboard = () => {
                 )}
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-teal-50 rounded-lg">
+              <div 
+                className="flex items-center justify-between p-4 bg-teal-50 rounded-lg cursor-pointer hover:bg-teal-100 transition-colors"
+                onClick={() => navigate('/prescriptions')}
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-teal-100 rounded-lg">
                     <FileText className="w-5 h-5 text-teal-700" strokeWidth={1.5} />
@@ -206,6 +209,11 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
+                {stats.pending_prescriptions > 0 && (
+                  <span className="text-xs font-medium text-teal-700 bg-teal-200 px-2 py-1 rounded-full">
+                    À traiter
+                  </span>
+                )}
               </div>
 
               <div 
