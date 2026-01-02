@@ -1179,6 +1179,201 @@ class PharmaFlowAPITester:
         for category_id in self.created_items.get('categories', []):
             self.run_test(f"Delete category {category_id}", "DELETE", f"categories/{category_id}", 200)
 
+    def test_supplies_employee_code_display(self):
+        """Test Supplies (Approvisionnements) employee code display fix for DynSoft Pharma"""
+        print("\n=== SUPPLIES EMPLOYEE CODE DISPLAY FIX TESTS ===")
+        print("🎯 Testing Supplies Employee Code Display Fix - DynSoft Pharma")
+        print("📋 Credentials: admin@pharmaflow.com / admin123 (employee_code: ADM-001)")
+        
+        # Test 1: Backend API - Login and verify employee code
+        print("\n--- Test 1: Backend API - Login and Verify Employee Code ---")
+        success, response = self.run_test(
+            "POST /api/auth/login with admin credentials",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@pharmaflow.com", "password": "admin123"}
+        )
+        if success and 'access_token' in response:
+            self.token = response['access_token']
+            # Decode JWT to verify employee_code
+            import jwt
+            try:
+                decoded = jwt.decode(response['access_token'], options={"verify_signature": False})
+                if decoded.get('employee_code') == 'ADM-001':
+                    print(f"   ✅ JWT contains correct employee_code: {decoded.get('employee_code')}")
+                else:
+                    print(f"   ❌ JWT employee_code mismatch: expected ADM-001, got {decoded.get('employee_code')}")
+            except Exception as e:
+                print(f"   ❌ Failed to decode JWT: {e}")
+        else:
+            print("   ❌ Login failed")
+            return False
+        
+        # Test 2: GET /api/supplies to verify employee code fields
+        print("\n--- Test 2: GET /api/supplies - Verify Employee Code Fields ---")
+        success, supplies = self.run_test("GET /api/supplies to list all supplies", "GET", "supplies", 200)
+        if success:
+            print(f"   ✅ Found {len(supplies)} supplies")
+            
+            # Check each supply for employee code fields
+            supplies_with_created_by_name = 0
+            supplies_with_updated_by_name = 0
+            supplies_with_validated_by_name = 0
+            
+            for supply in supplies:
+                # Check created_by_name field
+                if 'created_by_name' in supply:
+                    created_by_name = supply['created_by_name']
+                    if created_by_name and created_by_name != "Inconnu" and created_by_name != "N/A":
+                        supplies_with_created_by_name += 1
+                        print(f"   ✅ Supply {supply.get('id', 'Unknown')[:8]}... has created_by_name: {created_by_name}")
+                    elif created_by_name == "Inconnu":
+                        print(f"   ❌ Supply {supply.get('id', 'Unknown')[:8]}... shows 'Inconnu' instead of employee code")
+                
+                # Check updated_by_name field
+                if 'updated_by_name' in supply and supply['updated_by_name']:
+                    updated_by_name = supply['updated_by_name']
+                    if updated_by_name != "Inconnu" and updated_by_name != "N/A":
+                        supplies_with_updated_by_name += 1
+                        print(f"   ✅ Supply {supply.get('id', 'Unknown')[:8]}... has updated_by_name: {updated_by_name}")
+                
+                # Check validated_by_name field
+                if 'validated_by_name' in supply and supply['validated_by_name']:
+                    validated_by_name = supply['validated_by_name']
+                    if validated_by_name != "Inconnu" and validated_by_name != "N/A":
+                        supplies_with_validated_by_name += 1
+                        print(f"   ✅ Supply {supply.get('id', 'Unknown')[:8]}... has validated_by_name: {validated_by_name}")
+            
+            print(f"   📊 Summary: {supplies_with_created_by_name} supplies with valid created_by_name")
+            print(f"   📊 Summary: {supplies_with_updated_by_name} supplies with valid updated_by_name")
+            print(f"   📊 Summary: {supplies_with_validated_by_name} supplies with valid validated_by_name")
+        else:
+            print("   ❌ Failed to get supplies list")
+            return False
+        
+        # Test 3: Create New Supply and Verify created_by_name
+        print("\n--- Test 3: Create New Supply and Verify created_by_name ---")
+        # First, ensure we have a product to use
+        product_data = {
+            "name": "Test Médicament Supplies Fix",
+            "barcode": "SUPFIX123",
+            "description": "Médicament pour test supplies employee code fix",
+            "price": 12.75,
+            "stock": 30,
+            "min_stock": 5,
+            "category": "Test"
+        }
+        product_success, new_product = self.run_test("Create product for supplies test", "POST", "products", 200, product_data)
+        if product_success and 'id' in new_product:
+            product_id = new_product['id']
+            self.created_items['products'].append(product_id)
+            
+            # Create supply
+            supply_data = {
+                "supply_date": "2026-01-02T12:00:00Z",
+                "purchase_order_ref": "BC-SUPFIX-001",
+                "delivery_note_number": "BL-SUPFIX-001",
+                "items": [
+                    {
+                        "product_id": product_id,
+                        "quantity": 25,
+                        "unit_price": 10.50
+                    }
+                ]
+            }
+            success, new_supply = self.run_test("POST /api/supplies to create new supply", "POST", "supplies", 200, supply_data)
+            if success and 'id' in new_supply:
+                supply_id = new_supply['id']
+                self.created_items.setdefault('supplies', []).append(supply_id)
+                
+                # Verify created_by_name shows employee code
+                created_by_name = new_supply.get('created_by_name')
+                if created_by_name == 'ADM-001':
+                    print(f"   ✅ New supply created_by_name shows employee code: {created_by_name}")
+                else:
+                    print(f"   ❌ New supply created_by_name should be ADM-001, got: {created_by_name}")
+                
+                # Test 4: Edit Supply and Verify updated_by_name
+                print("\n--- Test 4: Edit Supply and Verify updated_by_name ---")
+                update_data = {
+                    "supply_date": "2026-01-02T12:00:00Z",
+                    "purchase_order_ref": "BC-SUPFIX-001-UPDATED",
+                    "delivery_note_number": "BL-SUPFIX-001",
+                    "items": [
+                        {
+                            "product_id": product_id,
+                            "quantity": 30,  # Changed quantity
+                            "unit_price": 10.50
+                        }
+                    ]
+                }
+                success, updated_supply = self.run_test("PUT /api/supplies/{id} to update supply", "PUT", f"supplies/{supply_id}", 200, update_data)
+                if success:
+                    # Get the updated supply to verify updated_by_name
+                    success, supply_details = self.run_test("GET /api/supplies/{id} to verify updated_by_name", "GET", f"supplies/{supply_id}", 200)
+                    if success:
+                        updated_by_name = supply_details.get('updated_by_name')
+                        if updated_by_name == 'ADM-001':
+                            print(f"   ✅ Updated supply updated_by_name shows employee code: {updated_by_name}")
+                        else:
+                            print(f"   ❌ Updated supply updated_by_name should be ADM-001, got: {updated_by_name}")
+                
+                # Test 5: Validate Supply and Verify validated_by_name
+                print("\n--- Test 5: Validate Supply and Verify validated_by_name ---")
+                success, validated_supply = self.run_test("POST /api/supplies/{id}/validate to validate supply", "POST", f"supplies/{supply_id}/validate", 200)
+                if success:
+                    validated_by_name = validated_supply.get('validated_by_name')
+                    if validated_by_name == 'ADM-001':
+                        print(f"   ✅ Validated supply validated_by_name shows employee code: {validated_by_name}")
+                    else:
+                        print(f"   ❌ Validated supply validated_by_name should be ADM-001, got: {validated_by_name}")
+                else:
+                    print("   ❌ Failed to validate supply")
+            else:
+                print("   ❌ Failed to create supply")
+                return False
+        else:
+            print("   ❌ Failed to create product for supplies test")
+            return False
+        
+        # Test 6: Backward Compatibility Test
+        print("\n--- Test 6: Backward Compatibility Test ---")
+        success, all_supplies = self.run_test("GET /api/supplies for backward compatibility test", "GET", "supplies", 200)
+        if success:
+            uuid_created_by = 0
+            employee_code_created_by = 0
+            inconnu_created_by = 0
+            
+            for supply in all_supplies:
+                created_by = supply.get('created_by', '')
+                created_by_name = supply.get('created_by_name', '')
+                
+                # Check if created_by is UUID format (old data)
+                if len(created_by) > 10 and '-' in created_by and created_by.count('-') >= 4:
+                    uuid_created_by += 1
+                    # Check if it resolves to employee code
+                    if created_by_name and created_by_name.startswith(('ADM-', 'PHA-', 'CAI-')):
+                        print(f"   ✅ Old UUID supply resolves to employee code: {created_by_name}")
+                    elif created_by_name == "Inconnu":
+                        inconnu_created_by += 1
+                        print(f"   ❌ Old UUID supply shows 'Inconnu' instead of employee code")
+                # Check if created_by is employee code format (new data)
+                elif created_by.startswith(('ADM-', 'PHA-', 'CAI-')):
+                    employee_code_created_by += 1
+            
+            print(f"   📊 Backward compatibility summary:")
+            print(f"   📊 {uuid_created_by} supplies with UUID format (old data)")
+            print(f"   📊 {employee_code_created_by} supplies with employee_code format (new data)")
+            print(f"   📊 {inconnu_created_by} supplies showing 'Inconnu' (needs fixing)")
+            
+            if inconnu_created_by == 0:
+                print(f"   ✅ Backward compatibility working - no 'Inconnu' entries found")
+            else:
+                print(f"   ❌ Backward compatibility issue - {inconnu_created_by} supplies show 'Inconnu'")
+        
+        return True
+
     def test_employee_code_tracking(self):
         """Test employee code standardization and price history model"""
         print("\n=== EMPLOYEE CODE TRACKING & PRICE HISTORY TESTS ===")
