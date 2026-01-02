@@ -1,208 +1,192 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
-from datetime import datetime
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
+from datetime import datetime, timezone
 from database import db
 from auth import require_role, get_current_user
-from models.stock import StockMovement, StockMovementCreate
+from models.stock import StockMovement, StockMovementCreate, StockMovementType, StockSummary
+import uuid
 
 router = APIRouter(prefix="/stock", tags=["Stock"])
 
-# Stock Valuation Functions
-async def calculate_fifo_value(product_id: str, tenant_id: str) -> dict:
-    """Calcul FIFO: les premiers entrés sont les premiers sortis"""
-    movements = await db.stock_movements.find({
-        "tenant_id": tenant_id,
-        "product_id": product_id,
-        "type": "in"
-    }, {"_id": 0}).sort("created_at", 1).to_list(1000)
-    
-    out_movements = await db.stock_movements.find({
-        "tenant_id": tenant_id,
-        "product_id": product_id,
-        "type": "out"
-    }, {"_id": 0}).to_list(1000)
-    total_out = sum(m.get('quantity', 0) for m in out_movements)
-    
-    remaining_out = total_out
-    total_value = 0
-    total_qty = 0
-    
-    for m in movements:
-        qty = m.get('quantity', 0)
-        price = m.get('unit_price', 0)
-        
-        if remaining_out >= qty:
-            remaining_out -= qty
-        else:
-            available = qty - remaining_out
-            remaining_out = 0
-            total_value += available * price
-            total_qty += available
-    
-    return {
-        "total_quantity": total_qty,
-        "total_value": round(total_value, 2),
-        "unit_cost": round(total_value / total_qty, 2) if total_qty > 0 else 0
-    }
 
-async def calculate_lifo_value(product_id: str, tenant_id: str) -> dict:
-    """Calcul LIFO: les derniers entrés sont les premiers sortis"""
-    movements = await db.stock_movements.find({
-        "tenant_id": tenant_id,
-        "product_id": product_id,
-        "type": "in"
-    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    
-    out_movements = await db.stock_movements.find({
-        "tenant_id": tenant_id,
-        "product_id": product_id,
-        "type": "out"
-    }, {"_id": 0}).to_list(1000)
-    total_out = sum(m.get('quantity', 0) for m in out_movements)
-    
-    remaining_out = total_out
-    total_value = 0
-    total_qty = 0
-    
-    for m in movements:
-        qty = m.get('quantity', 0)
-        price = m.get('unit_price', 0)
-        
-        if remaining_out >= qty:
-            remaining_out -= qty
-        else:
-            available = qty - remaining_out
-            remaining_out = 0
-            total_value += available * price
-            total_qty += available
-    
-    return {
-        "total_quantity": total_qty,
-        "total_value": round(total_value, 2),
-        "unit_cost": round(total_value / total_qty, 2) if total_qty > 0 else 0
-    }
+async def get_user_name(user_id: str, tenant_id: str) -> str:
+    if not user_id:
+        return None
+    user = await db.users.find_one({"id": user_id, "tenant_id": tenant_id})
+    if user:
+        first = user.get("first_name", "")
+        last = user.get("last_name", "")
+        return f"{first} {last}".strip() or user.get("name", "Utilisateur")
+    return "Utilisateur inconnu"
 
-async def calculate_weighted_average_value(product_id: str, tenant_id: str) -> dict:
-    """Calcul Moyenne Pondérée: coût moyen de toutes les entrées"""
-    movements = await db.stock_movements.find({
-        "tenant_id": tenant_id,
-        "product_id": product_id,
-        "type": "in"
-    }, {"_id": 0}).to_list(1000)
-    
-    total_cost = sum(m.get('quantity', 0) * m.get('unit_price', 0) for m in movements)
-    total_in_qty = sum(m.get('quantity', 0) for m in movements)
-    
-    out_movements = await db.stock_movements.find({
-        "tenant_id": tenant_id,
-        "product_id": product_id,
-        "type": "out"
-    }, {"_id": 0}).to_list(1000)
-    total_out = sum(m.get('quantity', 0) for m in out_movements)
-    
-    current_qty = total_in_qty - total_out
-    avg_cost = total_cost / total_in_qty if total_in_qty > 0 else 0
-    
-    return {
-        "total_quantity": current_qty,
-        "total_value": round(current_qty * avg_cost, 2),
-        "unit_cost": round(avg_cost, 2)
-    }
 
-async def get_valuation_for_product(product_id: str, tenant_id: str, method: str) -> dict:
-    """Get valuation for a product based on method"""
-    if method == 'fifo':
-        return await calculate_fifo_value(product_id, tenant_id)
-    elif method == 'lifo':
-        return await calculate_lifo_value(product_id, tenant_id)
-    else:
-        return await calculate_weighted_average_value(product_id, tenant_id)
+async def get_product_info(product_id: str, tenant_id: str) -> dict:
+    product = await db.products.find_one({"id": product_id, "tenant_id": tenant_id})
+    if product:
+        return {"name": product.get("name"), "stock": product.get("stock", 0)}
+    return {"name": "Produit inconnu", "stock": 0}
 
-@router.post("", response_model=StockMovement)
-async def create_stock_movement(movement_data: StockMovementCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
-    """Create a stock movement"""
-    movement_dict = movement_data.model_dump()
-    movement_dict['tenant_id'] = current_user['tenant_id']
-    movement_obj = StockMovement(**movement_dict)
-    
-    product = await db.products.find_one({"id": movement_data.product_id, "tenant_id": current_user['tenant_id']})
+
+async def create_stock_movement(
+    product_id: str,
+    movement_type: StockMovementType,
+    movement_quantity: int,
+    tenant_id: str,
+    user_id: str,
+    reference_type: str = None,
+    reference_id: str = None,
+    notes: str = None
+) -> StockMovement:
+    """Créer un mouvement de stock et mettre à jour le produit"""
+    # Récupérer le produit
+    product = await db.products.find_one({"id": product_id, "tenant_id": tenant_id})
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
     
-    if movement_data.type == "in":
-        new_stock = product['stock'] + movement_data.quantity
-    else:
-        new_stock = product['stock'] - movement_data.quantity
-        if new_stock < 0:
-            raise HTTPException(status_code=400, detail="Insufficient stock")
+    stock_before = product.get("stock", 0)
+    stock_after = stock_before + movement_quantity
     
-    await db.products.update_one({"id": movement_data.product_id}, {"$set": {"stock": new_stock}})
+    # Vérifier que le stock ne devient pas négatif (sauf ajustement)
+    if stock_after < 0 and movement_type != StockMovementType.ADJUSTMENT:
+        raise HTTPException(status_code=400, detail=f"Stock insuffisant. Stock actuel: {stock_before}")
     
-    doc = movement_obj.model_dump()
-    doc['created_at'] = doc['created_at'].isoformat()
+    # Créer le mouvement
+    movement = StockMovement(
+        product_id=product_id,
+        product_name=product.get("name"),
+        movement_type=movement_type,
+        movement_quantity=movement_quantity,
+        stock_before=stock_before,
+        stock_after=max(0, stock_after),
+        reference_type=reference_type,
+        reference_id=reference_id,
+        notes=notes,
+        tenant_id=tenant_id,
+        created_by=user_id
+    )
+    
+    doc = movement.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    doc["movement_type"] = doc["movement_type"].value
+    
     await db.stock_movements.insert_one(doc)
-    return movement_obj
+    
+    # Mettre à jour le stock du produit
+    await db.products.update_one(
+        {"id": product_id},
+        {"$set": {"stock": max(0, stock_after), "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return movement
 
-@router.get("", response_model=List[StockMovement])
-async def get_stock_movements(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
-    """Get all stock movements"""
-    movements = await db.stock_movements.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
-    for movement in movements:
-        if isinstance(movement['created_at'], str):
-            movement['created_at'] = datetime.fromisoformat(movement['created_at'])
-    return movements
 
-@router.get("/alerts")
-async def get_stock_alerts(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
-    """Get products with low stock"""
-    products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
-    alerts = [p for p in products if p['stock'] <= p['min_stock']]
-    return alerts
+@router.get("/movements", response_model=List[StockMovement])
+async def get_stock_movements(
+    product_id: Optional[str] = None,
+    movement_type: Optional[str] = None,
+    limit: int = Query(default=100, le=500),
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupérer l'historique des mouvements de stock"""
+    tenant_id = current_user["tenant_id"]
+    
+    query = {"tenant_id": tenant_id}
+    if product_id:
+        query["product_id"] = product_id
+    if movement_type:
+        query["movement_type"] = movement_type
+    
+    movements = await db.stock_movements.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    
+    # Enrichir avec les noms
+    for mov in movements:
+        mov["created_by_name"] = await get_user_name(mov.get("created_by"), tenant_id)
+        if isinstance(mov.get("created_at"), str):
+            mov["created_at"] = datetime.fromisoformat(mov["created_at"])
+    
+    return [StockMovement(**mov) for mov in movements]
 
-@router.get("/valuation/{product_id}")
-async def get_product_stock_valuation(product_id: str, current_user: dict = Depends(get_current_user)):
-    """Get stock valuation for a specific product"""
-    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
-    method = settings.get('stock_valuation_method', 'weighted_average') if settings else 'weighted_average'
-    
-    valuation = await get_valuation_for_product(product_id, current_user['tenant_id'], method)
-    valuation['method'] = method
-    return valuation
 
-@router.get("/valuation")
-async def get_total_stock_valuation(current_user: dict = Depends(get_current_user)):
-    """Get total stock valuation"""
-    settings = await db.settings.find_one({"tenant_id": current_user['tenant_id']}, {"_id": 0})
-    method = settings.get('stock_valuation_method', 'weighted_average') if settings else 'weighted_average'
+@router.get("/movements/{product_id}", response_model=List[StockMovement])
+async def get_product_stock_history(
+    product_id: str,
+    limit: int = Query(default=50, le=200),
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupérer l'historique de stock d'un produit spécifique"""
+    tenant_id = current_user["tenant_id"]
     
-    products = await db.products.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    movements = await db.stock_movements.find(
+        {"product_id": product_id, "tenant_id": tenant_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
     
-    total_value = 0
-    products_valuation = []
+    for mov in movements:
+        mov["created_by_name"] = await get_user_name(mov.get("created_by"), tenant_id)
+        if isinstance(mov.get("created_at"), str):
+            mov["created_at"] = datetime.fromisoformat(mov["created_at"])
     
-    for product in products:
-        valuation = await get_valuation_for_product(product['id'], current_user['tenant_id'], method)
-        
-        # Si pas de mouvements, utiliser le prix de vente comme estimation
-        if valuation['total_value'] == 0 and product.get('stock', 0) > 0:
-            estimated_cost = product.get('price', 0) * 0.7
-            valuation['total_value'] = round(product['stock'] * estimated_cost, 2)
-            valuation['unit_cost'] = round(estimated_cost, 2)
-            valuation['total_quantity'] = product['stock']
-            valuation['estimated'] = True
-        
-        total_value += valuation['total_value']
-        products_valuation.append({
-            "product_id": product['id'],
-            "product_name": product['name'],
-            "stock": product.get('stock', 0),
-            **valuation
-        })
+    return [StockMovement(**mov) for mov in movements]
+
+
+@router.post("/adjustment", response_model=StockMovement)
+async def create_stock_adjustment(
+    data: StockMovementCreate,
+    current_user: dict = Depends(require_role(["admin", "pharmacien"]))
+):
+    """Créer un ajustement de stock manuel"""
+    tenant_id = current_user["tenant_id"]
     
-    return {
-        "method": method,
-        "total_value": round(total_value, 2),
-        "products_count": len(products),
-        "currency": settings.get('currency', 'EUR') if settings else 'EUR',
-        "products": products_valuation
-    }
+    movement = await create_stock_movement(
+        product_id=data.product_id,
+        movement_type=StockMovementType.ADJUSTMENT,
+        movement_quantity=data.movement_quantity,
+        tenant_id=tenant_id,
+        user_id=current_user["id"],
+        reference_type="adjustment",
+        notes=data.notes
+    )
+    
+    return movement
+
+
+@router.get("/summary/{product_id}", response_model=StockSummary)
+async def get_stock_summary(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupérer le résumé de stock d'un produit"""
+    tenant_id = current_user["tenant_id"]
+    
+    product = await db.products.find_one({"id": product_id, "tenant_id": tenant_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    
+    # Calculer les totaux
+    movements = await db.stock_movements.find(
+        {"product_id": product_id, "tenant_id": tenant_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    total_entries = sum(m.get("movement_quantity", 0) for m in movements if m.get("movement_quantity", 0) > 0)
+    total_exits = abs(sum(m.get("movement_quantity", 0) for m in movements if m.get("movement_quantity", 0) < 0))
+    
+    last_movement = await db.stock_movements.find_one(
+        {"product_id": product_id, "tenant_id": tenant_id},
+        {"_id": 0},
+        sort=[("created_at", -1)]
+    )
+    
+    last_date = None
+    if last_movement and last_movement.get("created_at"):
+        last_date = datetime.fromisoformat(last_movement["created_at"]) if isinstance(last_movement["created_at"], str) else last_movement["created_at"]
+    
+    return StockSummary(
+        product_id=product_id,
+        product_name=product.get("name", "Inconnu"),
+        current_stock=product.get("stock", 0),
+        total_entries=total_entries,
+        total_exits=total_exits,
+        last_movement_date=last_date,
+        movements_count=len(movements)
+    )
