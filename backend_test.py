@@ -2129,7 +2129,20 @@ class PharmaFlowAPITester:
         return test_success
 
 def main():
-    tester = PharmaFlowAPITester()
+    # Get backend URL from environment
+    import subprocess
+    try:
+        backend_url = subprocess.check_output(
+            "grep REACT_APP_BACKEND_URL /app/frontend/.env | cut -d '=' -f2", 
+            shell=True, 
+            text=True
+        ).strip()
+        print(f"Using backend URL from environment: {backend_url}")
+    except:
+        backend_url = "https://pharmamgmt.preview.emergentagent.com"
+        print(f"Using default backend URL: {backend_url}")
+    
+    tester = PharmaFlowAPITester(backend_url)
     
     # Check command line arguments
     if len(sys.argv) > 1:
@@ -2143,12 +2156,14 @@ def main():
             success = tester.run_categories_crud_tests()
         elif sys.argv[1] == "--modular":
             success = tester.run_modularized_backend_tests()
+        elif sys.argv[1] == "--employee-code":
+            success = tester.run_employee_code_tracking_tests()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code]")
             return 1
     else:
-        # Default to modularized backend tests for this review
-        success = tester.run_modularized_backend_tests()
+        # Default to employee code tracking tests for this review
+        success = tester.run_employee_code_tracking_tests()
     
     return 0 if success else 1
 
