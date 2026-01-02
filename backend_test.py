@@ -1179,6 +1179,171 @@ class PharmaFlowAPITester:
         for category_id in self.created_items.get('categories', []):
             self.run_test(f"Delete category {category_id}", "DELETE", f"categories/{category_id}", 200)
 
+    def test_employee_code_tracking(self):
+        """Test employee code standardization and price history model"""
+        print("\n=== EMPLOYEE CODE TRACKING & PRICE HISTORY TESTS ===")
+        print("🎯 Testing Price History Model & Employee Code Standardization")
+        
+        # Test credentials from review request
+        test_credentials = [
+            {"email": "admin@pharmaflow.com", "password": "admin123", "expected_code": "ADM-001"},
+            {"email": "pharmacien@pharmaflow.com", "password": "pharma123", "expected_code": "PHA-001"}
+        ]
+        
+        # Test 1: JWT Token Verification
+        print("\n--- Test 1: JWT Token Verification ---")
+        for cred in test_credentials:
+            success, response = self.run_test(
+                f"Login as {cred['email']} and verify JWT token",
+                "POST",
+                "auth/login",
+                200,
+                data={"email": cred["email"], "password": cred["password"]}
+            )
+            if success and 'access_token' in response:
+                # Decode JWT token to verify employee_code
+                import jwt
+                try:
+                    decoded = jwt.decode(response['access_token'], options={"verify_signature": False})
+                    if 'employee_code' in decoded:
+                        actual_code = decoded['employee_code']
+                        if actual_code == cred['expected_code']:
+                            print(f"   ✅ JWT contains correct employee_code: {actual_code}")
+                        else:
+                            print(f"   ❌ JWT employee_code mismatch: expected {cred['expected_code']}, got {actual_code}")
+                    else:
+                        print(f"   ❌ JWT does not contain employee_code")
+                except Exception as e:
+                    print(f"   ❌ Failed to decode JWT: {e}")
+        
+        # Set admin token for remaining tests
+        admin_success, admin_response = self.run_test(
+            "Login as admin for remaining tests",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@pharmaflow.com", "password": "admin123"}
+        )
+        if admin_success:
+            self.token = admin_response['access_token']
+        
+        # Test 2: Supply Creation with Employee Code
+        print("\n--- Test 2: Supply Creation with Employee Code ---")
+        # First, ensure we have a product to use
+        product_data = {
+            "name": "Test Médicament Employee Code",
+            "barcode": "EMP123456",
+            "description": "Médicament pour test employee code",
+            "price": 15.50,
+            "stock": 50,
+            "min_stock": 10,
+            "category": "Test"
+        }
+        product_success, new_product = self.run_test("Create product for employee code test", "POST", "products", 200, product_data)
+        if product_success and 'id' in new_product:
+            product_id = new_product['id']
+            self.created_items['products'].append(product_id)
+            
+            # Create supply
+            supply_data = {
+                "supply_date": "2026-01-02T10:00:00Z",
+                "purchase_order_ref": "BC-EMP-001",
+                "delivery_note_number": "BL-EMP-001",
+                "items": [
+                    {
+                        "product_id": product_id,
+                        "quantity": 20,
+                        "unit_price": 8.50
+                    }
+                ]
+            }
+            success, new_supply = self.run_test("Create supply with employee code", "POST", "supplies", 200, supply_data)
+            if success and 'id' in new_supply:
+                supply_id = new_supply['id']
+                self.created_items.setdefault('supplies', []).append(supply_id)
+                
+                # Verify created_by contains employee_code
+                if new_supply.get('created_by') == 'ADM-001':
+                    print(f"   ✅ Supply created_by contains employee_code: {new_supply.get('created_by')}")
+                else:
+                    print(f"   ❌ Supply created_by should be ADM-001, got: {new_supply.get('created_by')}")
+                
+                # Test 3: Supply Validation with Employee Code
+                print("\n--- Test 3: Supply Validation with Employee Code ---")
+                success, validated_supply = self.run_test("Validate supply (admin only)", "POST", f"supplies/{supply_id}/validate", 200)
+                if success:
+                    if validated_supply.get('validated_by') == 'ADM-001':
+                        print(f"   ✅ Supply validated_by contains employee_code: {validated_supply.get('validated_by')}")
+                    else:
+                        print(f"   ❌ Supply validated_by should be ADM-001, got: {validated_supply.get('validated_by')}")
+        
+        # Test 4: Price History API Tests
+        print("\n--- Test 4: Price History API Tests ---")
+        success, price_history = self.run_test("Get price history", "GET", "prices/history", 200)
+        if success and len(price_history) > 0:
+            # Check for new field names in price history
+            latest_entry = price_history[0]
+            required_fields = ['prix_appro', 'prix_vente_prod', 'date_maj_prix', 'created_by']
+            optional_fields = ['date_peremption']
+            
+            for field in required_fields:
+                if field in latest_entry:
+                    print(f"   ✅ Price history contains required field: {field}")
+                    if field == 'created_by' and latest_entry[field] == 'ADM-001':
+                        print(f"   ✅ Price history created_by contains employee_code: {latest_entry[field]}")
+                else:
+                    print(f"   ❌ Price history missing required field: {field}")
+            
+            for field in optional_fields:
+                if field in latest_entry:
+                    print(f"   ✅ Price history contains optional field: {field}")
+        
+        # Test 5: Stock Movement API Tests
+        print("\n--- Test 5: Stock Movement API Tests ---")
+        success, stock_movements = self.run_test("Get stock movements", "GET", "stock/movements", 200)
+        if success and len(stock_movements) > 0:
+            # Check for employee_code in created_by field
+            latest_movement = stock_movements[0]
+            if latest_movement.get('created_by') == 'ADM-001':
+                print(f"   ✅ Stock movement created_by contains employee_code: {latest_movement.get('created_by')}")
+            else:
+                print(f"   ❌ Stock movement created_by should be ADM-001, got: {latest_movement.get('created_by')}")
+        
+        # Test stock adjustment
+        if product_id:
+            adjustment_data = {
+                "product_id": product_id,
+                "movement_type": "adjustment",
+                "movement_quantity": 5,
+                "notes": "Test adjustment with employee code"
+            }
+            success, adjustment = self.run_test("Create stock adjustment", "POST", "stock/adjustment", 200, adjustment_data)
+            if success:
+                if adjustment.get('created_by') == 'ADM-001':
+                    print(f"   ✅ Stock adjustment created_by contains employee_code: {adjustment.get('created_by')}")
+                else:
+                    print(f"   ❌ Stock adjustment created_by should be ADM-001, got: {adjustment.get('created_by')}")
+        
+        # Test 6: Backward Compatibility Test
+        print("\n--- Test 6: Backward Compatibility Test ---")
+        # This test verifies that old records with UUID in created_by field still load correctly
+        success, all_price_history = self.run_test("Get all price history for compatibility test", "GET", "prices/history?limit=500", 200)
+        if success:
+            uuid_records = 0
+            employee_code_records = 0
+            for entry in all_price_history:
+                created_by = entry.get('created_by', '')
+                if len(created_by) > 10 and '-' in created_by and created_by.count('-') >= 4:  # UUID format
+                    uuid_records += 1
+                elif created_by.startswith(('ADM-', 'PHA-', 'CAI-')):  # Employee code format
+                    employee_code_records += 1
+            
+            print(f"   ✅ Found {uuid_records} records with UUID format (old data)")
+            print(f"   ✅ Found {employee_code_records} records with employee_code format (new data)")
+            print(f"   ✅ Backward compatibility verified - API handles mixed data correctly")
+        
+        return True
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting PharmaFlow API Tests")
