@@ -1087,10 +1087,17 @@ const Sales = () => {
                           )}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-slate-900">
-                              {op.type === 'sale' ? 'Vente' : 'Retour'}
-                            </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-mono text-sm font-bold px-2 py-0.5 rounded ${
+                              op.type === 'sale' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {op.operation_number}
+                            </span>
+                            {op.type === 'return' && op.sale_number && (
+                              <span className="text-xs text-slate-500">
+                                → {op.sale_number}
+                              </span>
+                            )}
                             <span 
                               className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getAgentBadgeStyles(op.user_role)}`}
                               title={op.user_name || 'Inconnu'}
@@ -1098,7 +1105,7 @@ const Sales = () => {
                               {op.employee_code || 'N/A'}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-500">
+                          <p className="text-sm text-slate-500 mt-1">
                             {new Date(op.date).toLocaleString('fr-FR')}
                           </p>
                           {op.type === 'return' && op.reason && (
