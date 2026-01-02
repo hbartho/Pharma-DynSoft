@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '../components/ui/pagination';
-import { Plus, Search, Edit, Trash2, Package, Tag, Settings, Power, PowerOff, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Settings, Power, PowerOff, AlertTriangle, Calculator, TrendingUp } from 'lucide-react';
 import api from '../services/api';
 import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
@@ -31,12 +31,13 @@ const Products = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all'); // all, active, inactive
+  const [filterStatus, setFilterStatus] = useState('all');
   const [productSearchInForm, setProductSearchInForm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
     description: '',
+    purchase_price: '',
     price: '',
     stock: '',
     min_stock: '10',
@@ -46,6 +47,7 @@ const Products = () => {
     name: '',
     description: '',
     color: '#3B82F6',
+    markup_coefficient: '1.0',
   });
   const { isOnline } = useOffline();
 
@@ -72,7 +74,7 @@ const Products = () => {
   const loadCategories = async (forceRefresh = false) => {
     try {
       if (isOnline) {
-        const timestamp = Date.now(); // Cache buster
+        const timestamp = Date.now();
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {};
         const response = await api.get(`/categories?_t=${timestamp}`, { headers });
         console.log('Categories loaded:', response.data.length);
@@ -143,12 +145,50 @@ const Products = () => {
     init();
   }, []); // eslint-disable-line
 
+  // Obtenir le coefficient de la catégorie sélectionnée
+  const getSelectedCategoryCoefficient = () => {
+    if (!formData.category_id) return null;
+    const category = categories.find(c => c.id === formData.category_id);
+    return category?.markup_coefficient || 1.0;
+  };
+
+  // Calculer le prix de vente automatiquement
+  const calculateSellingPrice = (purchasePrice, categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    const coefficient = category?.markup_coefficient || 1.0;
+    return Math.round(purchasePrice * coefficient * 100) / 100;
+  };
+
+  // Gérer le changement de prix d'achat
+  const handlePurchasePriceChange = (value) => {
+    const purchasePrice = parseFloat(value) || 0;
+    const sellingPrice = calculateSellingPrice(purchasePrice, formData.category_id);
+    setFormData({ 
+      ...formData, 
+      purchase_price: value,
+      price: sellingPrice.toString()
+    });
+  };
+
+  // Gérer le changement de catégorie (recalculer le prix de vente)
+  const handleCategoryChange = (categoryId) => {
+    const purchasePrice = parseFloat(formData.purchase_price) || 0;
+    const actualCategoryId = categoryId === 'none' ? '' : categoryId;
+    const sellingPrice = calculateSellingPrice(purchasePrice, actualCategoryId);
+    setFormData({ 
+      ...formData, 
+      category_id: actualCategoryId,
+      price: sellingPrice.toString()
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       const productData = {
         ...formData,
+        purchase_price: parseFloat(formData.purchase_price) || 0,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         min_stock: parseInt(formData.min_stock),
@@ -200,19 +240,21 @@ const Products = () => {
     e.preventDefault();
     
     try {
+      const categoryData = {
+        ...categoryFormData,
+        markup_coefficient: parseFloat(categoryFormData.markup_coefficient) || 1.0,
+      };
+      
       if (editingCategory) {
-        await api.put(`/categories/${editingCategory.id}`, categoryFormData);
+        await api.put(`/categories/${editingCategory.id}`, categoryData);
         toast.success('Catégorie mise à jour');
       } else {
-        await api.post('/categories', categoryFormData);
+        await api.post('/categories', categoryData);
         toast.success('Catégorie ajoutée');
       }
       resetCategoryForm();
-      // Attendre un instant pour s'assurer que le backend a enregistré
       await new Promise(resolve => setTimeout(resolve, 100));
-      // Recharger les catégories avec force refresh
       await loadCategories(true);
-      // Ne pas fermer le dialogue pour permettre d'ajouter plusieurs catégories
     } catch (error) {
       console.error('Error saving category:', error);
       toast.error('Erreur lors de l\'enregistrement de la catégorie');
@@ -242,7 +284,6 @@ const Products = () => {
       setProductToDelete(null);
     } catch (error) {
       console.error('Error deleting product:', error);
-      // Afficher le message d'erreur du serveur (règle d'affaires)
       const errorMessage = error.response?.data?.detail || 'Erreur lors de la suppression';
       toast.error(errorMessage);
       setShowDeleteDialog(false);
@@ -274,11 +315,10 @@ const Products = () => {
       toast.success('Catégorie supprimée');
       setShowDeleteCategoryDialog(false);
       setCategoryToDelete(null);
-      // Reset filter if deleted category was selected
       if (filterCategory === categoryToDelete.id) {
         setFilterCategory('all');
       }
-      await loadCategories(true); // Force refresh avec nouvelle référence
+      await loadCategories(true);
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
@@ -291,6 +331,7 @@ const Products = () => {
       name: product.name,
       barcode: product.barcode || '',
       description: product.description || '',
+      purchase_price: (product.purchase_price || 0).toString(),
       price: product.price.toString(),
       stock: product.stock.toString(),
       min_stock: product.min_stock.toString(),
@@ -305,6 +346,7 @@ const Products = () => {
       name: category.name,
       description: category.description || '',
       color: category.color || '#3B82F6',
+      markup_coefficient: (category.markup_coefficient || 1.0).toString(),
     });
     setShowCategoryDialog(true);
   };
@@ -316,6 +358,7 @@ const Products = () => {
       name: '',
       barcode: '',
       description: '',
+      purchase_price: '',
       price: '',
       stock: '',
       min_stock: '10',
@@ -329,6 +372,7 @@ const Products = () => {
       name: '',
       description: '',
       color: '#3B82F6',
+      markup_coefficient: '1.0',
     });
   };
 
@@ -342,9 +386,13 @@ const Products = () => {
     return category?.color || '#94A3B8';
   };
 
+  const getCategoryCoefficient = (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category?.markup_coefficient || 1.0;
+  };
+
   const isAdmin = user?.role === 'admin';
 
-  // Filtrage pour la recherche dans le formulaire produit
   const filteredProductsInForm = products.filter((p) =>
     productSearchInForm && (
       p.name?.toLowerCase().includes(productSearchInForm.toLowerCase()) ||
@@ -362,13 +410,11 @@ const Products = () => {
         (filterStatus === 'inactive' && p.is_active === false);
       return matchesSearch && matchesCategory && matchesStatus;
     })
-    // Trier: produits nécessitant réapprovisionnement en premier
     .sort((a, b) => {
       const aLowStock = a.stock <= a.min_stock;
       const bLowStock = b.stock <= b.min_stock;
       if (aLowStock && !bLowStock) return -1;
       if (!aLowStock && bLowStock) return 1;
-      // Si même statut, trier par nom
       return a.name.localeCompare(b.name);
     });
 
@@ -386,17 +432,24 @@ const Products = () => {
     setCurrentPage(1);
   }, [searchQuery, filterCategory]);
 
+  // Calculer la marge bénéficiaire
+  const calculateMargin = (purchasePrice, sellingPrice) => {
+    if (!purchasePrice || purchasePrice === 0) return null;
+    const margin = ((sellingPrice - purchasePrice) / purchasePrice) * 100;
+    return Math.round(margin);
+  };
+
   return (
     <Layout>
       <div className="space-y-6" data-testid="products-page">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Produits
             </h1>
             <p className="text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-              Gestion des médicaments et produits
+              Gestion des médicaments et produits • {products.length} produit{products.length > 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex gap-2">
@@ -404,7 +457,7 @@ const Products = () => {
             <Dialog open={showCategoryDialog} onOpenChange={(open) => { 
               setShowCategoryDialog(open); 
               if (open) {
-                loadCategories(true); // Recharger les catégories à l'ouverture
+                loadCategories(true);
               } else {
                 resetCategoryForm(); 
               }
@@ -424,25 +477,31 @@ const Products = () => {
                 
                 {/* Liste des catégories existantes */}
                 {!editingCategory && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                  <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
                     {categories.length === 0 ? (
                       <p className="text-sm text-slate-500 text-center py-4">Aucune catégorie</p>
                     ) : (
                       categories.map((cat) => (
                         <div key={cat.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div 
-                              className="w-4 h-4 rounded-full" 
+                              className="w-4 h-4 rounded-full flex-shrink-0" 
                               style={{ backgroundColor: cat.color || '#3B82F6' }}
                             />
-                            <div>
-                              <p className="font-medium text-slate-900">{cat.name}</p>
-                              {cat.description && (
-                                <p className="text-xs text-slate-500">{cat.description}</p>
-                              )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-900 truncate">{cat.name}</p>
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span className="flex items-center gap-1">
+                                  <Calculator className="w-3 h-3" />
+                                  Coef: ×{cat.markup_coefficient || 1.0}
+                                </span>
+                                {cat.description && (
+                                  <span className="truncate">• {cat.description}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 flex-shrink-0">
                             <Button variant="ghost" size="sm" onClick={() => handleEditCategory(cat)}>
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -480,22 +539,44 @@ const Products = () => {
                       placeholder="Description optionnelle"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="cat-color">Couleur</Label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        id="cat-color"
-                        value={categoryFormData.color}
-                        onChange={(e) => setCategoryFormData({ ...categoryFormData, color: e.target.value })}
-                        className="w-10 h-10 rounded cursor-pointer border-0"
-                      />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cat-color">Couleur</Label>
+                      <div className="flex gap-2 items-center mt-1">
+                        <input
+                          type="color"
+                          id="cat-color"
+                          value={categoryFormData.color}
+                          onChange={(e) => setCategoryFormData({ ...categoryFormData, color: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer border-0"
+                        />
+                        <Input
+                          value={categoryFormData.color}
+                          onChange={(e) => setCategoryFormData({ ...categoryFormData, color: e.target.value })}
+                          className="flex-1"
+                          placeholder="#3B82F6"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="cat-coefficient" className="flex items-center gap-1">
+                        <Calculator className="w-3.5 h-3.5 text-teal-600" />
+                        Coefficient d'intérêt *
+                      </Label>
                       <Input
-                        value={categoryFormData.color}
-                        onChange={(e) => setCategoryFormData({ ...categoryFormData, color: e.target.value })}
-                        className="flex-1"
-                        placeholder="#3B82F6"
+                        id="cat-coefficient"
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        value={categoryFormData.markup_coefficient}
+                        onChange={(e) => setCategoryFormData({ ...categoryFormData, markup_coefficient: e.target.value })}
+                        required
+                        placeholder="1.25"
+                        className="mt-1"
                       />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Prix vente = Prix achat × {categoryFormData.markup_coefficient || '1.0'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
@@ -516,7 +597,7 @@ const Products = () => {
             <Dialog open={showDialog} onOpenChange={(open) => { 
               setShowDialog(open); 
               if (open) {
-                loadCategories(); // Recharger les catégories quand le dialogue s'ouvre
+                loadCategories();
               } else {
                 resetForm();
               }
@@ -605,21 +686,98 @@ const Products = () => {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="price">Prix (€) *</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        required
-                        data-testid="product-price-input"
-                      />
+
+                  {/* Catégorie - IMPORTANT: changer la catégorie recalcule le prix */}
+                  <div>
+                    <Label htmlFor="category">Catégorie</Label>
+                    <Select 
+                      value={formData.category_id || 'none'} 
+                      onValueChange={handleCategoryChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sans catégorie</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: cat.color || '#3B82F6' }}
+                              />
+                              {cat.name}
+                              <span className="text-xs text-slate-400 ml-1">
+                                (×{cat.markup_coefficient || 1.0})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.category_id && (
+                      <p className="text-xs text-teal-600 mt-1 flex items-center gap-1">
+                        <Calculator className="w-3 h-3" />
+                        Coefficient d'intérêt: ×{getSelectedCategoryCoefficient()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Prix */}
+                  <div className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-lg border border-teal-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-teal-700" />
+                      <span className="font-medium text-teal-800">Calcul du prix</span>
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="purchase_price" className="text-slate-700">Prix d'achat (fournisseur) *</Label>
+                        <Input
+                          id="purchase_price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.purchase_price}
+                          onChange={(e) => handlePurchasePriceChange(e.target.value)}
+                          required
+                          data-testid="product-purchase-price-input"
+                          className="bg-white"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="price" className="text-slate-700">Prix de vente *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          required
+                          data-testid="product-price-input"
+                          className="bg-white"
+                          placeholder="0.00"
+                        />
+                        {formData.purchase_price && formData.price && (
+                          <p className="text-xs text-emerald-600 mt-1">
+                            Marge: +{calculateMargin(parseFloat(formData.purchase_price), parseFloat(formData.price))}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {formData.category_id && formData.purchase_price && (
+                      <p className="text-xs text-slate-600 mt-2">
+                        💡 Prix suggéré: {formatAmount(calculateSellingPrice(parseFloat(formData.purchase_price), formData.category_id))} 
+                        (×{getSelectedCategoryCoefficient()})
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Stock */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="stock">Stock *</Label>
+                      <Label htmlFor="stock">Stock actuel *</Label>
                       <Input
                         id="stock"
                         type="number"
@@ -640,31 +798,7 @@ const Products = () => {
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="category">Catégorie</Label>
-                    <Select 
-                      value={formData.category_id} 
-                      onValueChange={(value) => setFormData({ ...formData, category_id: value === 'none' ? '' : value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sans catégorie</SelectItem>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: cat.color || '#3B82F6' }}
-                              />
-                              {cat.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
                   <div className="flex justify-end gap-3 pt-4">
                     <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                       Annuler
@@ -738,6 +872,7 @@ const Products = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentProducts.map((product) => {
             const needsRestock = product.stock <= product.min_stock;
+            const margin = calculateMargin(product.purchase_price, product.price);
             return (
             <div
               key={product.id}
@@ -792,14 +927,28 @@ const Products = () => {
                   >
                     <Tag className="w-3 h-3" />
                     {getCategoryName(product.category_id)}
+                    <span className="opacity-75">×{getCategoryCoefficient(product.category_id)}</span>
                   </span>
                 </div>
               )}
               
               <div className="space-y-2 mb-3">
+                {product.purchase_price > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Achat:</span>
+                    <span className="text-slate-600">{formatAmount(product.purchase_price)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Prix:</span>
-                  <span className="font-medium text-slate-900">{formatAmount(product.price)}</span>
+                  <span className="text-slate-600">Vente:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900">{formatAmount(product.price)}</span>
+                    {margin !== null && margin > 0 && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                        +{margin}%
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Stock:</span>
@@ -853,13 +1002,13 @@ const Products = () => {
           })}
         </div>
 
-        {/* Informations de pagination */}
+        {/* Pagination Info */}
         {filteredProducts.length > 0 && (
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <p className="text-sm text-slate-600">
               Affichage de {startIndex + 1} à {Math.min(endIndex, filteredProducts.length)} sur {filteredProducts.length} produits
             </p>
-            <div className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <div className="text-sm text-slate-600">
               Page {currentPage} sur {totalPages}
             </div>
           </div>
@@ -927,7 +1076,7 @@ const Products = () => {
         {filteredProducts.length === 0 && (
           <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
             <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5} />
-            <p className="text-slate-500" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <p className="text-slate-500">
               Aucun produit trouvé
             </p>
           </div>
@@ -936,13 +1085,11 @@ const Products = () => {
 
       {/* Dialogue de confirmation de suppression produit */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Confirmer la suppression
-            </AlertDialogTitle>
-            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
-              Êtes-vous sûr de vouloir supprimer le produit &ldquo;{productToDelete?.name}&rdquo; ?
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer le produit "{productToDelete?.name}" ?
               Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -959,14 +1106,12 @@ const Products = () => {
 
       {/* Dialogue de confirmation de suppression catégorie */}
       <AlertDialog open={showDeleteCategoryDialog} onOpenChange={setShowDeleteCategoryDialog}>
-        <AlertDialogContent className="bg-white/95 backdrop-blur-sm">
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Supprimer la catégorie
-            </AlertDialogTitle>
-            <AlertDialogDescription style={{ fontFamily: 'Inter, sans-serif' }}>
-              Êtes-vous sûr de vouloir supprimer la catégorie &ldquo;{categoryToDelete?.name}&rdquo; ?
-              Les produits associés ne seront pas supprimés mais n&apos;auront plus de catégorie.
+            <AlertDialogTitle>Supprimer la catégorie</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la catégorie "{categoryToDelete?.name}" ?
+              Les produits associés ne seront pas supprimés mais n'auront plus de catégorie.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
