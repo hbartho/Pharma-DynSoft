@@ -35,6 +35,8 @@ const Settings = () => {
         stock_valuation_method: response.data.stock_valuation_method || 'weighted_average',
         currency: response.data.currency || 'EUR',
         pharmacy_name: response.data.pharmacy_name || '',
+        low_stock_threshold: response.data.low_stock_threshold || 10,
+        return_delay_days: response.data.return_delay_days || 3,
       });
     } catch (error) {
       console.error('Error loading settings:', error);
