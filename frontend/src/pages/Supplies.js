@@ -117,7 +117,6 @@ const Supplies = () => {
       setLoading(true);
       const response = await api.get('/supplies');
       // L'API retourne déjà trié: En attente d'abord, puis par date décroissante
-      console.log('Supplies loaded:', response.data.map(s => ({id: s.id?.slice(0,8), is_validated: s.is_validated})));
       setSupplies(response.data);
     } catch (error) {
       console.error('Error loading supplies:', error);
