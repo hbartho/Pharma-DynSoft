@@ -25,6 +25,7 @@ from routes.users import router as users_router
 from routes.returns import router as returns_router
 from routes.units import router as units_router
 from routes.supplies import router as supplies_router
+from routes.prices import router as prices_router
 
 # Configure logging
 logging.basicConfig(
