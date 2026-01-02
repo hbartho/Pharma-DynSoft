@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
-import { DollarSign, Package, AlertTriangle, FileText, Coins } from 'lucide-react';
+import { DollarSign, Package, AlertTriangle, FileText, Coins, PackagePlus } from 'lucide-react';
 import api from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
