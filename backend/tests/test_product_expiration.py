@@ -251,11 +251,14 @@ class ProductExpirationTester:
             print(f"   ❌ expiration_alert_days not updated correctly: {updated_settings.get('expiration_alert_days')}")
             return False
         
+        # Generate unique product name
+        unique_id = str(uuid.uuid4())[:8]
+        
         # Create a product expiring in 20 days
         expiration_date_20_days = (datetime.now() + timedelta(days=20)).isoformat()
         product_data = {
-            "name": "Test Product 20 Days Expiry",
-            "barcode": "EXP20DAYS",
+            "name": f"Test Product 20 Days Expiry {unique_id}",
+            "barcode": f"EXP20D{unique_id}",
             "description": "Product expiring in 20 days",
             "price": 12.0,
             "stock": 30,
