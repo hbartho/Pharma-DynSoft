@@ -9,24 +9,15 @@ import uuid
 router = APIRouter(prefix="/prices", tags=["Prices"])
 
 
-async def get_user_name(user_id: str, tenant_id: str) -> str:
-    if not user_id:
-        return None
-    user = await db.users.find_one({"id": user_id, "tenant_id": tenant_id})
-    if user:
-        first = user.get("first_name", "")
-        last = user.get("last_name", "")
-        return f"{first} {last}".strip() or user.get("name", "Utilisateur")
-    return "Utilisateur inconnu"
-
-
 async def create_price_history(
     product_id: str,
-    purchase_price: float,
-    selling_price: float,
+    prix_appro: float,
+    prix_vente_prod: float,
     change_type: PriceChangeType,
     tenant_id: str,
-    user_id: str,
+    employee_code: str,
+    date_appro: datetime = None,
+    date_peremption: datetime = None,
     reference_type: str = None,
     reference_id: str = None,
     notes: str = None
@@ -37,28 +28,36 @@ async def create_price_history(
     if not product:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
     
-    purchase_price_before = product.get("purchase_price", 0)
-    selling_price_before = product.get("price", 0)
+    prix_appro_avant = product.get("purchase_price", 0)
+    prix_vente_avant = product.get("price", 0)
     
-    # Créer l'historique
+    # Créer l'historique avec les nouveaux champs
     price_entry = PriceHistory(
         product_id=product_id,
         product_name=product.get("name"),
-        purchase_price=purchase_price,
-        selling_price=selling_price,
-        purchase_price_before=purchase_price_before,
-        selling_price_before=selling_price_before,
+        product_reference=product.get("internal_reference"),
+        prix_appro=prix_appro,
+        prix_vente_prod=prix_vente_prod,
+        prix_appro_avant=prix_appro_avant,
+        prix_vente_avant=prix_vente_avant,
+        date_maj_prix=datetime.now(timezone.utc),
+        date_appro=date_appro,
+        date_peremption=date_peremption,
         change_type=change_type,
         reference_type=reference_type,
         reference_id=reference_id,
         notes=notes,
         tenant_id=tenant_id,
-        created_by=user_id
+        created_by=employee_code  # Utiliser employee_code uniquement
     )
     
     doc = price_entry.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
-    doc["effective_date"] = doc["effective_date"].isoformat()
+    doc["date_maj_prix"] = doc["date_maj_prix"].isoformat()
+    if doc.get("date_appro"):
+        doc["date_appro"] = doc["date_appro"].isoformat()
+    if doc.get("date_peremption"):
+        doc["date_peremption"] = doc["date_peremption"].isoformat()
     doc["change_type"] = doc["change_type"].value
     
     await db.price_history.insert_one(doc)
@@ -67,8 +66,8 @@ async def create_price_history(
     await db.products.update_one(
         {"id": product_id},
         {"$set": {
-            "purchase_price": purchase_price,
-            "price": selling_price,
+            "purchase_price": prix_appro,
+            "price": prix_vente_prod,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
@@ -95,9 +94,9 @@ async def get_price_history(
     history = await db.price_history.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
     for entry in history:
-        entry["created_by_name"] = await get_user_name(entry.get("created_by"), tenant_id)
-        for field in ["created_at", "effective_date"]:
-            if isinstance(entry.get(field), str):
+        # Convertir les dates string en datetime
+        for field in ["created_at", "date_maj_prix", "date_appro", "date_peremption", "modified_at"]:
+            if entry.get(field) and isinstance(entry[field], str):
                 entry[field] = datetime.fromisoformat(entry[field])
     
     return [PriceHistory(**entry) for entry in history]
@@ -118,9 +117,8 @@ async def get_product_price_history(
     ).sort("created_at", -1).to_list(limit)
     
     for entry in history:
-        entry["created_by_name"] = await get_user_name(entry.get("created_by"), tenant_id)
-        for field in ["created_at", "effective_date"]:
-            if isinstance(entry.get(field), str):
+        for field in ["created_at", "date_maj_prix", "date_appro", "date_peremption", "modified_at"]:
+            if entry.get(field) and isinstance(entry[field], str):
                 entry[field] = datetime.fromisoformat(entry[field])
     
     return [PriceHistory(**entry) for entry in history]
@@ -133,14 +131,17 @@ async def update_product_price(
 ):
     """Mettre à jour le prix d'un produit manuellement"""
     tenant_id = current_user["tenant_id"]
+    employee_code = current_user.get("employee_code", "N/A")
     
     price_entry = await create_price_history(
         product_id=data.product_id,
-        purchase_price=data.purchase_price,
-        selling_price=data.selling_price,
+        prix_appro=data.prix_appro,
+        prix_vente_prod=data.prix_vente_prod,
         change_type=data.change_type or PriceChangeType.MANUAL,
         tenant_id=tenant_id,
-        user_id=current_user["id"],
+        employee_code=employee_code,
+        date_appro=data.date_appro,
+        date_peremption=data.date_peremption,
         reference_type=data.reference_type,
         reference_id=data.reference_id,
         notes=data.notes
@@ -171,14 +172,19 @@ async def get_price_summary(
     )
     
     last_date = None
-    if last_change and last_change.get("created_at"):
-        last_date = datetime.fromisoformat(last_change["created_at"]) if isinstance(last_change["created_at"], str) else last_change["created_at"]
+    last_modified_by = None
+    if last_change:
+        if last_change.get("created_at"):
+            last_date = datetime.fromisoformat(last_change["created_at"]) if isinstance(last_change["created_at"], str) else last_change["created_at"]
+        last_modified_by = last_change.get("created_by")  # employee_code
     
     return PriceSummary(
         product_id=product_id,
         product_name=product.get("name", "Inconnu"),
-        current_purchase_price=product.get("purchase_price", 0),
-        current_selling_price=product.get("price", 0),
+        product_reference=product.get("internal_reference"),
+        current_prix_appro=product.get("purchase_price", 0),
+        current_prix_vente=product.get("price", 0),
         price_changes_count=count,
-        last_change_date=last_date
+        last_change_date=last_date,
+        last_modified_by=last_modified_by
     )
