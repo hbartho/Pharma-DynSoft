@@ -158,16 +158,13 @@
 - **Message**: Supplies (Approvisionnements) Employee Code Display Fix testing completed successfully. Backend testing: All 9 test suites passed (100% success rate). Frontend UI testing: All 4 test cases passed (100% success rate). Key findings: (1) JWT token contains correct employee_code: ADM-001, (2) All supplies show proper employee codes in created_by_name field - no "Inconnu" entries found, (3) New supply creation working with created_by_name: ADM-001, (4) Supply editing working with updated_by_name: ADM-001, (5) Supply validation working with validated_by_name: ADM-001, (6) Backward compatibility working perfectly - old UUID data resolves to employee codes, zero "Inconnu" entries found, (7) **Frontend UI verification successful** - Found 16 ADM-001 occurrences, 0 "Inconnu" entries, supply list and details dialog both show proper employee codes with font-mono styling. Employee code display fix is fully functional across both backend and frontend.
 
 ## Current Testing Session (2026-01-02)
-- **Task**: Supplies (Approvisionnements) Employee Code Display Fix Testing (COMPLETED)
-- **Features Tested**:
-  1. Backend API employee code fields verification ✅
-  2. New supply creation with employee code tracking ✅
-  3. Supply editing with employee code tracking ✅
-  4. Supply validation with employee code tracking ✅
-  5. Backward compatibility with old UUID data ✅
-  6. **Frontend UI employee code display verification ✅**
-- **Status**: ✅ COMPLETED - All tests passed (Backend: 9/9, Frontend: 4/4 = 100% success rate)
-- **Key Finding**: Employee code display fix working perfectly - no "Inconnu" entries found in both backend and frontend
+- **Task**: PWA Offline-First Mode Implementation Testing
+- **Features to Test**:
+  1. Offline indicator in sidebar - shows connection status
+  2. Settings page - new PWA section with preload and sync options
+  3. Data caching in IndexedDB for offline access
+  4. Pending changes tracking when offline
+- **Status**: Testing in progress
 
 ## Employee Code Standardization & Price History Model Test Results (2026-01-02)
 
