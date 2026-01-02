@@ -976,3 +976,32 @@
 - Return number system working correctly
 - Employee code tracking seamless
 - Complete traceability between sales and returns
+
+## Sales/Returns Number Display & Return Delay Policy (2026-01-02)
+
+### Changes Made
+1. **Frontend Sales Page**:
+   - Added "N° Vente" column with sale numbers (VNT-XXXX format)
+   - History dialog shows operation numbers for both sales and returns
+   - Returns show linked sale number (RET-XXXX → VNT-XXXX)
+   - Return dialog shows associated sale number
+
+2. **Backend Return Delay Validation**:
+   - Added `return_delay_days` setting (default: 3 days)
+   - New endpoint: GET /api/returns/check-eligibility/{sale_id}
+   - Returns are blocked if sale is older than configured delay
+   - Error message shows how many days have passed
+
+3. **Settings Page Enhancement**:
+   - Added "Politique de retours" section
+   - Configurable return delay (0-365 days)
+   - Added low stock threshold setting
+   - Live explanation of current return policy
+
+### Files Modified
+- `/app/backend/models/settings.py` - Added return_delay_days and low_stock_threshold
+- `/app/backend/routes/returns.py` - Added eligibility check and delay validation
+- `/app/frontend/src/pages/Sales.js` - Sale numbers display and return eligibility check
+- `/app/frontend/src/pages/Settings.js` - Return delay configuration UI
+
+### Test Status: Ready for testing
