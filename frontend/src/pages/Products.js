@@ -1015,8 +1015,7 @@ const Products = () => {
                     </div>
                     {formData.category_id && formData.purchase_price && (
                       <p className="text-xs text-slate-600 mt-2">
-                        💡 Prix suggéré: {formatAmount(calculateSellingPrice(parseFloat(formData.purchase_price), formData.category_id))} 
-                        (×{getSelectedCategoryCoefficient()})
+                        💡 Prix suggéré: {formatAmount(calculateSellingPrice(parseFloat(formData.purchase_price), formData.category_id))}
                       </p>
                     )}
                   </div>
