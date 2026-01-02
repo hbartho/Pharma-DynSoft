@@ -927,7 +927,6 @@ const Products = () => {
                   >
                     <Tag className="w-3 h-3" />
                     {getCategoryName(product.category_id)}
-                    <span className="opacity-75">×{getCategoryCoefficient(product.category_id)}</span>
                   </span>
                 </div>
               )}
