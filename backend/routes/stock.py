@@ -23,7 +23,6 @@ async def get_valuation_for_product(product_id: str, tenant_id: str, method: str
     
     # Méthode simple basée sur le prix d'achat
     if method == "fifo" or method == "weighted_average":
-        # Pour l'instant, on utilise le prix d'achat du produit
         unit_cost = purchase_price
         total_value = current_stock * unit_cost
     else:
@@ -31,17 +30,6 @@ async def get_valuation_for_product(product_id: str, tenant_id: str, method: str
         total_value = current_stock * unit_cost
     
     return {"unit_cost": unit_cost, "total_value": total_value}
-
-
-async def get_user_name(user_id: str, tenant_id: str) -> str:
-    if not user_id:
-        return None
-    user = await db.users.find_one({"id": user_id, "tenant_id": tenant_id})
-    if user:
-        first = user.get("first_name", "")
-        last = user.get("last_name", "")
-        return f"{first} {last}".strip() or user.get("name", "Utilisateur")
-    return "Utilisateur inconnu"
 
 
 async def get_product_info(product_id: str, tenant_id: str) -> dict:
@@ -56,7 +44,7 @@ async def create_stock_movement(
     movement_type: StockMovementType,
     movement_quantity: int,
     tenant_id: str,
-    user_id: str,
+    employee_code: str,
     reference_type: str = None,
     reference_id: str = None,
     notes: str = None
@@ -74,7 +62,7 @@ async def create_stock_movement(
     if stock_after < 0 and movement_type != StockMovementType.ADJUSTMENT:
         raise HTTPException(status_code=400, detail=f"Stock insuffisant. Stock actuel: {stock_before}")
     
-    # Créer le mouvement
+    # Créer le mouvement avec employee_code
     movement = StockMovement(
         product_id=product_id,
         product_name=product.get("name"),
@@ -86,7 +74,7 @@ async def create_stock_movement(
         reference_id=reference_id,
         notes=notes,
         tenant_id=tenant_id,
-        created_by=user_id
+        created_by=employee_code  # Utiliser employee_code
     )
     
     doc = movement.model_dump()
@@ -122,9 +110,8 @@ async def get_stock_movements(
     
     movements = await db.stock_movements.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
-    # Enrichir avec les noms
+    # Convertir les dates
     for mov in movements:
-        mov["created_by_name"] = await get_user_name(mov.get("created_by"), tenant_id)
         if isinstance(mov.get("created_at"), str):
             mov["created_at"] = datetime.fromisoformat(mov["created_at"])
     
@@ -146,7 +133,6 @@ async def get_product_stock_history(
     ).sort("created_at", -1).to_list(limit)
     
     for mov in movements:
-        mov["created_by_name"] = await get_user_name(mov.get("created_by"), tenant_id)
         if isinstance(mov.get("created_at"), str):
             mov["created_at"] = datetime.fromisoformat(mov["created_at"])
     
@@ -160,13 +146,14 @@ async def create_stock_adjustment(
 ):
     """Créer un ajustement de stock manuel"""
     tenant_id = current_user["tenant_id"]
+    employee_code = current_user.get("employee_code", "N/A")
     
     movement = await create_stock_movement(
         product_id=data.product_id,
         movement_type=StockMovementType.ADJUSTMENT,
         movement_quantity=data.movement_quantity,
         tenant_id=tenant_id,
-        user_id=current_user["id"],
+        employee_code=employee_code,
         reference_type="adjustment",
         notes=data.notes
     )
@@ -214,3 +201,53 @@ async def get_stock_summary(
         last_movement_date=last_date,
         movements_count=len(movements)
     )
+
+
+@router.get("/alerts")
+async def get_stock_alerts(
+    threshold: int = Query(default=10, description="Seuil de stock bas"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Récupérer les alertes de stock bas"""
+    tenant_id = current_user["tenant_id"]
+    
+    low_stock_products = await db.products.find(
+        {"tenant_id": tenant_id, "stock": {"$lte": threshold}},
+        {"_id": 0, "password": 0}
+    ).to_list(1000)
+    
+    return low_stock_products
+
+
+@router.get("/valuation")
+async def get_stock_valuation(
+    method: str = Query(default="weighted_average", description="Méthode: fifo, lifo, weighted_average"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Calculer la valorisation totale du stock"""
+    tenant_id = current_user["tenant_id"]
+    
+    products = await db.products.find(
+        {"tenant_id": tenant_id, "stock": {"$gt": 0}},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    total_valuation = 0
+    valuations = []
+    
+    for product in products:
+        valuation = await get_valuation_for_product(product["id"], tenant_id, method)
+        total_valuation += valuation["total_value"]
+        valuations.append({
+            "product_id": product["id"],
+            "product_name": product.get("name"),
+            "stock": product.get("stock", 0),
+            "unit_cost": valuation["unit_cost"],
+            "total_value": valuation["total_value"]
+        })
+    
+    return {
+        "method": method,
+        "total_valuation": total_valuation,
+        "products": valuations
+    }
