@@ -116,17 +116,9 @@ const Supplies = () => {
     try {
       setLoading(true);
       const response = await api.get('/supplies');
-      // Trier les approvisionnements: En attente d'abord, puis par date décroissante
-      const sortedSupplies = response.data.sort((a, b) => {
-        const aPending = a.is_validated === false;
-        const bPending = b.is_validated === false;
-        if (aPending && !bPending) return -1;
-        if (!aPending && bPending) return 1;
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateB - dateA;
-      });
-      setSupplies(sortedSupplies);
+      // L'API retourne déjà trié: En attente d'abord, puis par date décroissante
+      console.log('Supplies loaded:', response.data.map(s => ({id: s.id?.slice(0,8), is_validated: s.is_validated})));
+      setSupplies(response.data);
     } catch (error) {
       console.error('Error loading supplies:', error);
       toast.error('Erreur lors du chargement des approvisionnements');
