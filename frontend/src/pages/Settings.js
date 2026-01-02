@@ -234,6 +234,50 @@ const Settings = () => {
             </div>
           </div>
 
+          {/* Alertes de péremption */}
+          <div className="p-6 rounded-xl bg-white border border-slate-100">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-red-50 rounded-lg">
+                <Calendar className="w-5 h-5 text-red-600" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Alertes de péremption
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="expiration_alert_days">Délai d'alerte avant péremption (jours)</Label>
+                <div className="flex items-center gap-3 mt-1">
+                  <Input
+                    id="expiration_alert_days"
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={settings.expiration_alert_days}
+                    onChange={(e) => setSettings({ ...settings, expiration_alert_days: parseInt(e.target.value) || 30 })}
+                    className="w-24"
+                  />
+                  <span className="text-slate-600">jour(s) avant la date de péremption</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" strokeWidth={1.5} />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">
+                      Notification active
+                    </p>
+                    <p className="text-sm text-red-700 mt-1">
+                      Les produits dont la date de péremption est dans les <strong>{settings.expiration_alert_days} prochains jours</strong> seront mis en évidence dans la liste des produits et le tableau de bord.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Méthode de valorisation du stock */}
           <div className="p-6 rounded-xl bg-white border border-slate-100">
             <div className="flex items-center gap-3 mb-6">
