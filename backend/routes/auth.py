@@ -63,10 +63,14 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user['password']):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     
+    # Normaliser les données utilisateur avant de créer le token
+    user = normalize_user_data(user)
+    
     access_token = create_access_token(data={
         "sub": user['id'], 
         "tenant_id": user['tenant_id'],
-        "role": user['role']
+        "role": user['role'],
+        "employee_code": user.get('employee_code', '')
     })
     
     user.pop('password')
