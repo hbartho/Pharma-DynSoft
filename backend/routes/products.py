@@ -145,6 +145,10 @@ async def get_product_alerts(current_user: dict = Depends(require_role(["admin",
             if isinstance(exp_date, str):
                 exp_date = datetime.fromisoformat(exp_date)
             
+            # Ensure timezone awareness
+            if exp_date.tzinfo is None:
+                exp_date = exp_date.replace(tzinfo=timezone.utc)
+            
             now = datetime.now(timezone.utc)
             days_until = (exp_date - now).days
             
