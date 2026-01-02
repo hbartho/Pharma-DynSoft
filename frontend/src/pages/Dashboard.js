@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     today_sales_count: 0,
     today_revenue: 0,
@@ -16,6 +17,7 @@ const Dashboard = () => {
     total_stock_value: 0,
     stock_valuation_method: 'weighted_average',
   });
+  const [pendingSupplies, setPendingSupplies] = useState(0);
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({ currency: 'GNF' });
