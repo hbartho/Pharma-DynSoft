@@ -1004,4 +1004,107 @@
 - `/app/frontend/src/pages/Sales.js` - Sale numbers display and return eligibility check
 - `/app/frontend/src/pages/Settings.js` - Return delay configuration UI
 
-### Test Status: Ready for testing
+### Test Status: ✅ FULLY WORKING
+
+## Return Delay Policy & Sale Numbers Test Results (2026-01-02)
+
+### Test Overview
+- **Test Scope**: Complete testing of Return Delay Policy & Sale Numbers functionality
+- **Login Credentials**: admin@pharmaflow.com / admin123 (ADM-001)
+- **Test Status**: ✅ FULLY WORKING
+- **Test File**: /app/backend/tests/test_return_delay_policy.py
+
+### Detailed Test Results:
+
+#### 1. Settings - Return Delay Configuration: ✅ WORKING
+- ✅ GET /api/settings - return_delay_days field exists (default: 3)
+- ✅ PUT /api/settings - Update return_delay_days to 5 days
+- ✅ GET /api/settings - Verify update was saved correctly
+- ✅ Settings configuration working with proper persistence
+
+#### 2. Return Eligibility Check: ✅ WORKING
+- ✅ GET /api/returns/check-eligibility/{sale_id} endpoint working
+- ✅ Response contains all required fields:
+  - `is_eligible`: true/false based on delay
+  - `message`: descriptive message about eligibility
+  - `days_remaining`: number of days left for return
+  - `return_delay_days`: configured delay setting
+- ✅ Eligibility calculation working correctly
+
+#### 3. Create Return Within Delay: ✅ WORKING
+- ✅ Created fresh sale with sale number VNT-0017
+- ✅ Return created successfully within delay period
+- ✅ Return number generated: RET-0005 (correct format)
+- ✅ Sale number reference: VNT-0017 (correct linking)
+- ✅ Employee code tracking: ADM-001 (correct format)
+- ✅ Total refund calculation: 25.0 (accurate)
+
+#### 4. Return Delay Enforcement: ✅ WORKING
+- ✅ Set return_delay_days to 0 (disable returns)
+- ✅ Return creation correctly blocked with 400 error
+- ✅ Appropriate error message: "Le délai de retour de 0 jour(s) est dépassé"
+- ✅ Reset return_delay_days back to 3 days successfully
+- ✅ Delay enforcement working as expected
+
+#### 5. Sales API - Sale Numbers: ✅ WORKING
+- ✅ GET /api/sales returns 17 sales with sale numbers
+- ✅ All sales have sale_number field (17/17 = 100%)
+- ✅ All sales have employee_code field (17/17 = 100%)
+- ✅ Sale number format: VNT-XXXX (correct format)
+- ✅ Both new sequential numbers (VNT-0017) and legacy format working
+
+#### 6. Returns API - Return Numbers and Sale Reference: ✅ WORKING
+- ✅ GET /api/returns returns 5 returns with proper numbering
+- ✅ All returns have return_number field (5/5 = 100%)
+- ✅ All returns have sale_number field (5/5 = 100%)
+- ✅ Return number format: RET-XXXX (correct format)
+- ✅ Sale number references working: RET-0005 → VNT-0017
+
+#### 7. Operations History: ✅ WORKING
+- ✅ GET /api/returns/history returns 22 operations (17 sales + 5 returns)
+- ✅ All operations have operation_number field (22/22 = 100%)
+- ✅ Sales show operation_number in VNT-XXXX format
+- ✅ Returns show operation_number in RET-XXXX format
+- ✅ All returns have sale_number reference (5/5 = 100%)
+- ✅ Complete traceability between sales and returns
+
+### Technical Implementation Verified:
+- **Return Delay Validation**: Configurable delay with proper enforcement
+- **Sale Number Generation**: VNT-XXXX format auto-generated on creation
+- **Return Number Generation**: RET-XXXX format auto-generated on creation
+- **Sale Number Reference**: Returns properly link to original sale numbers
+- **Employee Code Tracking**: ADM-001 format in all operations
+- **API Integration**: All endpoints working correctly with new fields
+- **Settings Management**: return_delay_days configurable and persistent
+- **Error Handling**: Proper validation and error messages
+
+### Key Features Confirmed Working:
+1. **Return Delay Configuration**: ✅ Configurable via settings (0-365 days)
+2. **Return Eligibility Check**: ✅ API endpoint with comprehensive response
+3. **Return Delay Enforcement**: ✅ Blocks returns outside configured delay
+4. **Sale Number System**: ✅ VNT-XXXX format for all sales
+5. **Return Number System**: ✅ RET-XXXX format for all returns
+6. **Sale Number Reference**: ✅ Returns include original sale number
+7. **Operations History**: ✅ Complete traceability with operation numbers
+8. **Employee Code Tracking**: ✅ ADM-001 format throughout system
+
+### Test Results Summary:
+- **Total API Calls**: 18/18 passed (100% success rate)
+- **Feature Test Suites**: 7/7 passed (100% success rate)
+- **Settings Configuration**: ✅ Working
+- **Return Eligibility**: ✅ Working
+- **Return Creation**: ✅ Working
+- **Delay Enforcement**: ✅ Working
+- **Sale Numbers**: ✅ Working
+- **Return Numbers**: ✅ Working
+- **Operations History**: ✅ Working
+
+### No Critical Issues Found:
+- No console errors or application crashes
+- No data integrity problems
+- All core functionality working as expected
+- Proper error handling and user feedback
+- Return delay policy working perfectly
+- Sale and return numbering system fully functional
+- Complete traceability between sales and returns
+- Employee code tracking seamless
