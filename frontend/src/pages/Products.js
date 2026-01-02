@@ -408,6 +408,7 @@ const Products = () => {
       min_stock: product.min_stock.toString(),
       category_id: product.category_id || '',
       unit_id: product.unit_id || '',
+      expiration_date: product.expiration_date ? product.expiration_date.split('T')[0] : '',
     });
     setShowDialog(true);
   };
