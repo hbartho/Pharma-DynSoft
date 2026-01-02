@@ -426,7 +426,8 @@ const Supplies = () => {
 
   const filteredSupplies = supplies
     .filter(supply => {
-      const matchesSearch = 
+      // Si pas de recherche, tout passe
+      const matchesSearch = !searchQuery || 
         supply.purchase_order_ref?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         supply.delivery_note_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         supply.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
