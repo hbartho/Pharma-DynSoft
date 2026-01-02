@@ -26,9 +26,10 @@ class StockMovement(BaseModel):
     reference_id: Optional[str] = None    # ID de la référence
     notes: Optional[str] = None
     tenant_id: str
+    
+    # Traçabilité - Utiliser UNIQUEMENT employee_code
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[str] = None
-    created_by_name: Optional[str] = None
+    created_by: str = ""  # employee_code du créateur (ex: ADM-001, PHA-001)
 
 class StockMovementCreate(BaseModel):
     product_id: str
