@@ -439,10 +439,14 @@ const Supplies = () => {
     })
     .sort((a, b) => {
       // Trier: En attente d'abord, puis par date décroissante
-      if (!a.is_validated && b.is_validated) return -1;
-      if (a.is_validated && !b.is_validated) return 1;
+      const aPending = !a.is_validated;
+      const bPending = !b.is_validated;
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
       // Même statut: trier par date décroissante
-      return new Date(b.created_at) - new Date(a.created_at);
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
     });
 
   const pendingCount = supplies.filter(s => !s.is_validated).length;
