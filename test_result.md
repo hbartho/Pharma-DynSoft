@@ -158,14 +158,15 @@
 - **Message**: Supplies (Approvisionnements) Employee Code Display Fix testing completed successfully. All 9 test suites passed (100% success rate). Key findings: (1) JWT token contains correct employee_code: ADM-001, (2) All 7 supplies show proper employee codes in created_by_name field - no "Inconnu" entries found, (3) New supply creation working with created_by_name: ADM-001, (4) Supply editing working with updated_by_name: ADM-001, (5) Supply validation working with validated_by_name: ADM-001, (6) Backward compatibility working perfectly - old UUID data (5 supplies) resolves to employee codes, new employee_code data (3 supplies) works correctly, zero "Inconnu" entries found. Employee code display fix is fully functional. Frontend UI testing not performed as per system limitations - requires separate UI verification.
 
 ## Current Testing Session (2026-01-02)
-- **Task**: Complete Sales Page Enhancements Testing (P0)
-- **Features to Test**:
-  1. Search by Sale Number (N° Vente), Agent, Date - UI verified in screenshot
-  2. Filter Returns only in History dialog - UI code verified
-  3. Backend return quantity validation - Code verified in returns.py
-- **Fixed Issues**:
-  - Added missing `import uuid` to `/app/backend/routes/returns.py`
-- **Status**: Testing in progress
+- **Task**: Supplies (Approvisionnements) Employee Code Display Fix Testing (COMPLETED)
+- **Features Tested**:
+  1. Backend API employee code fields verification ✅
+  2. New supply creation with employee code tracking ✅
+  3. Supply editing with employee code tracking ✅
+  4. Supply validation with employee code tracking ✅
+  5. Backward compatibility with old UUID data ✅
+- **Status**: ✅ COMPLETED - All tests passed (9/9 = 100% success rate)
+- **Key Finding**: Employee code display fix working perfectly - no "Inconnu" entries found
 
 ## Employee Code Standardization & Price History Model Test Results (2026-01-02)
 
