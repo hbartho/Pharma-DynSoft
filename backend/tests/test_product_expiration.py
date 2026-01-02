@@ -400,10 +400,10 @@ class ProductExpirationTester:
                         positions[product['name']] = i
                 
                 # Verify low stock comes before others
-                low_stock_pos = positions.get("A Low Stock Product", 999)
-                expired_pos = positions.get("B Expired Product", 999)
-                near_exp_pos = positions.get("C Near Expiration Product", 999)
-                normal_pos = positions.get("D Normal Product", 999)
+                low_stock_pos = positions.get(f"A Low Stock Product {unique_id}", 999)
+                expired_pos = positions.get(f"B Expired Product {unique_id}", 999)
+                near_exp_pos = positions.get(f"C Near Expiration Product {unique_id}", 999)
+                normal_pos = positions.get(f"D Normal Product {unique_id}", 999)
                 
                 if (low_stock_pos < expired_pos < near_exp_pos < normal_pos):
                     print(f"   ✅ Product sorting correct: Low stock({low_stock_pos}) > Expired({expired_pos}) > Near expiration({near_exp_pos}) > Normal({normal_pos})")
