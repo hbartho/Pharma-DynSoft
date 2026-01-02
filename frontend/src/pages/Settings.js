@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency } from '../services/currencyService';
@@ -18,6 +18,7 @@ const Settings = () => {
     pharmacy_name: '',
     low_stock_threshold: 10,
     return_delay_days: 3,
+    expiration_alert_days: 30,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
