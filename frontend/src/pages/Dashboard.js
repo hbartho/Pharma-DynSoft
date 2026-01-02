@@ -168,6 +168,30 @@ const Dashboard = () => {
               Informations rapides
             </h3>
             <div className="space-y-4">
+              <div 
+                className="flex items-center justify-between p-4 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors"
+                onClick={() => navigate('/supplies')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <PackagePlus className="w-5 h-5 text-orange-700" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      Approvisionnements en attente
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      {pendingSupplies}
+                    </p>
+                  </div>
+                </div>
+                {pendingSupplies > 0 && (
+                  <span className="text-xs font-medium text-orange-700 bg-orange-200 px-2 py-1 rounded-full">
+                    À valider
+                  </span>
+                )}
+              </div>
+
               <div className="flex items-center justify-between p-4 bg-teal-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-teal-100 rounded-lg">
@@ -184,7 +208,10 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg">
+              <div 
+                className="flex items-center justify-between p-4 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors"
+                onClick={() => navigate('/products')}
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-amber-100 rounded-lg">
                     <AlertTriangle className="w-5 h-5 text-amber-700" strokeWidth={1.5} />
@@ -198,6 +225,11 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
+                {stats.low_stock_count > 0 && (
+                  <span className="text-xs font-medium text-amber-700 bg-amber-200 px-2 py-1 rounded-full">
+                    Stock bas
+                  </span>
+                )}
               </div>
             </div>
           </div>
