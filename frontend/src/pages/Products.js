@@ -491,6 +491,28 @@ const Products = () => {
 
   const isAdmin = user?.role === 'admin';
 
+  // Calculer si un produit est proche de la péremption
+  const isNearExpiration = (product) => {
+    if (!product.expiration_date) return false;
+    const expDate = new Date(product.expiration_date);
+    const now = new Date();
+    const daysUntil = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+    return daysUntil <= (appSettings.expiration_alert_days || 30) && daysUntil > 0;
+  };
+
+  const isExpired = (product) => {
+    if (!product.expiration_date) return false;
+    const expDate = new Date(product.expiration_date);
+    return expDate <= new Date();
+  };
+
+  const getDaysUntilExpiration = (product) => {
+    if (!product.expiration_date) return 9999;
+    const expDate = new Date(product.expiration_date);
+    const now = new Date();
+    return Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+  };
+
   const filteredProductsInForm = products.filter((p) =>
     productSearchInForm && (
       p.name?.toLowerCase().includes(productSearchInForm.toLowerCase()) ||
@@ -499,6 +521,7 @@ const Products = () => {
     )
   );
 
+  // Tri prioritaire: réappro > péremption proche > alphabétique
   const filteredProducts = products
     .filter((p) => {
       const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -507,14 +530,37 @@ const Products = () => {
       const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
       const matchesStatus = filterStatus === 'all' || 
         (filterStatus === 'active' && p.is_active !== false) || 
-        (filterStatus === 'inactive' && p.is_active === false);
+        (filterStatus === 'inactive' && p.is_active === false) ||
+        (filterStatus === 'low_stock' && p.stock <= p.min_stock) ||
+        (filterStatus === 'near_expiration' && isNearExpiration(p)) ||
+        (filterStatus === 'expired' && isExpired(p));
       return matchesSearch && matchesCategory && matchesStatus;
     })
     .sort((a, b) => {
+      // 1. Produits à réapprovisionner en premier
       const aLowStock = a.stock <= a.min_stock;
       const bLowStock = b.stock <= b.min_stock;
       if (aLowStock && !bLowStock) return -1;
       if (!aLowStock && bLowStock) return 1;
+      
+      // 2. Produits périmés
+      const aExpired = isExpired(a);
+      const bExpired = isExpired(b);
+      if (aExpired && !bExpired) return -1;
+      if (!aExpired && bExpired) return 1;
+      
+      // 3. Produits à péremption proche
+      const aNearExp = isNearExpiration(a);
+      const bNearExp = isNearExpiration(b);
+      if (aNearExp && !bNearExp) return -1;
+      if (!aNearExp && bNearExp) return 1;
+      
+      // 4. Si les deux sont à péremption proche, trier par date
+      if (aNearExp && bNearExp) {
+        return getDaysUntilExpiration(a) - getDaysUntilExpiration(b);
+      }
+      
+      // 5. Alphabétique
       return a.name.localeCompare(b.name);
     });
 
