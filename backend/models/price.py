@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from typing import Optional, List, Any
 from datetime import datetime, timezone
 from enum import Enum
 import uuid
@@ -30,14 +30,14 @@ class PriceHistory(BaseModel):
     product_name: Optional[str] = None           # Nom du produit (dénormalisé)
     product_reference: Optional[str] = None      # ref_prod (référence interne)
     
-    # Prix - Champs principaux demandés
-    prix_appro: float                            # prix_appro - Prix d'approvisionnement/achat
-    prix_vente_prod: float                       # prix_vente_prod - Prix de vente du produit
+    # Prix - Champs principaux demandés (avec compatibilité anciens champs)
+    prix_appro: float = 0                        # prix_appro - Prix d'approvisionnement/achat
+    prix_vente_prod: float = 0                   # prix_vente_prod - Prix de vente du produit
     prix_appro_avant: Optional[float] = None     # Prix achat avant modification
     prix_vente_avant: Optional[float] = None     # Prix vente avant modification
     
     # Dates - Champs principaux demandés
-    date_maj_prix: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Date mise à jour prix
+    date_maj_prix: Optional[datetime] = None     # Date mise à jour prix
     date_appro: Optional[datetime] = None        # date_appro - Date de l'approvisionnement
     date_peremption: Optional[datetime] = None   # date_peremption - Date de péremption
     
@@ -50,12 +50,43 @@ class PriceHistory(BaseModel):
     # Agence
     tenant_id: str                               # IDAgence
     
-    # Traçabilité - Utiliser UNIQUEMENT employee_code
+    # Traçabilité - Utiliser employee_code (ou user_id pour compatibilité)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: str                              # employee_code du créateur (ex: ADM-001)
+    created_by: str = ""                         # employee_code du créateur (ex: ADM-001)
     
     modified_at: Optional[datetime] = None
     modified_by: Optional[str] = None            # employee_code du modificateur
+    
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_old_fields(cls, data: Any) -> Any:
+        """Migrer les anciens noms de champs vers les nouveaux"""
+        if isinstance(data, dict):
+            # Mapper les anciens noms de champs vers les nouveaux
+            if 'purchase_price' in data and 'prix_appro' not in data:
+                data['prix_appro'] = data.get('purchase_price', 0)
+            if 'selling_price' in data and 'prix_vente_prod' not in data:
+                data['prix_vente_prod'] = data.get('selling_price', 0)
+            if 'purchase_price_before' in data and 'prix_appro_avant' not in data:
+                data['prix_appro_avant'] = data.get('purchase_price_before')
+            if 'selling_price_before' in data and 'prix_vente_avant' not in data:
+                data['prix_vente_avant'] = data.get('selling_price_before')
+            if 'price_update_date' in data and 'date_maj_prix' not in data:
+                data['date_maj_prix'] = data.get('price_update_date')
+            if 'supply_date' in data and 'date_appro' not in data:
+                data['date_appro'] = data.get('supply_date')
+            if 'expiration_date' in data and 'date_peremption' not in data:
+                data['date_peremption'] = data.get('expiration_date')
+            # Gérer effective_date également
+            if 'effective_date' in data and 'date_maj_prix' not in data:
+                data['date_maj_prix'] = data.get('effective_date')
+            # Si date_maj_prix est toujours None, utiliser created_at
+            if not data.get('date_maj_prix'):
+                data['date_maj_prix'] = data.get('created_at', datetime.now(timezone.utc))
+            # Assurer que created_by a une valeur par défaut
+            if not data.get('created_by'):
+                data['created_by'] = data.get('created_by_code', 'N/A')
+        return data
 
 class PriceHistoryCreate(BaseModel):
     product_id: str
