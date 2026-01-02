@@ -6,12 +6,14 @@ import uuid
 class Sale(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    sale_number: Optional[str] = None  # Numéro de vente lisible (ex: VNT-001)
     customer_id: Optional[str] = None
     items: List[Dict[str, Any]]
     total: float
     payment_method: str
     tenant_id: str
     user_id: Optional[str] = None
+    employee_code: Optional[str] = None  # Code employé du vendeur
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SaleCreate(BaseModel):
