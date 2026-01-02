@@ -2378,12 +2378,14 @@ def main():
             success = tester.run_modularized_backend_tests()
         elif sys.argv[1] == "--employee-code":
             success = tester.run_employee_code_tracking_tests()
+        elif sys.argv[1] == "--supplies-employee-code":
+            success = tester.run_supplies_employee_code_tests()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code|--supplies-employee-code]")
             return 1
     else:
-        # Default to employee code tracking tests for this review
-        success = tester.run_employee_code_tracking_tests()
+        # Default to supplies employee code tests for this review
+        success = tester.run_supplies_employee_code_tests()
     
     return 0 if success else 1
 
