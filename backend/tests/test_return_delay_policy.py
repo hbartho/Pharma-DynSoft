@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 class ReturnDelayPolicyTester:
     def __init__(self):
         # Get backend URL from environment
-        self.base_url = os.getenv('REACT_APP_BACKEND_URL', 'https://pharmamgmt.preview.emergentagent.com')
+        self.base_url = os.getenv('REACT_APP_BACKEND_URL', 'https://pharmflow-3.preview.emergentagent.com')
         self.token = None
         self.tests_run = 0
         self.tests_passed = 0

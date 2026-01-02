@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class PharmaFlowAPITester:
-    def __init__(self, base_url="https://pharmamgmt.preview.emergentagent.com"):
+    def __init__(self, base_url="https://pharmflow-3.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.user_data = None
@@ -2139,7 +2139,7 @@ def main():
         ).strip()
         print(f"Using backend URL from environment: {backend_url}")
     except:
-        backend_url = "https://pharmamgmt.preview.emergentagent.com"
+        backend_url = "https://pharmflow-3.preview.emergentagent.com"
         print(f"Using default backend URL: {backend_url}")
     
     tester = PharmaFlowAPITester(backend_url)
