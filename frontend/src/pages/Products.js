@@ -446,6 +446,7 @@ const Products = () => {
       min_stock: '10',
       category_id: '',
       unit_id: '',
+      expiration_date: '',
     });
   };
 
