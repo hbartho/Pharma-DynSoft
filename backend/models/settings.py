@@ -12,6 +12,7 @@ class Settings(BaseModel):
     pharmacy_name: Optional[str] = None
     low_stock_threshold: int = 10  # Seuil de stock bas
     return_delay_days: int = 3  # Délai maximum pour les retours (en jours)
+    expiration_alert_days: int = 30  # Délai pour alerter sur les produits à péremption proche (en jours)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -21,3 +22,4 @@ class SettingsUpdate(BaseModel):
     pharmacy_name: Optional[str] = None
     low_stock_threshold: Optional[int] = None
     return_delay_days: Optional[int] = None  # Délai maximum pour les retours
+    expiration_alert_days: Optional[int] = None  # Délai pour alerter sur les produits à péremption proche
