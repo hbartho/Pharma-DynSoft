@@ -295,32 +295,57 @@ class ReturnDelayPolicyTester:
         """Test 3: Create Return Within Delay"""
         print("\n=== TEST 3: CREATE RETURN WITHIN DELAY ===")
         
-        # Get existing sales to use for return test
-        success, existing_sales = self.run_test(
-            "Get existing sales for return test",
-            "GET",
-            "sales",
-            200
+        # First, ensure return delay is set to a reasonable value (3 days)
+        reset_data = {
+            "return_delay_days": 3
+        }
+        success, _ = self.run_test(
+            "Set return_delay_days to 3 for testing",
+            "PUT",
+            "settings",
+            200,
+            data=reset_data
         )
         
-        if not success or len(existing_sales) == 0:
-            print("   ❌ No sales available for return test")
+        if not success:
+            print(f"   ❌ Failed to set return delay")
             return False
         
-        # Use the most recent sale
-        sale = existing_sales[0]
-        sale_id = sale['id']
-        
-        # Get the first product from the sale
-        if not sale.get('items') or len(sale['items']) == 0:
-            print("   ❌ Sale has no items for return test")
+        # Create a fresh sale for testing
+        product_id = self.create_test_product()
+        if not product_id:
             return False
         
-        first_item = sale['items'][0]
-        product_id = first_item['product_id']
+        # Create a sale
+        sale_data = {
+            "items": [
+                {
+                    "product_id": product_id,
+                    "name": "Test Médicament Retour Fresh",
+                    "price": 25.00,
+                    "quantity": 2
+                }
+            ],
+            "total": 50.00,
+            "payment_method": "cash"
+        }
         
-        print(f"   ✅ Using sale: {sale_id} - {sale.get('sale_number', 'N/A')}")
-        print(f"   ✅ Using product: {product_id} - {first_item.get('name', 'Unknown')}")
+        success, sale = self.run_test(
+            "Create fresh sale for return test",
+            "POST",
+            "sales",
+            200,
+            data=sale_data
+        )
+        
+        if success and 'id' in sale:
+            sale_id = sale['id']
+            self.created_items['sales'].append(sale_id)
+            print(f"   ✅ Created fresh sale: {sale_id}")
+            print(f"   ✅ Sale number: {sale.get('sale_number', 'N/A')}")
+        else:
+            print(f"   ❌ Failed to create fresh sale")
+            return False
         
         # Create a return for the sale immediately (should succeed)
         return_data = {
