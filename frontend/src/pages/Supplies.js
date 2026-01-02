@@ -845,12 +845,9 @@ const Supplies = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {console.log('Rendering filteredSupplies:', filteredSupplies.map(s => ({id: s.id?.slice(0,8), is_validated: s.is_validated})))}
-            {filteredSupplies.map((supply, index) => (
+            {filteredSupplies.map((supply) => (
               <div
                 key={supply.id}
-                data-debug-index={index}
-                data-debug-validated={String(supply.is_validated)}
                 className={`bg-white rounded-xl border p-4 transition-all ${
                   supply.is_validated 
                     ? 'border-emerald-200' 
