@@ -2093,6 +2093,41 @@ class PharmaFlowAPITester:
         self.token = self.tokens['admin']
         return True
 
+    def run_employee_code_tracking_tests(self):
+        """Run specific tests for employee code tracking and price history model"""
+        print("🚀 Starting Employee Code Tracking & Price History Model Tests")
+        print("🏥 DynSoft Pharma - Testing Price History Model & Employee Code Standardization")
+        print(f"Base URL: {self.base_url}")
+        print("Testing new features:")
+        print("- JWT token includes employee_code")
+        print("- Price history uses French field names (prix_appro, prix_vente_prod, date_maj_prix, date_peremption)")
+        print("- All user tracking fields use employee_code instead of user_id")
+        print("- Backward compatibility with existing data")
+        
+        # Run the specific test
+        test_success = self.test_employee_code_tracking()
+        
+        # Cleanup
+        self.cleanup_created_items()
+        
+        # Print results
+        print(f"\n📊 Employee Code Tracking Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        if test_success:
+            print("\n✅ ALL EMPLOYEE CODE TRACKING TESTS PASSED")
+            print("✅ JWT token includes employee_code: WORKING")
+            print("✅ Supply creation with employee_code: WORKING")
+            print("✅ Supply validation with employee_code: WORKING")
+            print("✅ Price history with French field names: WORKING")
+            print("✅ Stock movements with employee_code: WORKING")
+            print("✅ Backward compatibility: WORKING")
+        else:
+            print("\n❌ Some employee code tracking tests failed")
+        
+        return test_success
+
 def main():
     tester = PharmaFlowAPITester()
     
