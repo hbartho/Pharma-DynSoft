@@ -2788,6 +2788,8 @@ def main():
             success = tester.run_employee_code_tracking_tests()
         elif sys.argv[1] == "--supplies-employee-code":
             success = tester.run_supplies_employee_code_tests()
+        elif sys.argv[1] == "--state-management":
+            success = tester.run_state_management_tests()
         elif sys.argv[1] == "--pwa-offline":
             # Login first
             if not tester.test_login():
@@ -2795,14 +2797,11 @@ def main():
                 return 1
             success = tester.test_pwa_offline_infrastructure()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code|--supplies-employee-code|--pwa-offline]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code|--supplies-employee-code|--state-management|--pwa-offline]")
             return 1
     else:
-        # Default to PWA offline tests for this review
-        if not tester.test_login():
-            print("❌ Login failed, cannot run PWA tests")
-            return 1
-        success = tester.test_pwa_offline_infrastructure()
+        # Default to state management tests for this review
+        success = tester.run_state_management_tests()
     
     return 0 if success else 1
 
