@@ -145,11 +145,14 @@ class ProductExpirationTester:
         """Test 2: Product with Expiration Date"""
         print("\n=== TEST 2: PRODUCT WITH EXPIRATION DATE ===")
         
+        # Generate unique product name
+        unique_id = str(uuid.uuid4())[:8]
+        
         # Create product with expiration date (10 days from now)
         expiration_date = (datetime.now() + timedelta(days=10)).isoformat()
         product_data = {
-            "name": "Test Product with Expiration",
-            "barcode": "EXP123456",
+            "name": f"Test Product with Expiration {unique_id}",
+            "barcode": f"EXP{unique_id}",
             "description": "Product with expiration date",
             "price": 15.0,
             "stock": 50,
