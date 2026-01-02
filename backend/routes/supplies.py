@@ -49,8 +49,8 @@ async def enrich_supply(supply: dict, tenant_id: str) -> dict:
 
 
 @router.post("", response_model=Supply)
-async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
-    """Créer un nouvel approvisionnement (en attente de validation)"""
+async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(get_current_user)):
+    """Créer un nouvel approvisionnement (en attente de validation) - Tous les utilisateurs"""
     tenant_id = current_user["tenant_id"]
     
     # Préparer les items avec les noms de produits
