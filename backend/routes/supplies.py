@@ -112,7 +112,7 @@ async def get_supplies(
     status: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Récupérer tous les approvisionnements"""
+    """Récupérer tous les approvisionnements - Triés: En attente d'abord, puis par date décroissante"""
     tenant_id = current_user["tenant_id"]
     
     query = {"tenant_id": tenant_id}
@@ -121,7 +121,11 @@ async def get_supplies(
     elif status == "validated":
         query["is_validated"] = True
     
-    supplies = await db.supplies.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    # Trier par is_validated (False=0 en premier), puis par created_at décroissant
+    supplies = await db.supplies.find(query, {"_id": 0}).sort([
+        ("is_validated", 1),  # False (0) avant True (1)
+        ("created_at", -1)    # Plus récent en premier
+    ]).to_list(1000)
     
     # Enrichir chaque approvisionnement
     enriched_supplies = []
