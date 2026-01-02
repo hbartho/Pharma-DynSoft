@@ -1311,6 +1311,17 @@ const Products = () => {
                     {product.stock} {product.unit_id ? getUnitAbbreviation(product.unit_id).toLowerCase() : 'unités'}
                   </span>
                 </div>
+                {product.expiration_date && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Péremption:</span>
+                    <span className={`font-medium flex items-center gap-1 ${
+                      expired ? 'text-red-600' : nearExp ? 'text-orange-600' : 'text-slate-600'
+                    }`}>
+                      <Calendar className="w-3 h-3" />
+                      {new Date(product.expiration_date).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button
