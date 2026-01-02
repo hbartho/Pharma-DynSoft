@@ -64,6 +64,7 @@ app.include_router(sync_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(returns_router, prefix="/api")
 app.include_router(units_router, prefix="/api")
+app.include_router(supplies_router, prefix="/api")
 
 @app.on_event("shutdown")
 async def shutdown_event():
