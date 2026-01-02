@@ -1112,3 +1112,35 @@
 - Sale and return numbering system fully functional
 - Complete traceability between sales and returns
 - Employee code tracking seamless
+
+## Product Expiration & Sorting Enhancement (2026-01-02)
+
+### Changes Made
+1. **Sale Number Format Fixed**: VNT-XXXXXXXX (8 chars from UUID) instead of VNT-0001
+2. **Product Expiration Date**:
+   - Added `expiration_date` field to Product model
+   - Products page shows expiration date and alerts (badge "10j", "Périmé")
+   - Form includes date picker for expiration date
+3. **Expiration Alert Setting**:
+   - New `expiration_alert_days` parameter (default: 30 days)
+   - Settings page shows "Alertes de péremption" section
+   - Alert explanation shows configured days
+4. **Product Sorting Priority**:
+   - 1st: Low stock (needs restock)
+   - 2nd: Expired products
+   - 3rd: Near expiration (sorted by days remaining)
+   - 4th: Alphabetical
+5. **Product Filters**:
+   - Added "Péremption proche" filter
+   - Added "Périmés" filter
+
+### Files Modified
+- `/app/backend/routes/sales.py` - Sale number format
+- `/app/backend/routes/returns.py` - Return number format
+- `/app/backend/models/product.py` - expiration_date field
+- `/app/backend/models/settings.py` - expiration_alert_days
+- `/app/backend/routes/products.py` - /alerts endpoint, sorting
+- `/app/frontend/src/pages/Products.js` - Expiration display, filters, form
+- `/app/frontend/src/pages/Settings.js` - Expiration alert configuration
+
+### Test Status: Ready for backend testing
