@@ -2323,6 +2323,31 @@ class PharmaFlowAPITester:
         
         return test_success
 
+    def run_supplies_employee_code_tests(self):
+        """Run supplies employee code display fix tests specifically"""
+        print("🚀 Starting Supplies Employee Code Display Fix Tests")
+        print("🏥 DynSoft Pharma - Testing Employee Code Display in Supplies")
+        print(f"Base URL: {self.base_url}")
+        print("Testing credentials: admin@pharmaflow.com / admin123 (employee_code: ADM-001)")
+        
+        # Run the specific test
+        test_success = self.test_supplies_employee_code_display()
+        
+        # Cleanup
+        self.cleanup_created_items()
+        
+        # Print results
+        print(f"\n📊 Supplies Employee Code Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        if test_success:
+            print("✅ All supplies employee code display features working correctly")
+        else:
+            print("❌ Some supplies employee code display features failed")
+        
+        return test_success
+
 def main():
     # Get backend URL from environment
     import subprocess
