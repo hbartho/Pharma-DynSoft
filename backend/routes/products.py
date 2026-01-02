@@ -84,6 +84,9 @@ async def get_products(
         if exp_date:
             if isinstance(exp_date, str):
                 exp_date = datetime.fromisoformat(exp_date)
+            # Ensure timezone awareness
+            if exp_date.tzinfo is None:
+                exp_date = exp_date.replace(tzinfo=timezone.utc)
             product['_near_expiration'] = exp_date <= expiration_threshold
             product['_days_until_expiration'] = (exp_date - datetime.now(timezone.utc)).days
         else:
