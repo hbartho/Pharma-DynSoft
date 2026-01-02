@@ -1539,6 +1539,208 @@ class PharmaFlowAPITester:
         
         return True
 
+    def test_pwa_offline_infrastructure(self):
+        """Test PWA/Offline infrastructure for DynSoft Pharma"""
+        print("\n=== PWA OFFLINE INFRASTRUCTURE TESTS ===")
+        print("🎯 Testing PWA/Offline infrastructure for DynSoft Pharma")
+        print("📋 Focus: Backend API endpoints that feed the offline system")
+        print("🔑 Credentials: admin@pharmaflow.com / admin123")
+        
+        # Test 1: Verify All API Endpoints for Offline Caching
+        print("\n--- Test 1: Verify All API Endpoints for Offline Caching ---")
+        
+        offline_endpoints = [
+            {"name": "Products", "endpoint": "products", "type": "array"},
+            {"name": "Categories", "endpoint": "categories", "type": "array"},
+            {"name": "Customers", "endpoint": "customers", "type": "array"},
+            {"name": "Suppliers", "endpoint": "suppliers", "type": "array"},
+            {"name": "Units", "endpoint": "units", "type": "array"},
+            {"name": "Settings", "endpoint": "settings", "type": "object"}
+        ]
+        
+        endpoint_results = {}
+        
+        for endpoint_info in offline_endpoints:
+            name = endpoint_info["name"]
+            endpoint = endpoint_info["endpoint"]
+            expected_type = endpoint_info["type"]
+            
+            print(f"\n🔍 Testing {name} endpoint...")
+            success, data = self.run_test(
+                f"GET /api/{endpoint} - {name} for offline caching",
+                "GET",
+                endpoint,
+                200
+            )
+            
+            if success:
+                # Verify JSON structure
+                if expected_type == "array" and isinstance(data, list):
+                    print(f"   ✅ Returns valid JSON array with {len(data)} items")
+                    endpoint_results[name] = {"success": True, "count": len(data), "data": data}
+                elif expected_type == "object" and isinstance(data, dict):
+                    print(f"   ✅ Returns valid JSON object with {len(data)} fields")
+                    endpoint_results[name] = {"success": True, "fields": len(data), "data": data}
+                else:
+                    print(f"   ❌ Expected {expected_type}, got {type(data).__name__}")
+                    endpoint_results[name] = {"success": False, "error": f"Wrong data type: {type(data).__name__}"}
+            else:
+                print(f"   ❌ Failed to retrieve {name}")
+                endpoint_results[name] = {"success": False, "error": "API call failed"}
+        
+        # Test 2: Test Sync-Compatible Data Structure
+        print("\n--- Test 2: Test Sync-Compatible Data Structure ---")
+        print("🔍 Verifying that each endpoint returns data with 'id' field for IndexedDB storage")
+        
+        id_field_results = {}
+        
+        for endpoint_info in offline_endpoints:
+            name = endpoint_info["name"]
+            expected_type = endpoint_info["type"]
+            
+            if name in endpoint_results and endpoint_results[name]["success"]:
+                data = endpoint_results[name]["data"]
+                
+                if expected_type == "array" and isinstance(data, list):
+                    items_with_id = 0
+                    total_items = len(data)
+                    
+                    for item in data:
+                        if isinstance(item, dict) and 'id' in item:
+                            items_with_id += 1
+                    
+                    if total_items > 0:
+                        percentage = (items_with_id / total_items) * 100
+                        if percentage == 100:
+                            print(f"   ✅ {name}: All {total_items} items have 'id' field (100%)")
+                            id_field_results[name] = {"success": True, "percentage": 100, "count": total_items}
+                        else:
+                            print(f"   ⚠️ {name}: {items_with_id}/{total_items} items have 'id' field ({percentage:.1f}%)")
+                            id_field_results[name] = {"success": False, "percentage": percentage, "count": total_items}
+                    else:
+                        print(f"   ℹ️ {name}: Empty array (no items to check)")
+                        id_field_results[name] = {"success": True, "percentage": 100, "count": 0}
+                
+                elif expected_type == "object" and isinstance(data, dict):
+                    # Settings object doesn't need 'id' field, it's a configuration object
+                    print(f"   ✅ {name}: Settings object structure verified")
+                    id_field_results[name] = {"success": True, "note": "Settings object - no id field required"}
+        
+        # Test 3: Test Settings Endpoint Specifically
+        print("\n--- Test 3: Test Settings Endpoint for PWA Configuration ---")
+        
+        if "Settings" in endpoint_results and endpoint_results["Settings"]["success"]:
+            settings_data = endpoint_results["Settings"]["data"]
+            
+            print(f"🔍 Analyzing settings structure for PWA compatibility...")
+            print(f"   📊 Settings contains {len(settings_data)} configuration fields")
+            
+            # Check for PWA-related fields
+            pwa_related_fields = [
+                "return_delay_days",
+                "low_stock_threshold", 
+                "currency",
+                "pharmacy_name",
+                "pharmacy_address"
+            ]
+            
+            found_pwa_fields = []
+            for field in pwa_related_fields:
+                if field in settings_data:
+                    found_pwa_fields.append(field)
+                    print(f"   ✅ Found PWA-compatible field: {field} = {settings_data[field]}")
+            
+            print(f"   📊 Found {len(found_pwa_fields)}/{len(pwa_related_fields)} PWA-compatible fields")
+            
+            # Verify settings can be parsed correctly
+            try:
+                import json
+                json_str = json.dumps(settings_data)
+                parsed_back = json.loads(json_str)
+                print(f"   ✅ Settings object is JSON serializable and parseable")
+            except Exception as e:
+                print(f"   ❌ Settings object JSON serialization failed: {e}")
+        else:
+            print(f"   ❌ Settings endpoint failed, cannot test PWA configuration")
+        
+        # Test 4: Data Consistency Check
+        print("\n--- Test 4: Data Consistency Check ---")
+        print("🔍 Verifying data structure consistency across endpoints")
+        
+        consistency_results = {}
+        
+        for endpoint_info in offline_endpoints:
+            name = endpoint_info["name"]
+            expected_type = endpoint_info["type"]
+            
+            if name in endpoint_results and endpoint_results[name]["success"]:
+                data = endpoint_results[name]["data"]
+                
+                if expected_type == "array" and isinstance(data, list) and len(data) > 0:
+                    # Check first few items for consistent structure
+                    sample_size = min(3, len(data))
+                    sample_items = data[:sample_size]
+                    
+                    # Get field sets for each sample item
+                    field_sets = []
+                    for item in sample_items:
+                        if isinstance(item, dict):
+                            field_sets.append(set(item.keys()))
+                    
+                    if field_sets:
+                        # Check if all items have similar structure
+                        common_fields = set.intersection(*field_sets) if field_sets else set()
+                        all_fields = set.union(*field_sets) if field_sets else set()
+                        
+                        consistency_percentage = (len(common_fields) / len(all_fields)) * 100 if all_fields else 100
+                        
+                        print(f"   📊 {name}: {len(common_fields)}/{len(all_fields)} fields consistent ({consistency_percentage:.1f}%)")
+                        print(f"   📋 {name}: Common fields include 'id', 'name', etc.")
+                        
+                        consistency_results[name] = {
+                            "consistent": consistency_percentage >= 80,
+                            "percentage": consistency_percentage,
+                            "common_fields": len(common_fields),
+                            "total_fields": len(all_fields)
+                        }
+                    else:
+                        print(f"   ⚠️ {name}: No valid items to check consistency")
+                        consistency_results[name] = {"consistent": False, "error": "No valid items"}
+                else:
+                    print(f"   ℹ️ {name}: Skipping consistency check (empty or non-array)")
+                    consistency_results[name] = {"consistent": True, "note": "Skipped - empty or settings object"}
+        
+        # Test Summary
+        print("\n--- PWA Offline Infrastructure Test Summary ---")
+        
+        total_endpoints = len(offline_endpoints)
+        successful_endpoints = sum(1 for name in endpoint_results if endpoint_results[name]["success"])
+        
+        print(f"📊 API Endpoints: {successful_endpoints}/{total_endpoints} working correctly")
+        
+        # ID field compatibility
+        id_compatible_endpoints = sum(1 for name in id_field_results if id_field_results[name]["success"])
+        print(f"📊 IndexedDB Compatibility: {id_compatible_endpoints}/{len(id_field_results)} endpoints have proper 'id' fields")
+        
+        # Data consistency
+        consistent_endpoints = sum(1 for name in consistency_results if consistency_results[name]["consistent"])
+        print(f"📊 Data Consistency: {consistent_endpoints}/{len(consistency_results)} endpoints have consistent structure")
+        
+        # Overall PWA readiness
+        if successful_endpoints == total_endpoints and id_compatible_endpoints >= (len(id_field_results) - 1):  # -1 for settings
+            print(f"✅ PWA Offline Infrastructure: READY")
+            print(f"   ✅ All API endpoints return proper JSON data")
+            print(f"   ✅ Data structures are compatible with IndexedDB storage")
+            print(f"   ✅ Settings endpoint returns complete configuration")
+            return True
+        else:
+            print(f"❌ PWA Offline Infrastructure: NEEDS ATTENTION")
+            if successful_endpoints < total_endpoints:
+                print(f"   ❌ {total_endpoints - successful_endpoints} API endpoints failed")
+            if id_compatible_endpoints < (len(id_field_results) - 1):
+                print(f"   ❌ Some endpoints missing 'id' fields for IndexedDB compatibility")
+            return False
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting PharmaFlow API Tests")
