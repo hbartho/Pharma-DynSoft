@@ -374,13 +374,29 @@ class ReturnDelayPolicyTester:
             print(f"   ❌ Failed to disable returns")
             return False
         
-        # Try to create a return for the recent sale (should fail)
-        if not self.created_items['sales']:
+        # Get existing sales to use for return test
+        success, existing_sales = self.run_test(
+            "Get existing sales for delay enforcement test",
+            "GET",
+            "sales",
+            200
+        )
+        
+        if not success or len(existing_sales) == 0:
             print("   ❌ No sales available for return test")
             return False
         
-        sale_id = self.created_items['sales'][0]
-        product_id = self.created_items['products'][0]
+        # Use the most recent sale
+        sale = existing_sales[0]
+        sale_id = sale['id']
+        
+        # Get the first product from the sale
+        if not sale.get('items') or len(sale['items']) == 0:
+            print("   ❌ Sale has no items for return test")
+            return False
+        
+        first_item = sale['items'][0]
+        product_id = first_item['product_id']
         
         return_data = {
             "sale_id": sale_id,
