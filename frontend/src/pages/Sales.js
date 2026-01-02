@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText, RotateCcw, History } from 'lucide-react';
+import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText, RotateCcw, History, Filter, Calendar } from 'lucide-react';
 import api from '../services/api';
 import { addItem, getAllItems, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
@@ -20,10 +20,13 @@ const Sales = () => {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [showReturnDetailDialog, setShowReturnDetailDialog] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
+  const [selectedReturnDetail, setSelectedReturnDetail] = useState(null);
   const [returnItems, setReturnItems] = useState([]);
   const [returnReason, setReturnReason] = useState('');
   const [operationsHistory, setOperationsHistory] = useState([]);
+  const [historyFilter, setHistoryFilter] = useState('all'); // all, sales, returns
   const [saleReturns, setSaleReturns] = useState({});
   const [cart, setCart] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -32,6 +35,7 @@ const Sales = () => {
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchDate, setSearchDate] = useState('');
   const { isOnline } = useOffline();
 
   const loadData = async (forceRefresh = false) => {
