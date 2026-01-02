@@ -1095,6 +1095,25 @@ const Products = () => {
                     </div>
                   </div>
 
+                  {/* Date de péremption */}
+                  <div>
+                    <Label htmlFor="expiration_date" className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-500" />
+                      Date de péremption
+                    </Label>
+                    <Input
+                      id="expiration_date"
+                      type="date"
+                      value={formData.expiration_date}
+                      onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
+                      data-testid="product-expiration-date-input"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Laissez vide si le produit n'a pas de date de péremption
+                    </p>
+                  </div>
+
                   <div className="flex justify-end gap-3 pt-4">
                     <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                       Annuler
