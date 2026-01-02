@@ -88,7 +88,7 @@ async def create_supply(supply_data: SupplyCreate, current_user: dict = Depends(
         notes=supply_data.notes,
         items=[item.model_dump() for item in items],
         tenant_id=tenant_id,
-        created_by=current_user["id"]
+        created_by=current_user["user_id"]
     )
     
     # Convertir les dates en ISO string pour MongoDB
