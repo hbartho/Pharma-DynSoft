@@ -12,6 +12,8 @@ class SupplyItem(BaseModel):
     quantity: int
     unit_price: float  # Prix d'achat unitaire
     total_price: float = 0  # quantity * unit_price
+    # Champs optionnels pour l'historique des prix
+    date_peremption: Optional[datetime] = None  # Date de péremption du lot
 
 class Supply(BaseModel):
     """Approvisionnement / Entrée de stock"""
@@ -20,7 +22,7 @@ class Supply(BaseModel):
     supply_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # date_appro
     is_validated: bool = False  # validerAppro - En attente par défaut
     validated_at: Optional[datetime] = None
-    validated_by: Optional[str] = None
+    validated_by: Optional[str] = None  # employee_code du validateur (ex: ADM-001)
     supplier_id: Optional[str] = None  # IDFournisseur
     supplier_name: Optional[str] = None  # Dénormalisé
     total_amount: float = 0  # MontantAppro
@@ -31,17 +33,19 @@ class Supply(BaseModel):
     notes: Optional[str] = None
     items: List[SupplyItem] = []  # Details_Appro
     tenant_id: str  # IDAgence
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # date_saisie
-    created_by: Optional[str] = None  # saisie_par
-    created_by_name: Optional[str] = None
-    updated_at: Optional[datetime] = None  # modifier_le
-    updated_by: Optional[str] = None  # modifier_par
-    updated_by_name: Optional[str] = None
+    
+    # Traçabilité - Utiliser UNIQUEMENT employee_code
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str = ""  # employee_code du créateur (ex: ADM-001, PHA-001)
+    
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None  # employee_code du modificateur
 
 class SupplyItemCreate(BaseModel):
     product_id: str
     quantity: int
     unit_price: float
+    date_peremption: Optional[datetime] = None  # Date de péremption optionnelle
 
 class SupplyCreate(BaseModel):
     supply_date: Optional[datetime] = None
@@ -57,6 +61,7 @@ class SupplyItemUpdate(BaseModel):
     product_id: str
     quantity: int
     unit_price: float
+    date_peremption: Optional[datetime] = None
 
 class SupplyUpdate(BaseModel):
     supply_date: Optional[datetime] = None
