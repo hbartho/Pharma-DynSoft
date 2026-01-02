@@ -154,6 +154,9 @@
 - **Agent**: testing
 - **Message**: Sales Page Enhancements frontend UI testing completed successfully. All 4 major test cases passed (100% success rate). Key findings: (1) Login and navigation to Sales page working correctly, (2) Search functionality working perfectly - search by sale number (VNT-), agent code (ADM-001), and date filter all functional, (3) History dialog with filter buttons working perfectly - found 3 filter buttons (Tout, Ventes, Retours), Retours filter shows 4 RET-XXXXXXXX entries with sale references (→ VNT-XXXXXXXX), (4) Return dialog functionality working perfectly - opens correctly, shows sale number in header (VNT-7F498404), displays items available for return, has required reason field, (5) Sale number format verification successful - found 18 VNT-XXXXXXXX sale numbers displayed correctly. All frontend UI components for Sales Page Enhancements are fully functional and working as expected. No critical issues found.
 
+- **Agent**: testing
+- **Message**: Supplies (Approvisionnements) Employee Code Display Fix testing completed successfully. All 9 test suites passed (100% success rate). Key findings: (1) JWT token contains correct employee_code: ADM-001, (2) All 7 supplies show proper employee codes in created_by_name field - no "Inconnu" entries found, (3) New supply creation working with created_by_name: ADM-001, (4) Supply editing working with updated_by_name: ADM-001, (5) Supply validation working with validated_by_name: ADM-001, (6) Backward compatibility working perfectly - old UUID data (5 supplies) resolves to employee codes, new employee_code data (3 supplies) works correctly, zero "Inconnu" entries found. Employee code display fix is fully functional. Frontend UI testing not performed as per system limitations - requires separate UI verification.
+
 ## Current Testing Session (2026-01-02)
 - **Task**: Complete Sales Page Enhancements Testing (P0)
 - **Features to Test**:
