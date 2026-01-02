@@ -62,6 +62,34 @@ export const initDB = async () => {
         store.createIndex('synced', 'synced');
       }
       
+      // Supplies store (Approvisionnements)
+      if (!db.objectStoreNames.contains('supplies')) {
+        const store = db.createObjectStore('supplies', { keyPath: 'id' });
+        store.createIndex('created_at', 'created_at');
+        store.createIndex('synced', 'synced');
+        store.createIndex('is_validated', 'is_validated');
+      }
+      
+      // Returns store (Retours)
+      if (!db.objectStoreNames.contains('returns')) {
+        const store = db.createObjectStore('returns', { keyPath: 'id' });
+        store.createIndex('created_at', 'created_at');
+        store.createIndex('synced', 'synced');
+        store.createIndex('sale_id', 'sale_id');
+      }
+      
+      // Units store (Unités)
+      if (!db.objectStoreNames.contains('units')) {
+        const store = db.createObjectStore('units', { keyPath: 'id' });
+        store.createIndex('synced', 'synced');
+      }
+      
+      // Settings store
+      if (!db.objectStoreNames.contains('settings')) {
+        const store = db.createObjectStore('settings', { keyPath: 'id' });
+        store.createIndex('synced', 'synced');
+      }
+      
       // Local changes queue - for offline modifications
       if (!db.objectStoreNames.contains('local_changes')) {
         const store = db.createObjectStore('local_changes', { keyPath: 'id', autoIncrement: true });
