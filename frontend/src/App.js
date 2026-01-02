@@ -113,6 +113,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/supplies"
+        element={
+          <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
+            <Supplies />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
         path="/prescriptions"
         element={
           <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
