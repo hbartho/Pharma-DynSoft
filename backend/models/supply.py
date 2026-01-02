@@ -23,6 +23,7 @@ class Supply(BaseModel):
     is_validated: bool = False  # validerAppro - En attente par défaut
     validated_at: Optional[datetime] = None
     validated_by: Optional[str] = None  # employee_code du validateur (ex: ADM-001)
+    validated_by_name: Optional[str] = None  # Code employé enrichi
     supplier_id: Optional[str] = None  # IDFournisseur
     supplier_name: Optional[str] = None  # Dénormalisé
     total_amount: float = 0  # MontantAppro
@@ -37,9 +38,11 @@ class Supply(BaseModel):
     # Traçabilité - Utiliser UNIQUEMENT employee_code
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str = ""  # employee_code du créateur (ex: ADM-001, PHA-001)
+    created_by_name: Optional[str] = None  # Code employé enrichi
     
     updated_at: Optional[datetime] = None
     updated_by: Optional[str] = None  # employee_code du modificateur
+    updated_by_name: Optional[str] = None  # Code employé enrichi
 
 class SupplyItemCreate(BaseModel):
     product_id: str
