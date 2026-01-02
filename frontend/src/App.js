@@ -14,6 +14,7 @@ import Products from './pages/Products';
 import Sales from './pages/Sales';
 import Customers from './pages/Customers';
 import Suppliers from './pages/Suppliers';
+import Supplies from './pages/Supplies';
 import Prescriptions from './pages/Prescriptions';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
