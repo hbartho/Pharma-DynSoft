@@ -172,57 +172,6 @@ const Login = () => {
       {/* Right side - Form */}
       <div className="flex-1 flex items-center justify-center px-8 bg-white">
         <div className="w-full max-w-md">
-          {/* Agence / Nom de la pharmacie - Dropdown */}
-          <div className="mb-6">
-            <Label htmlFor="agency-select" className="text-sm font-medium text-slate-700 mb-2 block">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-teal-600" />
-                Agence
-              </div>
-            </Label>
-            <Select
-              value={selectedAgency?.tenant_id || ''}
-              onValueChange={handleAgencyChange}
-            >
-              <SelectTrigger 
-                id="agency-select"
-                className="w-full h-14 bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200 hover:border-teal-300 focus:ring-teal-500"
-              >
-                <SelectValue placeholder="Sélectionnez une agence">
-                  {selectedAgency && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-teal-100 rounded-lg">
-                        <Building2 className="w-4 h-4 text-teal-700" />
-                      </div>
-                      <span className="font-semibold text-teal-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                        {selectedAgency.pharmacy_name}
-                      </span>
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {agencies.map((agency) => (
-                  <SelectItem 
-                    key={agency.tenant_id} 
-                    value={agency.tenant_id}
-                    className="py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-teal-100 rounded-lg">
-                        <Building2 className="w-4 h-4 text-teal-700" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">{agency.pharmacy_name}</p>
-                        <p className="text-xs text-slate-500">Devise: {agency.currency}</p>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Connexion
@@ -231,6 +180,55 @@ const Login = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" data-testid="login-form">
+            {/* Agence / Nom de la pharmacie - Dropdown */}
+            <div>
+              <Label htmlFor="agency-select" className="text-sm font-medium text-slate-700 mb-2 block">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-teal-600" />
+                  Agence
+                </div>
+              </Label>
+              <Select
+                value={selectedAgency?.tenant_id || ''}
+                onValueChange={handleAgencyChange}
+              >
+                <SelectTrigger 
+                  id="agency-select"
+                  className="w-full h-12 bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200 hover:border-teal-300 focus:ring-teal-500"
+                >
+                  <SelectValue placeholder="Sélectionnez une agence">
+                    {selectedAgency && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-teal-700" />
+                        <span className="font-medium text-teal-900">
+                          {selectedAgency.pharmacy_name}
+                        </span>
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {agencies.map((agency) => (
+                    <SelectItem 
+                      key={agency.tenant_id} 
+                      value={agency.tenant_id}
+                      className="py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-teal-100 rounded-lg">
+                          <Building2 className="w-4 h-4 text-teal-700" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{agency.pharmacy_name}</p>
+                          <p className="text-xs text-slate-500">Devise: {agency.currency}</p>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
