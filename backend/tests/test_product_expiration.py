@@ -315,11 +315,12 @@ class ProductExpirationTester:
         
         # Create products with different priorities
         now = datetime.now()
+        unique_id = str(uuid.uuid4())[:8]
         
         # 1. Low stock product (needs restock)
         low_stock_product = {
-            "name": "A Low Stock Product",
-            "barcode": "LOWSTOCK1",
+            "name": f"A Low Stock Product {unique_id}",
+            "barcode": f"LOWST{unique_id}",
             "description": "Product with low stock",
             "price": 20.0,
             "stock": 2,  # Below min_stock
@@ -331,8 +332,8 @@ class ProductExpirationTester:
         
         # 2. Expired product
         expired_product = {
-            "name": "B Expired Product",
-            "barcode": "EXPIRED1",
+            "name": f"B Expired Product {unique_id}",
+            "barcode": f"EXPIR{unique_id}",
             "description": "Product that is expired",
             "price": 25.0,
             "stock": 50,
@@ -345,8 +346,8 @@ class ProductExpirationTester:
         
         # 3. Near expiration product
         near_expiration_product = {
-            "name": "C Near Expiration Product",
-            "barcode": "NEAREXP1",
+            "name": f"C Near Expiration Product {unique_id}",
+            "barcode": f"NEARX{unique_id}",
             "description": "Product near expiration",
             "price": 30.0,
             "stock": 40,
@@ -359,8 +360,8 @@ class ProductExpirationTester:
         
         # 4. Normal product (alphabetical)
         normal_product = {
-            "name": "D Normal Product",
-            "barcode": "NORMAL1",
+            "name": f"D Normal Product {unique_id}",
+            "barcode": f"NORML{unique_id}",
             "description": "Normal product",
             "price": 35.0,
             "stock": 100,
