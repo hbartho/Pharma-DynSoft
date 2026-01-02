@@ -213,43 +213,58 @@ class ReturnDelayPolicyTester:
         """Test 2: Return Eligibility Check"""
         print("\n=== TEST 2: RETURN ELIGIBILITY CHECK ===")
         
-        # First create a sale to test eligibility
-        product_id = self.create_test_product()
-        if not product_id:
-            return False
-        
-        # Create a sale
-        sale_data = {
-            "items": [
-                {
-                    "product_id": product_id,
-                    "name": "Test Médicament Retour",
-                    "price": 25.00,
-                    "quantity": 2
-                }
-            ],
-            "total": 50.00,
-            "payment_method": "cash"
-        }
-        
-        success, sale = self.run_test(
-            "Create sale for eligibility test",
-            "POST",
+        # First try to get existing sales
+        success, existing_sales = self.run_test(
+            "Get existing sales for eligibility test",
+            "GET",
             "sales",
-            200,
-            data=sale_data
+            200
         )
         
-        if success and 'id' in sale:
+        sale_id = None
+        if success and len(existing_sales) > 0:
+            # Use the most recent sale
+            sale = existing_sales[0]
             sale_id = sale['id']
-            self.created_items['sales'].append(sale_id)
-            print(f"   ✅ Created test sale: {sale_id}")
-            print(f"   ✅ Sale number: {sale.get('sale_number', 'N/A')}")
+            print(f"   ✅ Using existing sale: {sale_id} - {sale.get('sale_number', 'N/A')}")
         else:
-            print(f"   ❌ Failed to create test sale")
-            return False
+            # Create a new sale if none exist
+            product_id = self.create_test_product()
+            if not product_id:
+                return False
+            
+            # Create a sale
+            sale_data = {
+                "items": [
+                    {
+                        "product_id": product_id,
+                        "name": "Test Médicament Retour",
+                        "price": 25.00,
+                        "quantity": 2
+                    }
+                ],
+                "total": 50.00,
+                "payment_method": "cash"
+            }
+            
+            success, sale = self.run_test(
+                "Create sale for eligibility test",
+                "POST",
+                "sales",
+                200,
+                data=sale_data
+            )
+            
+            if success and 'id' in sale:
+                sale_id = sale['id']
+                self.created_items['sales'].append(sale_id)
+                print(f"   ✅ Created test sale: {sale_id}")
+                print(f"   ✅ Sale number: {sale.get('sale_number', 'N/A')}")
+            else:
+                print(f"   ❌ Failed to create test sale")
+                return False
         
-        # Check return eligibility for the recent sale
+        # Check return eligibility for the sale
         success, eligibility = self.run_test(
             f"GET /api/returns/check-eligibility/{sale_id} - Check eligibility",
             "GET",
