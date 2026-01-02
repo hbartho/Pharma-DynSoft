@@ -199,7 +199,7 @@ async def update_supply(
         "items": items,
         "total_amount": total_amount,
         "updated_at": datetime.now(timezone.utc).isoformat(),
-        "updated_by": current_user["id"]
+        "updated_by": current_user["user_id"]
     }
     
     await db.supplies.update_one({"id": supply_id}, {"$set": update_data})
@@ -332,7 +332,7 @@ async def add_item_to_supply(
             "$set": {
                 "total_amount": new_total,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-                "updated_by": current_user["id"]
+                "updated_by": current_user["user_id"]
             }
         }
     )
@@ -379,7 +379,7 @@ async def remove_item_from_supply(
             "$set": {
                 "total_amount": max(0, new_total),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-                "updated_by": current_user["id"]
+                "updated_by": current_user["user_id"]
             }
         }
     )
