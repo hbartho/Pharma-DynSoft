@@ -750,3 +750,36 @@
 - Proper error handling and user feedback
 - Stock and price history tables working perfectly
 - All API endpoints responding correctly
+
+## Dashboard Enhancement & State Management Optimization (2026-01-02)
+
+### Changes Made
+1. **Dashboard Improvements**:
+   - Added "Historiques" section with tabs for Stock and Price history
+   - Stock tab shows: recent entries/exits stats, horizontal bar chart of movements, movements table
+   - Price tab shows: modification count, traceability (employee_code), area chart of price evolution, price changes table
+   - Uses global SettingsContext for currency formatting instead of local loading
+
+2. **State Management Optimization**:
+   - Enhanced SettingsContext with caching (5 min cache duration)
+   - Added localStorage persistence for offline support
+   - Memoized values to prevent unnecessary re-renders
+   - Created custom hooks in `/app/frontend/src/hooks/useDataHelpers.js`:
+     - `useApiData`: API calls with caching
+     - `useCrudOperations`: CRUD operations with loading state
+     - `useDebounce`: Search debouncing
+     - `usePagination`: Pagination helper
+     - `useFilters`: Filter management
+     - `useSort`: Sorting helper
+
+### Files Modified/Created
+- `/app/frontend/src/pages/Dashboard.js` (modified)
+- `/app/frontend/src/contexts/SettingsContext.js` (modified)
+- `/app/frontend/src/hooks/useDataHelpers.js` (created)
+- `/app/frontend/src/hooks/index.js` (created)
+
+### Test Status
+- Manual testing: Screenshots captured showing Stock and Prix tabs working
+- Employee code (ADM-001) displayed in price history traçability
+- Currency formatting using global context working
+
