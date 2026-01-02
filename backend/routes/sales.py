@@ -9,11 +9,11 @@ router = APIRouter(prefix="/sales", tags=["Sales"])
 
 
 async def generate_sale_number(tenant_id: str) -> str:
-    """Générer un numéro de vente unique et lisible (ex: VNT-001)"""
-    # Compter les ventes existantes pour ce tenant
-    count = await db.sales.count_documents({"tenant_id": tenant_id})
-    # Format: VNT-001, VNT-002, etc.
-    return f"VNT-{str(count + 1).zfill(4)}"
+    """Générer un numéro de vente unique et lisible (ex: VNT-966AAFB0)
+    Utilise les 8 premiers caractères de l'UUID pour garantir l'unicité
+    """
+    unique_id = str(uuid.uuid4()).replace('-', '')[:8].upper()
+    return f"VNT-{unique_id}"
 
 
 @router.post("", response_model=Sale)
