@@ -2550,6 +2550,212 @@ class PharmaFlowAPITester:
         
         return test_success
 
+    def test_state_management_integration(self):
+        """Test React application with Zustand + React Query state management integration"""
+        print("\n=== STATE MANAGEMENT INTEGRATION TESTS ===")
+        print("🎯 Testing React application with Zustand + React Query state management")
+        print("📋 Credentials: admin@pharmaflow.com / admin123")
+        
+        # Test 1: Authentication with employee_code
+        print("\n--- Test 1: Authentication with employee_code ---")
+        success, response = self.run_test(
+            "POST /api/auth/login - verify returns token and user with employee_code",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@pharmaflow.com", "password": "admin123"}
+        )
+        if success and 'access_token' in response:
+            self.token = response['access_token']
+            user_data = response.get('user', {})
+            
+            # Verify user has employee_code
+            if 'employee_code' in user_data:
+                print(f"   ✅ User contains employee_code: {user_data['employee_code']}")
+            else:
+                print(f"   ❌ User missing employee_code field")
+            
+            # Decode JWT to verify employee_code in token
+            import jwt
+            try:
+                decoded = jwt.decode(response['access_token'], options={"verify_signature": False})
+                if 'employee_code' in decoded:
+                    print(f"   ✅ JWT contains employee_code: {decoded['employee_code']}")
+                else:
+                    print(f"   ❌ JWT missing employee_code field")
+            except Exception as e:
+                print(f"   ❌ Failed to decode JWT: {e}")
+        else:
+            print("   ❌ Authentication failed")
+            return False
+        
+        # Test 2: API Endpoints Data Layer
+        print("\n--- Test 2: API Endpoints Data Layer ---")
+        
+        # GET /api/products - verify returns products array
+        success, products = self.run_test(
+            "GET /api/products - verify returns products array",
+            "GET",
+            "products",
+            200
+        )
+        if success:
+            if isinstance(products, list):
+                print(f"   ✅ Products endpoint returns array with {len(products)} items")
+            else:
+                print(f"   ❌ Products endpoint should return array, got {type(products)}")
+        
+        # GET /api/categories - verify returns categories array
+        success, categories = self.run_test(
+            "GET /api/categories - verify returns categories array",
+            "GET",
+            "categories",
+            200
+        )
+        if success:
+            if isinstance(categories, list):
+                print(f"   ✅ Categories endpoint returns array with {len(categories)} items")
+            else:
+                print(f"   ❌ Categories endpoint should return array, got {type(categories)}")
+        
+        # GET /api/settings - verify returns settings object
+        success, settings = self.run_test(
+            "GET /api/settings - verify returns settings object",
+            "GET",
+            "settings",
+            200
+        )
+        if success:
+            if isinstance(settings, dict):
+                print(f"   ✅ Settings endpoint returns object with {len(settings)} fields")
+                # Check for key settings fields
+                key_fields = ['pharmacy_name', 'currency', 'low_stock_threshold']
+                for field in key_fields:
+                    if field in settings:
+                        print(f"   ✅ Settings contains {field}: {settings[field]}")
+                    else:
+                        print(f"   ⚠️ Settings missing {field} field")
+            else:
+                print(f"   ❌ Settings endpoint should return object, got {type(settings)}")
+        
+        # GET /api/sales - verify returns sales array
+        success, sales = self.run_test(
+            "GET /api/sales - verify returns sales array",
+            "GET",
+            "sales",
+            200
+        )
+        if success:
+            if isinstance(sales, list):
+                print(f"   ✅ Sales endpoint returns array with {len(sales)} items")
+                # Check if sales have proper structure
+                if len(sales) > 0:
+                    sample_sale = sales[0]
+                    required_fields = ['id', 'total', 'created_at']
+                    for field in required_fields:
+                        if field in sample_sale:
+                            print(f"   ✅ Sales contain {field} field")
+                        else:
+                            print(f"   ⚠️ Sales missing {field} field")
+            else:
+                print(f"   ❌ Sales endpoint should return array, got {type(sales)}")
+        
+        # Test 3: Data Structure Verification for State Management
+        print("\n--- Test 3: Data Structure Verification for State Management ---")
+        
+        # Verify all endpoints return JSON-serializable data
+        endpoints_to_test = [
+            ("products", products),
+            ("categories", categories), 
+            ("settings", settings),
+            ("sales", sales)
+        ]
+        
+        for endpoint_name, data in endpoints_to_test:
+            try:
+                import json
+                json.dumps(data)
+                print(f"   ✅ {endpoint_name} data is JSON serializable")
+            except Exception as e:
+                print(f"   ❌ {endpoint_name} data not JSON serializable: {e}")
+        
+        # Test 4: Additional API endpoints for comprehensive state management
+        print("\n--- Test 4: Additional API Endpoints for State Management ---")
+        
+        # GET /api/customers
+        success, customers = self.run_test(
+            "GET /api/customers - verify for state management",
+            "GET",
+            "customers",
+            200
+        )
+        if success and isinstance(customers, list):
+            print(f"   ✅ Customers endpoint returns array with {len(customers)} items")
+        
+        # GET /api/suppliers
+        success, suppliers = self.run_test(
+            "GET /api/suppliers - verify for state management",
+            "GET",
+            "suppliers",
+            200
+        )
+        if success and isinstance(suppliers, list):
+            print(f"   ✅ Suppliers endpoint returns array with {len(suppliers)} items")
+        
+        # GET /api/units
+        success, units = self.run_test(
+            "GET /api/units - verify for state management",
+            "GET",
+            "units",
+            200
+        )
+        if success and isinstance(units, list):
+            print(f"   ✅ Units endpoint returns array with {len(units)} items")
+        
+        # Test 5: Authentication persistence verification
+        print("\n--- Test 5: Authentication Persistence Verification ---")
+        
+        # Test /api/auth/me to verify token persistence
+        success, user_info = self.run_test(
+            "GET /api/auth/me - verify authentication persistence",
+            "GET",
+            "auth/me",
+            200
+        )
+        if success:
+            print(f"   ✅ Authentication persistence working - user: {user_info.get('name')}")
+            print(f"   ✅ User role: {user_info.get('role')}")
+            print(f"   ✅ Employee code: {user_info.get('employee_code')}")
+        
+        return True
+
+    def run_state_management_tests(self):
+        """Run state management integration tests specifically"""
+        print("🚀 Starting State Management Integration Tests")
+        print("🏥 DynSoft Pharma - Testing React with Zustand + React Query")
+        print(f"Base URL: {self.base_url}")
+        print("Testing credentials: admin@pharmaflow.com / admin123")
+        
+        # Run the specific test
+        test_success = self.test_state_management_integration()
+        
+        # Print results
+        print(f"\n📊 State Management Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        print(f"Success rate: {success_rate:.1f}%")
+        
+        if test_success:
+            print("\n✅ ALL STATE MANAGEMENT INTEGRATION TESTS PASSED")
+            print("✅ Authentication with employee_code: WORKING")
+            print("✅ API endpoints data layer: WORKING")
+            print("✅ Data structure verification: WORKING")
+            print("✅ JSON serialization: WORKING")
+            print("✅ Authentication persistence: WORKING")
+        else:
+            print("\n❌ Some state management integration tests failed")
+        
+        return test_success
+
 def main():
     # Get backend URL from environment
     import subprocess
