@@ -10,11 +10,21 @@ class Supplier(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
+    is_active: bool = True  # Statut actif/inactif
     tenant_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None  # employee_code
 
 class SupplierCreate(BaseModel):
     name: str
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
+
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
