@@ -387,10 +387,10 @@ class ProductExpirationTester:
                 
                 # Expected order: Low stock > Expired > Near expiration > Normal (alphabetical)
                 expected_order = [
-                    "A Low Stock Product",    # Low stock first
-                    "B Expired Product",      # Then expired
-                    "C Near Expiration Product",  # Then near expiration
-                    "D Normal Product"        # Then alphabetical
+                    f"A Low Stock Product {unique_id}",    # Low stock first
+                    f"B Expired Product {unique_id}",      # Then expired
+                    f"C Near Expiration Product {unique_id}",  # Then near expiration
+                    f"D Normal Product {unique_id}"        # Then alphabetical
                 ]
                 
                 # Check if our products appear in the correct relative order
