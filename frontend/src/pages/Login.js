@@ -5,7 +5,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
-import { Building2, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Building2, KeyRound, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../services/api';
 
@@ -17,7 +18,8 @@ const Login = () => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
-  const [pharmacyName, setPharmacyName] = useState('DynSoft Pharma');
+  const [agencies, setAgencies] = useState([]);
+  const [selectedAgency, setSelectedAgency] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   
   // État pour le dialogue de changement de mot de passe
@@ -32,25 +34,41 @@ const Login = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  // Charger le nom de la pharmacie depuis les paramètres
+  // Charger les agences depuis les paramètres
   useEffect(() => {
-    const loadPharmacyName = async () => {
+    const loadAgencies = async () => {
       try {
-        // Essayer de charger le nom sans authentification (endpoint public)
-        const response = await api.get('/settings/public');
-        if (response.data?.pharmacy_name) {
-          setPharmacyName(response.data.pharmacy_name);
+        const response = await api.get('/settings/agencies');
+        const agenciesList = response.data || [];
+        setAgencies(agenciesList);
+        
+        // Sélectionner la première agence par défaut
+        if (agenciesList.length > 0) {
+          setSelectedAgency(agenciesList[0]);
         }
       } catch (error) {
-        // Si l'endpoint public n'existe pas, garder le nom par défaut
-        console.log('Using default pharmacy name');
+        console.error('Error loading agencies:', error);
+        // Agence par défaut en cas d'erreur
+        const defaultAgency = {
+          tenant_id: 'default',
+          pharmacy_name: 'DynSoft Pharma',
+          currency: 'GNF'
+        };
+        setAgencies([defaultAgency]);
+        setSelectedAgency(defaultAgency);
       }
     };
-    loadPharmacyName();
+    loadAgencies();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!selectedAgency) {
+      toast.error('Veuillez sélectionner une agence');
+      return;
+    }
+    
     setLoading(true);
 
     const result = await login(formData.email, formData.password);
@@ -67,6 +85,13 @@ const Login = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleAgencyChange = (tenantId) => {
+    const agency = agencies.find(a => a.tenant_id === tenantId);
+    if (agency) {
+      setSelectedAgency(agency);
+    }
   };
 
   const handlePasswordChangeSubmit = async (e) => {
@@ -147,19 +172,55 @@ const Login = () => {
       {/* Right side - Form */}
       <div className="flex-1 flex items-center justify-center px-8 bg-white">
         <div className="w-full max-w-md">
-          {/* Agence / Nom de la pharmacie */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <Building2 className="w-6 h-6 text-teal-700" />
+          {/* Agence / Nom de la pharmacie - Dropdown */}
+          <div className="mb-6">
+            <Label htmlFor="agency-select" className="text-sm font-medium text-slate-700 mb-2 block">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-teal-600" />
+                Agence
               </div>
-              <div>
-                <p className="text-xs text-teal-600 font-medium uppercase tracking-wide">Agence</p>
-                <p className="text-lg font-bold text-teal-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                  {pharmacyName}
-                </p>
-              </div>
-            </div>
+            </Label>
+            <Select
+              value={selectedAgency?.tenant_id || ''}
+              onValueChange={handleAgencyChange}
+            >
+              <SelectTrigger 
+                id="agency-select"
+                className="w-full h-14 bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200 hover:border-teal-300 focus:ring-teal-500"
+              >
+                <SelectValue placeholder="Sélectionnez une agence">
+                  {selectedAgency && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-teal-100 rounded-lg">
+                        <Building2 className="w-4 h-4 text-teal-700" />
+                      </div>
+                      <span className="font-semibold text-teal-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        {selectedAgency.pharmacy_name}
+                      </span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {agencies.map((agency) => (
+                  <SelectItem 
+                    key={agency.tenant_id} 
+                    value={agency.tenant_id}
+                    className="py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-teal-100 rounded-lg">
+                        <Building2 className="w-4 h-4 text-teal-700" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">{agency.pharmacy_name}</p>
+                        <p className="text-xs text-slate-500">Devise: {agency.currency}</p>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="mb-8">
@@ -221,7 +282,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !selectedAgency}
               data-testid="login-submit-button"
               className="w-full bg-teal-700 hover:bg-teal-800 text-white rounded-full py-6 text-lg font-medium transition-all active:scale-95"
             >
