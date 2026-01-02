@@ -21,6 +21,7 @@ import {
   AlertCircle,
   PanelLeftClose,
   PanelLeft,
+  PackagePlus,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
