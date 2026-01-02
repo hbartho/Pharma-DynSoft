@@ -1,23 +1,36 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 from database import db
 from auth import get_current_user
 from models.returns import SaleReturn, SaleReturnCreate
 
 router = APIRouter(prefix="/returns", tags=["Returns"])
 
+
+async def generate_return_number(tenant_id: str) -> str:
+    """Générer un numéro de retour unique et lisible (ex: RET-001)"""
+    count = await db.returns.count_documents({"tenant_id": tenant_id})
+    return f"RET-{str(count + 1).zfill(4)}"
+
+
 @router.post("", response_model=SaleReturn)
 async def create_return(return_data: SaleReturnCreate, current_user: dict = Depends(get_current_user)):
     """Créer un retour d'articles pour une vente"""
+    tenant_id = current_user['tenant_id']
+    employee_code = current_user.get('employee_code', 'N/A')
+    
     # Vérifier que le motif est fourni
     if not return_data.reason or not return_data.reason.strip():
         raise HTTPException(status_code=400, detail="Le motif du retour est obligatoire")
     
     # Vérifier que la vente existe
-    sale = await db.sales.find_one({"id": return_data.sale_id, "tenant_id": current_user['tenant_id']})
+    sale = await db.sales.find_one({"id": return_data.sale_id, "tenant_id": tenant_id})
     if not sale:
         raise HTTPException(status_code=404, detail="Vente non trouvée")
+    
+    # Récupérer le numéro de vente (ou générer un fallback)
+    sale_number = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
     
     # Vérifier les articles retournés
     return_items = []
@@ -34,7 +47,7 @@ async def create_return(return_data: SaleReturnCreate, current_user: dict = Depe
             raise HTTPException(status_code=400, detail=f"Quantité de retour ({return_item['quantity']}) supérieure à la quantité vendue ({sale_item['quantity']}) pour {sale_item['name']}")
         
         # Vérifier si déjà retourné
-        existing_returns = await db.returns.find({"sale_id": return_data.sale_id, "tenant_id": current_user['tenant_id']}).to_list(100)
+        existing_returns = await db.returns.find({"sale_id": return_data.sale_id, "tenant_id": tenant_id}).to_list(100)
         already_returned = sum(
             sum(ri['quantity'] for ri in r['items'] if ri['product_id'] == return_item['product_id'])
             for r in existing_returns
@@ -58,19 +71,25 @@ async def create_return(return_data: SaleReturnCreate, current_user: dict = Depe
         })
         
         # Restaurer le stock
-        product = await db.products.find_one({"id": return_item['product_id'], "tenant_id": current_user['tenant_id']})
+        product = await db.products.find_one({"id": return_item['product_id'], "tenant_id": tenant_id})
         if product:
             new_stock = product['stock'] + return_item['quantity']
             await db.products.update_one({"id": return_item['product_id']}, {"$set": {"stock": new_stock}})
     
-    # Créer l'enregistrement de retour
+    # Générer le numéro de retour
+    return_number = await generate_return_number(tenant_id)
+    
+    # Créer l'enregistrement de retour avec le numéro de vente
     return_obj = SaleReturn(
+        return_number=return_number,
         sale_id=return_data.sale_id,
+        sale_number=sale_number,  # Inclure le numéro de vente
         items=return_items,
         total_refund=round(total_refund, 2),
         reason=return_data.reason,
         user_id=current_user['user_id'],
-        tenant_id=current_user['tenant_id']
+        employee_code=employee_code,  # Utiliser employee_code
+        tenant_id=tenant_id
     )
     
     doc = return_obj.model_dump()
@@ -79,39 +98,102 @@ async def create_return(return_data: SaleReturnCreate, current_user: dict = Depe
     
     return return_obj
 
+
 @router.get("", response_model=List[SaleReturn])
 async def get_returns(current_user: dict = Depends(get_current_user)):
-    """Obtenir tous les retours"""
-    returns = await db.returns.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    """Obtenir tous les retours avec le numéro de vente"""
+    tenant_id = current_user['tenant_id']
+    returns = await db.returns.find({"tenant_id": tenant_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Récupérer tous les utilisateurs pour enrichir les données
+    users = await db.users.find({"tenant_id": tenant_id}, {"_id": 0, "password": 0}).to_list(1000)
+    users_map = {u['id']: u for u in users}
+    
     for r in returns:
         if isinstance(r['created_at'], str):
             r['created_at'] = datetime.fromisoformat(r['created_at'])
+        
+        # Générer un return_number si absent (pour les anciens retours)
+        if not r.get('return_number'):
+            r['return_number'] = f"RET-{r['id'][:8].upper()}"
+        
+        # Récupérer le numéro de vente si absent
+        if not r.get('sale_number') and r.get('sale_id'):
+            sale = await db.sales.find_one({"id": r['sale_id'], "tenant_id": tenant_id}, {"_id": 0})
+            if sale:
+                r['sale_number'] = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
+            else:
+                r['sale_number'] = f"VNT-{r['sale_id'][:8].upper()}"
+        
+        # Ajouter employee_code si absent
+        if not r.get('employee_code') and r.get('user_id'):
+            user = users_map.get(r['user_id'])
+            if user:
+                if user.get('employee_code'):
+                    r['employee_code'] = user['employee_code']
+                else:
+                    role_prefix = {'admin': 'ADM', 'pharmacien': 'PHA', 'caissier': 'CAI'}.get(user.get('role', ''), 'EMP')
+                    r['employee_code'] = f"{role_prefix}-{user['id'][:4].upper()}"
+            else:
+                r['employee_code'] = 'N/A'
+    
     return returns
+
 
 @router.get("/sale/{sale_id}")
 async def get_returns_for_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
     """Obtenir les retours pour une vente spécifique"""
-    returns = await db.returns.find({"sale_id": sale_id, "tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(100)
+    tenant_id = current_user['tenant_id']
+    returns = await db.returns.find({"sale_id": sale_id, "tenant_id": tenant_id}, {"_id": 0}).to_list(100)
+    
+    # Récupérer le numéro de vente
+    sale = await db.sales.find_one({"id": sale_id, "tenant_id": tenant_id}, {"_id": 0})
+    sale_number = None
+    if sale:
+        sale_number = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
+    
     for r in returns:
         if isinstance(r['created_at'], str):
             r['created_at'] = datetime.fromisoformat(r['created_at'])
+        
+        # Ajouter le numéro de vente si absent
+        if not r.get('sale_number'):
+            r['sale_number'] = sale_number or f"VNT-{sale_id[:8].upper()}"
+        
+        # Générer un return_number si absent
+        if not r.get('return_number'):
+            r['return_number'] = f"RET-{r['id'][:8].upper()}"
+    
     return returns
+
 
 @router.get("/history")
 async def get_operations_history(current_user: dict = Depends(get_current_user)):
     """Obtenir l'historique complet des opérations (ventes + retours) avec informations agent"""
+    tenant_id = current_user['tenant_id']
+    
     # Récupérer les ventes
-    sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    sales = await db.sales.find({"tenant_id": tenant_id}, {"_id": 0}).to_list(1000)
     
     # Récupérer les retours
-    returns = await db.returns.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).to_list(1000)
+    returns = await db.returns.find({"tenant_id": tenant_id}, {"_id": 0}).to_list(1000)
     
     # Récupérer tous les utilisateurs pour enrichir les données
-    users = await db.users.find({"tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0}).to_list(1000)
+    users = await db.users.find({"tenant_id": tenant_id}, {"_id": 0, "password": 0}).to_list(1000)
     users_map = {u['id']: u for u in users}
     
-    def get_user_info(user_id):
+    # Créer un map des ventes pour récupérer les numéros de vente
+    sales_map = {s['id']: s for s in sales}
+    
+    def get_user_info(user_id, existing_employee_code=None):
         """Récupère les informations de l'agent"""
+        if existing_employee_code:
+            return {
+                'employee_code': existing_employee_code,
+                'user_role': users_map.get(user_id, {}).get('role', 'unknown') if user_id else 'unknown',
+                'user_name': users_map.get(user_id, {}).get('name') or 'Inconnu' if user_id else 'Inconnu'
+            }
+        
         if user_id and user_id in users_map:
             user = users_map[user_id]
             if 'employee_code' in user and user['employee_code']:
@@ -135,10 +217,12 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
     history = []
     
     for sale in sales:
-        user_info = get_user_info(sale.get('user_id'))
+        user_info = get_user_info(sale.get('user_id'), sale.get('employee_code'))
+        sale_number = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
         
         history.append({
             "id": sale['id'],
+            "operation_number": sale_number,
             "type": "sale",
             "date": sale['created_at'],
             "amount": sale['total'],
@@ -150,15 +234,27 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
         })
     
     for ret in returns:
-        user_info = get_user_info(ret.get('user_id'))
+        user_info = get_user_info(ret.get('user_id'), ret.get('employee_code'))
+        return_number = ret.get('return_number') or f"RET-{ret['id'][:8].upper()}"
+        
+        # Récupérer le numéro de vente
+        sale_number = ret.get('sale_number')
+        if not sale_number and ret.get('sale_id'):
+            sale = sales_map.get(ret['sale_id'])
+            if sale:
+                sale_number = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
+            else:
+                sale_number = f"VNT-{ret['sale_id'][:8].upper()}"
         
         history.append({
             "id": ret['id'],
+            "operation_number": return_number,
             "type": "return",
             "date": ret['created_at'],
             "amount": -ret['total_refund'],
             "items_count": len(ret.get('items', [])),
             "sale_id": ret['sale_id'],
+            "sale_number": sale_number,  # Numéro de vente associé au retour
             "reason": ret.get('reason'),
             "user_id": ret.get('user_id'),
             **user_info,
