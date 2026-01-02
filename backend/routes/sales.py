@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime, timezone
+import uuid
 from database import db
 from auth import require_role, get_current_user
 from models.sale import Sale, SaleCreate
