@@ -36,12 +36,44 @@ async def get_employee_code_from_user_id(user_id: str, tenant_id: str) -> str:
 
 
 async def enrich_supply(supply: dict, tenant_id: str) -> dict:
-    """Enrichir un approvisionnement avec les noms"""
+    """Enrichir un approvisionnement avec les noms et codes employés"""
     supply["supplier_name"] = await get_supplier_name(supply.get("supplier_id"), tenant_id)
     
     # Enrichir les items
     for item in supply.get("items", []):
         item["product_name"] = await get_product_name(item.get("product_id"), tenant_id)
+    
+    # Ajouter created_by_name (code employé ou chercher dans users si c'est un UUID)
+    created_by = supply.get("created_by")
+    if created_by:
+        # Vérifier si c'est déjà un code employé (format XXX-NNN)
+        if "-" in created_by and len(created_by) <= 10:
+            supply["created_by_name"] = created_by
+        else:
+            # C'est probablement un UUID, chercher le code employé
+            supply["created_by_name"] = await get_employee_code_from_user_id(created_by, tenant_id)
+    else:
+        supply["created_by_name"] = "N/A"
+    
+    # Ajouter updated_by_name (code employé)
+    updated_by = supply.get("updated_by")
+    if updated_by:
+        if "-" in updated_by and len(updated_by) <= 10:
+            supply["updated_by_name"] = updated_by
+        else:
+            supply["updated_by_name"] = await get_employee_code_from_user_id(updated_by, tenant_id)
+    else:
+        supply["updated_by_name"] = None
+    
+    # Ajouter validated_by_name (code employé)
+    validated_by = supply.get("validated_by")
+    if validated_by:
+        if "-" in validated_by and len(validated_by) <= 10:
+            supply["validated_by_name"] = validated_by
+        else:
+            supply["validated_by_name"] = await get_employee_code_from_user_id(validated_by, tenant_id)
+    else:
+        supply["validated_by_name"] = None
     
     return supply
 
