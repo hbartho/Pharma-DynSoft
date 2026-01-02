@@ -810,6 +810,11 @@ const Sales = () => {
               <tbody className="divide-y divide-slate-200">
                 {filteredSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors" data-testid={`sale-row-${sale.id}`}>
+                    <td className="px-6 py-4 text-sm">
+                      <span className="font-mono font-semibold text-teal-700 bg-teal-50 px-2 py-1 rounded">
+                        {sale.sale_number || `VNT-${sale.id?.substring(0, 8).toUpperCase()}`}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
                       {new Date(sale.created_at).toLocaleString('fr-FR')}
                     </td>
