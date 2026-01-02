@@ -164,10 +164,28 @@ class ReturnDelayPolicyTester:
         return True
 
     def create_test_product(self):
-        """Create a test product for sales"""
+        """Create a test product for sales or use existing product"""
+        # First try to get existing products
+        success, products = self.run_test(
+            "Get existing products for return tests",
+            "GET",
+            "products",
+            200
+        )
+        
+        if success and len(products) > 0:
+            # Use the first available product
+            product = products[0]
+            product_id = product['id']
+            print(f"   ✅ Using existing product: {product_id} - {product.get('name', 'Unknown')}")
+            return product_id
+        
+        # If no products exist, create a unique one
+        import time
+        timestamp = int(time.time())
         product_data = {
-            "name": "Test Médicament Retour",
-            "barcode": "RET123456",
+            "name": f"Test Médicament Retour {timestamp}",
+            "barcode": f"RET{timestamp}",
             "description": "Médicament pour test de retour",
             "price": 25.00,
             "stock": 100,
