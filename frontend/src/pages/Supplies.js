@@ -922,10 +922,15 @@ const Supplies = () => {
                     <div className="mt-2 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <User className="w-3 h-3" />
-                        Saisi par {supply.created_by_name || 'Inconnu'} le {formatDate(supply.created_at)}
+                        Saisi par <span className="font-mono font-medium text-slate-700">{supply.created_by_name || supply.created_by || 'N/A'}</span> le {formatDate(supply.created_at)}
+                        {supply.updated_by_name && (
+                          <span className="ml-2 text-blue-600">
+                            • Modifié par <span className="font-mono font-medium">{supply.updated_by_name}</span>
+                          </span>
+                        )}
                         {supply.is_validated && supply.validated_at && (
                           <span className="ml-2 text-emerald-600">
-                            • Validé le {formatDate(supply.validated_at)}
+                            • Validé par <span className="font-mono font-medium">{supply.validated_by_name || 'N/A'}</span> le {formatDate(supply.validated_at)}
                           </span>
                         )}
                       </span>
