@@ -170,16 +170,22 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <OfflineProvider>
-          <BrowserRouter>
-            <AppRoutes />
-            <Toaster position="top-right" richColors />
-          </BrowserRouter>
-        </OfflineProvider>
-      </SettingsProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <SettingsProvider>
+          <OfflineProvider>
+            <BrowserRouter>
+              <AppRoutes />
+              <Toaster position="top-right" richColors />
+            </BrowserRouter>
+          </OfflineProvider>
+        </SettingsProvider>
+      </AuthProvider>
+      {/* DevTools uniquement en développement */}
+      {process.env.NODE_ENV === 'development' && (
+        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
+      )}
+    </QueryClientProvider>
   );
 }
 
