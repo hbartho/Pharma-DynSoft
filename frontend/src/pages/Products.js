@@ -222,6 +222,7 @@ const Products = () => {
         min_stock: parseInt(formData.min_stock),
         category_id: formData.category_id || null,
         unit_id: formData.unit_id || null,
+        expiration_date: formData.expiration_date || null,
       };
 
       if (editingProduct) {
