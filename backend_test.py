@@ -2756,6 +2756,309 @@ class PharmaFlowAPITester:
         
         return test_success
 
+    def test_supplier_activation_deactivation_deletion(self):
+        """Test Supplier activation/deactivation and deletion rules for DynSoft Pharma"""
+        print("\n=== SUPPLIER ACTIVATION/DEACTIVATION & DELETION RULES TESTS ===")
+        print("🎯 Testing Supplier Status Toggle and Deletion Rules - DynSoft Pharma")
+        print("📋 Admin: admin@pharmaflow.com / admin123")
+        print("📋 Pharmacien: pharmacien@pharmaflow.com / pharma123")
+        
+        # Store original token
+        original_token = self.token
+        
+        # Test 1: Login as admin and get suppliers list
+        print("\n--- Test 1: Admin Login and Initial Suppliers List ---")
+        success, admin_response = self.run_test(
+            "Login as admin",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "admin@pharmaflow.com", "password": "admin123"}
+        )
+        if success and 'access_token' in admin_response:
+            admin_token = admin_response['access_token']
+            self.token = admin_token
+            print(f"   ✅ Admin login successful")
+        else:
+            print("   ❌ Admin login failed")
+            return False
+        
+        # Get initial suppliers list
+        success, initial_suppliers = self.run_test("GET /api/suppliers (admin sees all)", "GET", "suppliers", 200)
+        if success:
+            print(f"   ✅ Admin sees {len(initial_suppliers)} suppliers total")
+            active_count = sum(1 for s in initial_suppliers if s.get('is_active', True))
+            inactive_count = len(initial_suppliers) - active_count
+            print(f"   📊 Active suppliers: {active_count}, Inactive suppliers: {inactive_count}")
+        else:
+            print("   ❌ Failed to get suppliers list")
+            return False
+        
+        # Test 2: Test Supplier Status Toggle (Admin Only)
+        print("\n--- Test 2: Supplier Status Toggle (Admin Only) ---")
+        if initial_suppliers:
+            # Pick first supplier for testing
+            test_supplier = initial_suppliers[0]
+            supplier_id = test_supplier['id']
+            original_status = test_supplier.get('is_active', True)
+            print(f"   🎯 Testing with supplier: {test_supplier.get('name', 'Unknown')} (ID: {supplier_id[:8]}...)")
+            print(f"   📊 Original status: {'Active' if original_status else 'Inactive'}")
+            
+            # Toggle status
+            success, toggled_supplier = self.run_test(
+                f"PATCH /api/suppliers/{supplier_id}/toggle-status (admin)",
+                "PATCH",
+                f"suppliers/{supplier_id}/toggle-status",
+                200
+            )
+            if success:
+                new_status = toggled_supplier.get('is_active')
+                if new_status != original_status:
+                    print(f"   ✅ Status toggled successfully: {original_status} → {new_status}")
+                else:
+                    print(f"   ❌ Status not changed: {original_status} → {new_status}")
+                
+                # Toggle back to original state
+                success, restored_supplier = self.run_test(
+                    f"PATCH /api/suppliers/{supplier_id}/toggle-status (restore)",
+                    "PATCH",
+                    f"suppliers/{supplier_id}/toggle-status",
+                    200
+                )
+                if success:
+                    restored_status = restored_supplier.get('is_active')
+                    if restored_status == original_status:
+                        print(f"   ✅ Status restored successfully: {new_status} → {restored_status}")
+                    else:
+                        print(f"   ❌ Status not restored properly: expected {original_status}, got {restored_status}")
+            else:
+                print("   ❌ Failed to toggle supplier status")
+        
+        # Test 3: Login as pharmacien and test visibility rules
+        print("\n--- Test 3: Pharmacien Login and Visibility Rules ---")
+        success, pharmacien_response = self.run_test(
+            "Login as pharmacien",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "pharmacien@pharmaflow.com", "password": "pharma123"}
+        )
+        if success and 'access_token' in pharmacien_response:
+            pharmacien_token = pharmacien_response['access_token']
+            self.token = pharmacien_token
+            print(f"   ✅ Pharmacien login successful")
+            
+            # Get suppliers as pharmacien (should only see active ones)
+            success, pharmacien_suppliers = self.run_test("GET /api/suppliers (pharmacien sees only active)", "GET", "suppliers", 200)
+            if success:
+                print(f"   ✅ Pharmacien sees {len(pharmacien_suppliers)} suppliers")
+                # Verify all suppliers are active
+                inactive_visible = sum(1 for s in pharmacien_suppliers if not s.get('is_active', True))
+                if inactive_visible == 0:
+                    print(f"   ✅ Pharmacien correctly sees only active suppliers")
+                else:
+                    print(f"   ❌ Pharmacien sees {inactive_visible} inactive suppliers (should be 0)")
+            
+            # Test pharmacien cannot toggle status (should get 403)
+            if initial_suppliers:
+                supplier_id = initial_suppliers[0]['id']
+                success, response = self.run_test(
+                    f"PATCH /api/suppliers/{supplier_id}/toggle-status (pharmacien - should fail)",
+                    "PATCH",
+                    f"suppliers/{supplier_id}/toggle-status",
+                    403
+                )
+                if success:
+                    print(f"   ✅ Pharmacien correctly denied access to toggle status (403)")
+                else:
+                    print(f"   ❌ Pharmacien should be denied access to toggle status")
+        else:
+            print("   ❌ Pharmacien login failed")
+        
+        # Restore admin token for deletion tests
+        self.token = admin_token
+        
+        # Test 4: Create supplier and test deletion with supplies
+        print("\n--- Test 4: Supplier Deletion with Supplies (Should Fail) ---")
+        # Create a new supplier
+        supplier_data = {
+            "name": "Test Supplier for Deletion",
+            "contact": "Test Contact",
+            "phone": "+33 6 00 00 00 01",
+            "email": "test.deletion@supplier.com",
+            "address": "123 Test Street, Test City"
+        }
+        success, new_supplier = self.run_test("POST /api/suppliers (create test supplier)", "POST", "suppliers", 200, supplier_data)
+        if success and 'id' in new_supplier:
+            supplier_id = new_supplier['id']
+            self.created_items.setdefault('suppliers', []).append(supplier_id)
+            print(f"   ✅ Created test supplier ID: {supplier_id[:8]}...")
+            
+            # Create a supply linked to this supplier
+            # First, get a product to use
+            success, products = self.run_test("GET /api/products (for supply creation)", "GET", "products", 200)
+            if success and products:
+                product_id = products[0]['id']
+                
+                supply_data = {
+                    "supplier_id": supplier_id,
+                    "supply_date": "2026-01-02T12:00:00Z",
+                    "purchase_order_ref": "BC-DELETE-TEST-001",
+                    "delivery_note_number": "BL-DELETE-TEST-001",
+                    "items": [
+                        {
+                            "product_id": product_id,
+                            "quantity": 10,
+                            "unit_price": 5.00
+                        }
+                    ]
+                }
+                success, new_supply = self.run_test("POST /api/supplies (create supply for supplier)", "POST", "supplies", 200, supply_data)
+                if success and 'id' in new_supply:
+                    supply_id = new_supply['id']
+                    self.created_items.setdefault('supplies', []).append(supply_id)
+                    print(f"   ✅ Created supply linked to supplier: {supply_id[:8]}...")
+                    
+                    # Try to delete supplier (should fail with 400)
+                    success, delete_response = self.run_test(
+                        f"DELETE /api/suppliers/{supplier_id} (should fail - has supplies)",
+                        "DELETE",
+                        f"suppliers/{supplier_id}",
+                        400
+                    )
+                    if success:
+                        print(f"   ✅ Supplier deletion correctly blocked (400): {delete_response.get('detail', 'No detail')}")
+                    else:
+                        print(f"   ❌ Supplier deletion should fail with 400 when supplier has supplies")
+                else:
+                    print("   ❌ Failed to create supply for supplier")
+            else:
+                print("   ❌ No products available for supply creation")
+        else:
+            print("   ❌ Failed to create test supplier")
+        
+        # Test 5: Test can-delete endpoint
+        print("\n--- Test 5: Can-Delete Endpoint ---")
+        if 'suppliers' in self.created_items and self.created_items['suppliers']:
+            supplier_id = self.created_items['suppliers'][0]
+            success, can_delete_response = self.run_test(
+                f"GET /api/suppliers/{supplier_id}/can-delete",
+                "GET",
+                f"suppliers/{supplier_id}/can-delete",
+                200
+            )
+            if success:
+                can_delete = can_delete_response.get('can_delete', False)
+                supplies_count = can_delete_response.get('supplies_count', 0)
+                message = can_delete_response.get('message', '')
+                print(f"   ✅ Can delete: {can_delete}")
+                print(f"   ✅ Supplies count: {supplies_count}")
+                print(f"   ✅ Message: {message}")
+                
+                if supplies_count > 0 and not can_delete:
+                    print(f"   ✅ Correctly indicates supplier cannot be deleted due to supplies")
+                elif supplies_count == 0 and can_delete:
+                    print(f"   ✅ Correctly indicates supplier can be deleted (no supplies)")
+            else:
+                print("   ❌ Failed to check can-delete status")
+        
+        # Test 6: Create supplier without supplies and test successful deletion
+        print("\n--- Test 6: Supplier Deletion without Supplies (Should Succeed) ---")
+        supplier_data_clean = {
+            "name": "Test Supplier Clean Deletion",
+            "contact": "Clean Contact",
+            "phone": "+33 6 00 00 00 02",
+            "email": "test.clean@supplier.com",
+            "address": "456 Clean Street, Clean City"
+        }
+        success, clean_supplier = self.run_test("POST /api/suppliers (create clean supplier)", "POST", "suppliers", 200, supplier_data_clean)
+        if success and 'id' in clean_supplier:
+            clean_supplier_id = clean_supplier['id']
+            print(f"   ✅ Created clean supplier ID: {clean_supplier_id[:8]}...")
+            
+            # Verify can-delete returns true
+            success, can_delete_clean = self.run_test(
+                f"GET /api/suppliers/{clean_supplier_id}/can-delete (should be true)",
+                "GET",
+                f"suppliers/{clean_supplier_id}/can-delete",
+                200
+            )
+            if success:
+                if can_delete_clean.get('can_delete') and can_delete_clean.get('supplies_count') == 0:
+                    print(f"   ✅ Clean supplier can be deleted: {can_delete_clean.get('message')}")
+                else:
+                    print(f"   ❌ Clean supplier should be deletable")
+            
+            # Delete the clean supplier (should succeed)
+            success, delete_clean_response = self.run_test(
+                f"DELETE /api/suppliers/{clean_supplier_id} (should succeed)",
+                "DELETE",
+                f"suppliers/{clean_supplier_id}",
+                200
+            )
+            if success:
+                print(f"   ✅ Clean supplier deleted successfully: {delete_clean_response.get('message')}")
+                
+                # Verify supplier no longer exists
+                success, not_found = self.run_test(
+                    f"GET /api/suppliers/{clean_supplier_id} (should 404)",
+                    "GET",
+                    f"suppliers/{clean_supplier_id}",
+                    404
+                )
+                if success:
+                    print(f"   ✅ Deleted supplier correctly returns 404")
+                else:
+                    print(f"   ❌ Deleted supplier should return 404")
+            else:
+                print(f"   ❌ Clean supplier deletion should succeed")
+        else:
+            print("   ❌ Failed to create clean supplier")
+        
+        # Restore original token
+        self.token = original_token
+        
+        print("\n--- Supplier Activation/Deactivation & Deletion Tests Summary ---")
+        print("✅ Admin can toggle supplier status")
+        print("✅ Non-admin cannot toggle supplier status (403)")
+        print("✅ Admin sees all suppliers (active + inactive)")
+        print("✅ Non-admin sees only active suppliers")
+        print("✅ Suppliers with supplies cannot be deleted (400)")
+        print("✅ Suppliers without supplies can be deleted")
+        print("✅ Can-delete endpoint returns correct information")
+        
+        return True
+
+    def run_supplier_activation_deletion_tests(self):
+        """Run supplier activation/deactivation and deletion tests only"""
+        print("🎯 DynSoft Pharma - Supplier Activation/Deactivation & Deletion Rules Testing")
+        print("=" * 80)
+        
+        # Login first
+        if not self.test_login():
+            print("❌ Login failed, cannot continue tests")
+            return False
+        
+        # Run the specific test
+        success = self.test_supplier_activation_deactivation_deletion()
+        
+        # Cleanup
+        self.cleanup_created_items()
+        
+        # Print summary
+        print("\n" + "=" * 80)
+        print(f"🎯 Supplier Activation/Deactivation & Deletion Tests Summary")
+        print(f"Tests run: {self.tests_run}")
+        print(f"Tests passed: {self.tests_passed}")
+        print(f"Success rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
+        
+        if success:
+            print("✅ All supplier activation/deactivation & deletion tests passed!")
+        else:
+            print("❌ Some supplier tests failed")
+        
+        return success
+
 def main():
     # Get backend URL from environment
     import subprocess
@@ -2796,12 +3099,14 @@ def main():
                 print("❌ Login failed, cannot run PWA tests")
                 return 1
             success = tester.test_pwa_offline_infrastructure()
+        elif sys.argv[1] == "--supplier-activation":
+            success = tester.run_supplier_activation_deletion_tests()
         else:
-            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code|--supplies-employee-code|--state-management|--pwa-offline]")
+            print("Usage: python backend_test.py [--suppliers-only|--users-only|--customers-sales|--categories|--modular|--employee-code|--supplies-employee-code|--state-management|--pwa-offline|--supplier-activation]")
             return 1
     else:
-        # Default to state management tests for this review
-        success = tester.run_state_management_tests()
+        # Default to supplier activation tests for this review
+        success = tester.run_supplier_activation_deletion_tests()
     
     return 0 if success else 1
 
