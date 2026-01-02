@@ -399,12 +399,14 @@
 - **Message**: **Supplier Activation/Deactivation & Deletion Rules testing completed successfully. All 17 test suites passed (100% success rate). Key findings: (1) Admin status toggle working perfectly - PATCH /api/suppliers/{id}/toggle-status correctly changes is_active field both ways (true ↔ false), (2) Access control working perfectly - non-admin (pharmacien) correctly denied access to toggle status with 403 error, (3) Visibility rules working perfectly - admin sees all 10 suppliers (active + inactive), pharmacien sees only 1 active supplier, (4) Supplier deletion with supplies correctly blocked - returns 400 error with French message "Impossible de supprimer ce fournisseur : il a effectué 1 approvisionnement(s)", (5) Can-delete endpoint working perfectly - returns accurate can_delete: false/true and supplies_count, (6) Supplier deletion without supplies working perfectly - clean deletion succeeds with 200 status, deleted supplier returns 404. All supplier activation/deactivation and deletion rules are fully functional with proper access control and data integrity protection.**
 
 ## Current Testing Session (2026-01-02)
-- **Task**: React State Management Integration Testing
+- **Task**: Supplier Activation/Deactivation UI Testing
 - **Features to Test**:
-  1. Verify API Endpoints Still Work (data layer) - GET /api/products, /api/categories, /api/settings, /api/sales
-  2. Verify Authentication - POST /api/auth/login returns token and user with employee_code
-  3. Quick Frontend Verification - Login, navigate to products/sales, verify sidebar sync status
-- **Status**: Backend testing completed successfully
+  1. Login as Admin and Navigate to Suppliers
+  2. Verify Supplier Status Display (Badge with "Actif"/"Inactif")
+  3. Test Filter for Inactive Suppliers (Admin Only) - "Afficher inactifs" toggle
+  4. Test Status Toggle Button (PowerOff icon)
+  5. Test Deletion of Supplier with Supplies
+- **Status**: Frontend UI testing completed successfully
 
 ## Testing Agent Status
 - **Agent**: testing
