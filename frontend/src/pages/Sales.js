@@ -385,8 +385,17 @@ const Sales = () => {
   const handleReturnClick = async (sale) => {
     setSelectedSale(sale);
     
-    // Charger les retours existants pour cette vente
     try {
+      // Vérifier l'éligibilité au retour (délai)
+      const eligibilityRes = await api.get(`/returns/check-eligibility/${sale.id}`);
+      const eligibility = eligibilityRes.data;
+      
+      if (!eligibility.is_eligible) {
+        toast.error(eligibility.message);
+        return;
+      }
+      
+      // Charger les retours existants pour cette vente
       const returnsRes = await api.get(`/returns/sale/${sale.id}`);
       const existingReturns = returnsRes.data;
       
@@ -411,20 +420,15 @@ const Sales = () => {
       setReturnItems(items);
       setReturnReason('');
       setShowReturnDialog(true);
+      
+      // Afficher un message informatif sur le délai restant
+      if (eligibility.days_remaining <= 1) {
+        toast.warning(`Attention: ${eligibility.days_remaining} jour(s) restant(s) pour effectuer un retour`);
+      }
     } catch (error) {
-      console.error('Error loading returns:', error);
-      // Si erreur, initialiser sans retours existants
-      const items = sale.items.map(item => ({
-        product_id: item.product_id,
-        name: item.name,
-        price: item.price,
-        sold_quantity: item.quantity,
-        returned_quantity: 0,
-        return_quantity: 0
-      }));
-      setReturnItems(items);
-      setReturnReason('');
-      setShowReturnDialog(true);
+      console.error('Error checking return eligibility:', error);
+      const errorMessage = error.response?.data?.detail || 'Erreur lors de la vérification';
+      toast.error(errorMessage);
     }
   };
 
