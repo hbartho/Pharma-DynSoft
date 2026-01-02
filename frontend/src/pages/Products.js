@@ -931,9 +931,6 @@ const Products = () => {
                                   style={{ backgroundColor: cat.color || '#3B82F6' }}
                                 />
                                 {cat.name}
-                                <span className="text-xs text-slate-400 ml-1">
-                                  (×{cat.markup_coefficient || 1.0})
-                                </span>
                               </div>
                             </SelectItem>
                           ))}
