@@ -23,6 +23,7 @@ from routes.reports import router as reports_router
 from routes.sync import router as sync_router
 from routes.users import router as users_router
 from routes.returns import router as returns_router
+from routes.units import router as units_router
 
 # Configure logging
 logging.basicConfig(
