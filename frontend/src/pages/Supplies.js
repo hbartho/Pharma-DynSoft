@@ -442,25 +442,14 @@ const Supplies = () => {
       
       const matchesStatus = 
         statusFilter === 'all' ||
-        (statusFilter === 'pending' && !supply.is_validated) ||
-        (statusFilter === 'validated' && supply.is_validated);
+        (statusFilter === 'pending' && supply.is_validated === false) ||
+        (statusFilter === 'validated' && supply.is_validated === true);
       
       return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      // Trier: En attente d'abord, puis par date décroissante
-      const aPending = !a.is_validated;
-      const bPending = !b.is_validated;
-      if (aPending && !bPending) return -1;
-      if (!aPending && bPending) return 1;
-      // Même statut: trier par date décroissante
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateB - dateA;
     });
 
-  const pendingCount = supplies.filter(s => !s.is_validated).length;
-  const validatedCount = supplies.filter(s => s.is_validated).length;
+  const pendingCount = supplies.filter(s => s.is_validated === false).length;
+  const validatedCount = supplies.filter(s => s.is_validated === true).length;
 
   const filteredProducts = products.filter(p => 
     productSearch && (
