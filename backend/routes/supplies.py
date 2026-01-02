@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from database import db
 from auth import require_role, get_current_user
 from models.supply import Supply, SupplyCreate, SupplyUpdate, SupplyItem, SupplyItemCreate
+from models.stock import StockMovementType
+from models.price import PriceChangeType
 import uuid
 
 router = APIRouter(prefix="/supplies", tags=["Supplies"])
