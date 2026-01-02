@@ -1,24 +1,41 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 from database import db
 from auth import require_role, get_current_user
 from models.sale import Sale, SaleCreate
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
+
+async def generate_sale_number(tenant_id: str) -> str:
+    """Générer un numéro de vente unique et lisible (ex: VNT-001)"""
+    # Compter les ventes existantes pour ce tenant
+    count = await db.sales.count_documents({"tenant_id": tenant_id})
+    # Format: VNT-001, VNT-002, etc.
+    return f"VNT-{str(count + 1).zfill(4)}"
+
+
 @router.post("", response_model=Sale)
 async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(get_current_user)):
     """Create a new sale"""
+    tenant_id = current_user['tenant_id']
+    employee_code = current_user.get('employee_code', 'N/A')
+    
+    # Générer le numéro de vente
+    sale_number = await generate_sale_number(tenant_id)
+    
     sale_dict = sale_data.model_dump()
-    sale_dict['tenant_id'] = current_user['tenant_id']
+    sale_dict['tenant_id'] = tenant_id
     sale_dict['user_id'] = current_user['user_id']
+    sale_dict['employee_code'] = employee_code
+    sale_dict['sale_number'] = sale_number
     # Arrondir le total à 2 décimales
     sale_dict['total'] = round(sale_dict['total'], 2)
     sale_obj = Sale(**sale_dict)
     
     for item in sale_data.items:
-        product = await db.products.find_one({"id": item['product_id'], "tenant_id": current_user['tenant_id']})
+        product = await db.products.find_one({"id": item['product_id'], "tenant_id": tenant_id})
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
         
@@ -33,34 +50,45 @@ async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(get_cu
     await db.sales.insert_one(doc)
     return sale_obj
 
+
 @router.get("")
 async def get_sales(current_user: dict = Depends(get_current_user)):
     """Get all sales with user information"""
-    sales = await db.sales.find({"tenant_id": current_user['tenant_id']}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    tenant_id = current_user['tenant_id']
+    sales = await db.sales.find({"tenant_id": tenant_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     
     # Récupérer tous les utilisateurs pour enrichir les ventes
-    users = await db.users.find({"tenant_id": current_user['tenant_id']}, {"_id": 0, "password": 0}).to_list(1000)
+    users = await db.users.find({"tenant_id": tenant_id}, {"_id": 0, "password": 0}).to_list(1000)
     users_map = {u['id']: u for u in users}
     
     for sale in sales:
         if isinstance(sale['created_at'], str):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+        
+        # Générer un sale_number si absent (pour les anciennes ventes)
+        if not sale.get('sale_number'):
+            # Utiliser les 8 premiers caractères de l'ID comme fallback
+            sale['sale_number'] = f"VNT-{sale['id'][:8].upper()}"
+        
         # Ajouter les informations de l'agent
         if sale.get('user_id') and sale['user_id'] in users_map:
             user = users_map[sale['user_id']]
-            # Gérer la compatibilité avec l'ancien format
-            if 'employee_code' in user and user['employee_code']:
-                sale['employee_code'] = user['employee_code']
-            else:
-                role_prefix = {'admin': 'ADM', 'pharmacien': 'PHA', 'caissier': 'CAI'}.get(user.get('role', ''), 'EMP')
-                sale['employee_code'] = f"{role_prefix}-{user['id'][:4].upper()}"
+            # Utiliser employee_code s'il est déjà dans la vente
+            if not sale.get('employee_code'):
+                if 'employee_code' in user and user['employee_code']:
+                    sale['employee_code'] = user['employee_code']
+                else:
+                    role_prefix = {'admin': 'ADM', 'pharmacien': 'PHA', 'caissier': 'CAI'}.get(user.get('role', ''), 'EMP')
+                    sale['employee_code'] = f"{role_prefix}-{user['id'][:4].upper()}"
             sale['user_role'] = user.get('role', 'unknown')
             sale['user_name'] = user.get('name') or f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
         else:
-            sale['employee_code'] = 'N/A'
+            if not sale.get('employee_code'):
+                sale['employee_code'] = 'N/A'
             sale['user_role'] = 'unknown'
             sale['user_name'] = 'Inconnu'
     return sales
+
 
 @router.get("/{sale_id}", response_model=Sale)
 async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
@@ -70,7 +98,13 @@ async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user))
         raise HTTPException(status_code=404, detail="Sale not found")
     if isinstance(sale['created_at'], str):
         sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+    
+    # Générer un sale_number si absent
+    if not sale.get('sale_number'):
+        sale['sale_number'] = f"VNT-{sale['id'][:8].upper()}"
+    
     return Sale(**sale)
+
 
 @router.delete("/{sale_id}")
 async def delete_sale(sale_id: str, current_user: dict = Depends(require_role(["admin"]))):
