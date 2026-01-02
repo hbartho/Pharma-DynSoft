@@ -1111,12 +1111,53 @@ const Sales = () => {
               Historique des opérations
             </DialogTitle>
           </DialogHeader>
+          
+          {/* Filtres */}
+          <div className="flex gap-2 mb-4">
+            <Button 
+              variant={historyFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setHistoryFilter('all')}
+              className={historyFilter === 'all' ? 'bg-slate-800' : ''}
+            >
+              Tout ({operationsHistory.length})
+            </Button>
+            <Button 
+              variant={historyFilter === 'sales' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setHistoryFilter('sales')}
+              className={historyFilter === 'sales' ? 'bg-teal-700' : ''}
+            >
+              <ShoppingCart className="w-4 h-4 mr-1" />
+              Ventes ({operationsHistory.filter(o => o.type === 'sale').length})
+            </Button>
+            <Button 
+              variant={historyFilter === 'returns' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setHistoryFilter('returns')}
+              className={historyFilter === 'returns' ? 'bg-amber-600' : ''}
+            >
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Retours ({operationsHistory.filter(o => o.type === 'return').length})
+            </Button>
+          </div>
+          
           <div className="overflow-y-auto flex-1 pr-2">
             <div className="space-y-3">
-              {operationsHistory.length === 0 ? (
-                <p className="text-center text-slate-500 py-8">Aucune opération enregistrée</p>
+              {operationsHistory.filter(op => 
+                historyFilter === 'all' || 
+                (historyFilter === 'sales' && op.type === 'sale') ||
+                (historyFilter === 'returns' && op.type === 'return')
+              ).length === 0 ? (
+                <p className="text-center text-slate-500 py-8">Aucune opération trouvée</p>
               ) : (
-                operationsHistory.map((op) => (
+                operationsHistory
+                  .filter(op => 
+                    historyFilter === 'all' || 
+                    (historyFilter === 'sales' && op.type === 'sale') ||
+                    (historyFilter === 'returns' && op.type === 'return')
+                  )
+                  .map((op) => (
                   <div 
                     key={op.id} 
                     className={`p-4 rounded-lg border ${
@@ -1165,7 +1206,7 @@ const Sales = () => {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-2">
                         <p className={`text-lg font-bold ${
                           op.type === 'sale' ? 'text-teal-700' : 'text-amber-700'
                         }`}>
@@ -1174,6 +1215,20 @@ const Sales = () => {
                         <p className="text-sm text-slate-500">
                           {op.items_count} article{op.items_count > 1 ? 's' : ''}
                         </p>
+                        {op.type === 'return' && op.details && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedReturnDetail(op.details);
+                              setShowReturnDetailDialog(true);
+                            }}
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Détails
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1181,6 +1236,89 @@ const Sales = () => {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Détails du retour */}
+      <Dialog open={showReturnDetailDialog} onOpenChange={setShowReturnDetailDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Détails du retour
+              {selectedReturnDetail && (
+                <span className="ml-2 font-mono text-sm font-normal text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                  {selectedReturnDetail.return_number || `RET-${selectedReturnDetail.id?.substring(0, 8).toUpperCase()}`}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedReturnDetail && (
+            <div className="space-y-4">
+              {/* Infos du retour */}
+              <div className="p-4 bg-slate-50 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Vente associée:</span>
+                  <span className="font-mono font-semibold text-teal-700">
+                    {selectedReturnDetail.sale_number || `VNT-${selectedReturnDetail.sale_id?.substring(0, 8).toUpperCase()}`}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Date du retour:</span>
+                  <span className="font-medium">
+                    {new Date(selectedReturnDetail.created_at).toLocaleString('fr-FR')}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Agent:</span>
+                  <span className="font-mono font-medium">
+                    {selectedReturnDetail.employee_code || 'N/A'}
+                  </span>
+                </div>
+                {selectedReturnDetail.reason && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-sm text-slate-500 block">Motif:</span>
+                    <p className="text-sm text-amber-700 font-medium mt-1">
+                      {selectedReturnDetail.reason}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Articles retournés */}
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-2">Articles retournés</h4>
+                <div className="space-y-2">
+                  {selectedReturnDetail.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
+                      <div>
+                        <p className="font-medium text-slate-900">{item.name}</p>
+                        <p className="text-sm text-slate-500">
+                          {item.quantity} × {formatAmount(item.price)}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-amber-700">
+                        {formatAmount(item.refund || item.quantity * item.price)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total remboursé */}
+              <div className="flex justify-between items-center p-4 bg-amber-100 rounded-lg border border-amber-200">
+                <span className="text-lg font-semibold text-slate-900">Total remboursé:</span>
+                <span className="text-2xl font-bold text-amber-700">
+                  {formatAmount(selectedReturnDetail.total_refund)}
+                </span>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowReturnDetailDialog(false)}>
+                  Fermer
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Layout>
