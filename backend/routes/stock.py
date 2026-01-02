@@ -9,6 +9,30 @@ import uuid
 router = APIRouter(prefix="/stock", tags=["Stock"])
 
 
+async def get_valuation_for_product(product_id: str, tenant_id: str, method: str = "weighted_average") -> dict:
+    """Calculer la valorisation du stock pour un produit"""
+    product = await db.products.find_one({"id": product_id, "tenant_id": tenant_id})
+    if not product:
+        return {"unit_cost": 0, "total_value": 0}
+    
+    current_stock = product.get("stock", 0)
+    purchase_price = product.get("purchase_price", 0)
+    
+    if current_stock <= 0:
+        return {"unit_cost": 0, "total_value": 0}
+    
+    # Méthode simple basée sur le prix d'achat
+    if method == "fifo" or method == "weighted_average":
+        # Pour l'instant, on utilise le prix d'achat du produit
+        unit_cost = purchase_price
+        total_value = current_stock * unit_cost
+    else:
+        unit_cost = purchase_price
+        total_value = current_stock * unit_cost
+    
+    return {"unit_cost": unit_cost, "total_value": total_value}
+
+
 async def get_user_name(user_id: str, tenant_id: str) -> str:
     if not user_id:
         return None
