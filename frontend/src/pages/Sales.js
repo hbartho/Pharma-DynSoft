@@ -554,8 +554,27 @@ const Sales = () => {
     const customerName = getCustomerName(s.customer_id).toLowerCase();
     const paymentLabel = getPaymentLabel(s.payment_method).toLowerCase();
     const query = searchQuery.toLowerCase();
-    return customerName.includes(query) || paymentLabel.includes(query) || 
-           s.total?.toString().includes(query);
+    const saleNumber = (s.sale_number || `VNT-${s.id?.substring(0, 8).toUpperCase()}`).toLowerCase();
+    const employeeCode = (s.employee_code || '').toLowerCase();
+    const userName = (s.user_name || '').toLowerCase();
+    
+    // Recherche par texte (N° Vente, Client, Agent, Paiement, Total)
+    const matchesText = !query || 
+      saleNumber.includes(query) ||
+      customerName.includes(query) || 
+      paymentLabel.includes(query) || 
+      employeeCode.includes(query) ||
+      userName.includes(query) ||
+      s.total?.toString().includes(query);
+    
+    // Filtre par date
+    let matchesDate = true;
+    if (searchDate) {
+      const saleDate = new Date(s.created_at).toISOString().split('T')[0];
+      matchesDate = saleDate === searchDate;
+    }
+    
+    return matchesText && matchesDate;
   });
 
   return (
