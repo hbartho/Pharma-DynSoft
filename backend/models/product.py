@@ -9,7 +9,8 @@ class Product(BaseModel):
     name: str
     barcode: Optional[str] = None
     description: Optional[str] = None
-    price: float
+    purchase_price: float = 0  # Prix d'achat (fournisseur)
+    price: float  # Prix de vente (calculé ou manuel)
     stock: int
     min_stock: int = 10
     category_id: Optional[str] = None
@@ -22,7 +23,8 @@ class ProductCreate(BaseModel):
     name: str
     barcode: Optional[str] = None
     description: Optional[str] = None
-    price: float
+    purchase_price: float = 0  # Prix d'achat
+    price: float  # Prix de vente
     stock: int
     min_stock: int = 10
     category_id: Optional[str] = None
