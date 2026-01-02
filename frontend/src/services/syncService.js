@@ -49,7 +49,11 @@ const API_ENDPOINTS = {
   customers: '/customers',
   suppliers: '/suppliers',
   prescriptions: '/prescriptions',
-  sales: '/sales'
+  sales: '/sales',
+  supplies: '/supplies',
+  returns: '/returns',
+  units: '/units',
+  settings: '/settings'
 };
 
 // ============================================
