@@ -4,11 +4,15 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Download, Database, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 import { useSettings } from '../contexts/SettingsContext';
+import { useOffline } from '../contexts/OfflineContext';
 import { formatCurrency } from '../services/currencyService';
+import { preloadDataForOffline, getOfflineStats } from '../services/offlineOperations';
+import { getStoreCounts, clearLocalChanges } from '../services/indexedDB';
 import { toast } from 'sonner';
+import OfflineIndicator from '../components/OfflineIndicator';
 
 const Settings = () => {
   const { refreshSettings } = useSettings();
