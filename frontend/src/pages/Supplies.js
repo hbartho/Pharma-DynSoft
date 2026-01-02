@@ -422,20 +422,28 @@ const Supplies = () => {
     });
   };
 
-  const filteredSupplies = supplies.filter(supply => {
-    const matchesSearch = 
-      supply.purchase_order_ref?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supply.delivery_note_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supply.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supply.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = 
-      statusFilter === 'all' ||
-      (statusFilter === 'pending' && !supply.is_validated) ||
-      (statusFilter === 'validated' && supply.is_validated);
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredSupplies = supplies
+    .filter(supply => {
+      const matchesSearch = 
+        supply.purchase_order_ref?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        supply.delivery_note_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        supply.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        supply.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = 
+        statusFilter === 'all' ||
+        (statusFilter === 'pending' && !supply.is_validated) ||
+        (statusFilter === 'validated' && supply.is_validated);
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Trier: En attente d'abord, puis par date décroissante
+      if (!a.is_validated && b.is_validated) return -1;
+      if (a.is_validated && !b.is_validated) return 1;
+      // Même statut: trier par date décroissante
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
 
   const pendingCount = supplies.filter(s => !s.is_validated).length;
   const validatedCount = supplies.filter(s => s.is_validated).length;
