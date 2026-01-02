@@ -222,6 +222,7 @@ async def validate_supply(
 ):
     """Valider un approvisionnement et mettre à jour les stocks (Admin uniquement)"""
     tenant_id = current_user["tenant_id"]
+    user_id = current_user.get("id") or current_user.get("user_id")
     
     # Vérifier que l'appro existe
     supply = await db.supplies.find_one({"id": supply_id, "tenant_id": tenant_id})
@@ -234,24 +235,69 @@ async def validate_supply(
     if not supply.get("items") or len(supply.get("items", [])) == 0:
         raise HTTPException(status_code=400, detail="Impossible de valider un approvisionnement sans produits")
     
-    # Mettre à jour les stocks des produits
+    # Mettre à jour les stocks des produits et créer l'historique
     for item in supply.get("items", []):
         product_id = item.get("product_id")
         quantity = item.get("quantity", 0)
         unit_price = item.get("unit_price", 0)
         
-        # Mettre à jour le stock et le prix d'achat du produit
-        update_fields = {
-            "$inc": {"stock": quantity},
-            "$set": {
-                "purchase_price": unit_price,
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }
-        }
+        # Récupérer le produit actuel
+        product = await db.products.find_one({"id": product_id, "tenant_id": tenant_id})
+        if not product:
+            continue
         
+        stock_before = product.get("stock", 0)
+        stock_after = stock_before + quantity
+        purchase_price_before = product.get("purchase_price", 0)
+        selling_price_before = product.get("price", 0)
+        
+        # 1. Créer l'entrée dans l'historique de STOCK
+        stock_movement = {
+            "id": str(uuid.uuid4()),
+            "product_id": product_id,
+            "product_name": product.get("name"),
+            "movement_type": StockMovementType.SUPPLY.value,
+            "movement_quantity": quantity,
+            "stock_before": stock_before,
+            "stock_after": stock_after,
+            "reference_type": "supply",
+            "reference_id": supply_id,
+            "notes": f"Approvisionnement - BL: {supply.get('delivery_note_number') or 'N/A'}",
+            "tenant_id": tenant_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user_id
+        }
+        await db.stock_movements.insert_one(stock_movement)
+        
+        # 2. Créer l'entrée dans l'historique de PRIX (si le prix change)
+        if unit_price != purchase_price_before:
+            price_history = {
+                "id": str(uuid.uuid4()),
+                "product_id": product_id,
+                "product_name": product.get("name"),
+                "purchase_price": unit_price,
+                "selling_price": selling_price_before,  # Le prix de vente reste inchangé
+                "purchase_price_before": purchase_price_before,
+                "selling_price_before": selling_price_before,
+                "change_type": PriceChangeType.SUPPLY.value,
+                "reference_type": "supply",
+                "reference_id": supply_id,
+                "notes": f"Mise à jour via approvisionnement - Facture: {supply.get('invoice_number') or 'N/A'}",
+                "effective_date": datetime.now(timezone.utc).isoformat(),
+                "tenant_id": tenant_id,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_by": user_id
+            }
+            await db.price_history.insert_one(price_history)
+        
+        # 3. Mettre à jour le produit
         await db.products.update_one(
             {"id": product_id, "tenant_id": tenant_id},
-            update_fields
+            {"$set": {
+                "stock": stock_after,
+                "purchase_price": unit_price,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
         )
     
     # Marquer l'approvisionnement comme validé
@@ -260,7 +306,7 @@ async def validate_supply(
         {"$set": {
             "is_validated": True,
             "validated_at": datetime.now(timezone.utc).isoformat(),
-            "validated_by": current_user["user_id"]
+            "validated_by": user_id
         }}
     )
     
