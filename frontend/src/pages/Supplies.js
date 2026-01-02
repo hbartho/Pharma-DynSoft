@@ -1040,8 +1040,20 @@ const Supplies = () => {
                 </div>
                 <div>
                   <p className="text-slate-500">Saisi par</p>
-                  <p className="font-medium">{viewingSupply.created_by_name || 'Inconnu'}</p>
+                  <p className="font-medium font-mono">{viewingSupply.created_by_name || viewingSupply.created_by || 'N/A'}</p>
                 </div>
+                {viewingSupply.updated_by_name && (
+                  <div>
+                    <p className="text-slate-500">Modifié par</p>
+                    <p className="font-medium font-mono text-blue-600">{viewingSupply.updated_by_name}</p>
+                  </div>
+                )}
+                {viewingSupply.is_validated && (
+                  <div>
+                    <p className="text-slate-500">Validé par</p>
+                    <p className="font-medium font-mono text-emerald-600">{viewingSupply.validated_by_name || 'N/A'}</p>
+                  </div>
+                )}
               </div>
               
               {viewingSupply.notes && (
