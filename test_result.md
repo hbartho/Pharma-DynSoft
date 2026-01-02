@@ -2,7 +2,7 @@
 
 ## Current Test Session
 **Date**: 2026-01-02
-**Task**: Price History Model Update & Employee Code Standardization
+**Task**: Supplies (Approvisionnements) Employee Code Display Fix Testing
 
 ## Test Objectives
 1. Verify price_history model uses new field names (prix_appro, prix_vente_prod, date_maj_prix, date_peremption)
