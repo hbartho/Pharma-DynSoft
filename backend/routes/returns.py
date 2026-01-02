@@ -9,9 +9,11 @@ router = APIRouter(prefix="/returns", tags=["Returns"])
 
 
 async def generate_return_number(tenant_id: str) -> str:
-    """Générer un numéro de retour unique et lisible (ex: RET-0001)"""
-    count = await db.returns.count_documents({"tenant_id": tenant_id})
-    return f"RET-{str(count + 1).zfill(4)}"
+    """Générer un numéro de retour unique et lisible (ex: RET-A1B2C3D4)
+    Utilise les 8 premiers caractères de l'UUID pour garantir l'unicité
+    """
+    unique_id = str(uuid.uuid4()).replace('-', '')[:8].upper()
+    return f"RET-{unique_id}"
 
 
 async def get_return_delay_days(tenant_id: str) -> int:
