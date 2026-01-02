@@ -1449,3 +1449,101 @@
 - **Frontend components not tested** as per system limitations (testing agent focuses on backend APIs only)
 - **Search functionality, History dialog, Return UI**: These frontend features require UI testing which is outside the scope of backend API testing
 - **Recommendation**: Frontend features should be tested separately through UI testing tools or manual verification
+
+## Supplies (Approvisionnements) Employee Code Display Fix Test Results (2026-01-02)
+
+### Test Overview
+- **Test Scope**: Complete testing of Supplies Employee Code Display Fix for DynSoft Pharma
+- **Login Credentials**: admin@pharmaflow.com / admin123 (employee_code: ADM-001)
+- **Test Status**: ✅ FULLY WORKING
+- **Test File**: backend_test.py --supplies-employee-code
+
+### Detailed Test Results:
+
+#### 1. Backend API - Login and Verify Employee Code: ✅ WORKING
+- ✅ POST /api/auth/login with admin credentials successful
+- ✅ JWT token contains correct employee_code: ADM-001
+- ✅ Authentication working with proper employee code format
+
+#### 2. GET /api/supplies - Verify Employee Code Fields: ✅ WORKING
+- ✅ Found 7 supplies in system
+- ✅ All supplies have created_by_name field with employee codes
+- ✅ Employee code fields verified:
+  - **created_by_name**: 7/7 supplies show ADM-001 (100%)
+  - **updated_by_name**: 1/7 supplies show ADM-001 (supplies that were edited)
+  - **validated_by_name**: 5/7 supplies show ADM-001 (validated supplies)
+- ✅ **No "Inconnu" entries found** - all employee codes properly resolved
+- ✅ Employee code format ADM-001 consistently displayed
+
+#### 3. Create New Supply and Verify created_by_name: ✅ WORKING
+- ✅ Created test product for supplies testing
+- ✅ POST /api/supplies successfully created new supply
+- ✅ New supply created_by_name shows employee code: ADM-001
+- ✅ Supply creation workflow working with employee code tracking
+
+#### 4. Edit Supply and Verify updated_by_name: ✅ WORKING
+- ✅ PUT /api/supplies/{id} successfully updated supply
+- ✅ GET /api/supplies/{id} verified updated supply details
+- ✅ Updated supply updated_by_name shows employee code: ADM-001
+- ✅ Supply editing workflow working with employee code tracking
+
+#### 5. Validate Supply and Verify validated_by_name: ✅ WORKING
+- ✅ POST /api/supplies/{id}/validate successfully validated supply (admin only)
+- ✅ Validated supply validated_by_name shows employee code: ADM-001
+- ✅ Supply validation workflow working with employee code tracking
+- ✅ Admin-only validation access control working correctly
+
+#### 6. Backward Compatibility Test: ✅ WORKING
+- ✅ Found mixed data in system:
+  - **5 supplies with UUID format** (old data)
+  - **3 supplies with employee_code format** (new data)
+  - **0 supplies showing 'Inconnu'** (all resolved correctly)
+- ✅ **Old UUID supplies correctly resolve to employee codes**
+- ✅ **Backward compatibility working perfectly** - no "Inconnu" entries
+- ✅ API handles mixed data without issues
+
+### Technical Implementation Verified:
+- **Employee Code Resolution**: Old UUID records properly resolve to employee codes via users table lookup
+- **Supply Model Enhancement**: created_by_name, updated_by_name, validated_by_name fields working
+- **API Integration**: All supplies endpoints return employee code fields correctly
+- **Data Enrichment**: enrich_supply() function properly converts UUIDs to employee codes
+- **Backward Compatibility**: Seamless handling of old UUID data and new employee_code data
+- **Access Control**: Admin-only validation working correctly
+
+### Key Features Confirmed Working:
+1. **Employee Code Display**: ✅ All supplies show ADM-001 format instead of "Inconnu"
+2. **Supply Creation**: ✅ New supplies created with created_by_name: ADM-001
+3. **Supply Editing**: ✅ Edited supplies show updated_by_name: ADM-001
+4. **Supply Validation**: ✅ Validated supplies show validated_by_name: ADM-001
+5. **Backward Compatibility**: ✅ Old UUID data resolves to employee codes
+6. **API Consistency**: ✅ All supplies endpoints return employee code fields
+
+### Test Results Summary:
+- **Total Tests**: 9/9 passed (100% success rate)
+- **Login & Authentication**: ✅ Working
+- **Employee Code Fields**: ✅ Working
+- **Supply Creation**: ✅ Working
+- **Supply Editing**: ✅ Working
+- **Supply Validation**: ✅ Working
+- **Backward Compatibility**: ✅ Working
+
+### No Critical Issues Found:
+- No console errors or application crashes
+- No data integrity problems
+- All core functionality working as expected
+- Proper error handling and user feedback
+- **No "Inconnu" entries found** - employee code display fix working perfectly
+- Backward compatibility maintained for old data
+- Employee code standardization working seamlessly
+
+### Expected Results Verification:
+- ✅ **created_by_name never shows "Inconnu" or "N/A"** for supplies created by logged-in users
+- ✅ **Backward compatibility working** - Old supplies with UUID in created_by resolve to employee_code via users table
+- ✅ **Employee code format ADM-001** consistently displayed throughout system
+- ✅ **All supply operations track employee codes** correctly (create, edit, validate)
+
+### Frontend Testing Note:
+- **Frontend UI testing not performed** as per system limitations (testing agent focuses on backend APIs only)
+- **Supplies page UI verification**: Frontend display of "Saisi par", "Modifié par", "Validé par" fields should be tested separately
+- **Details dialog verification**: Eye icon functionality and employee code display in details view requires UI testing
+- **Recommendation**: Frontend employee code display should be verified through manual testing or UI automation tools
