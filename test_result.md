@@ -1143,4 +1143,99 @@
 - `/app/frontend/src/pages/Products.js` - Expiration display, filters, form
 - `/app/frontend/src/pages/Settings.js` - Expiration alert configuration
 
-### Test Status: Ready for backend testing
+### Test Status: ✅ FULLY WORKING
+
+## Product Expiration & Sorting Enhancement Test Results (2026-01-02)
+
+### Test Overview
+- **Test Scope**: Complete testing of Product Expiration & Sorting Enhancement functionality
+- **Login Credentials**: admin@pharmaflow.com / admin123 (ADM-001)
+- **Test Status**: ✅ FULLY WORKING
+- **Test File**: /app/backend/tests/test_product_expiration.py
+
+### Detailed Test Results:
+
+#### 1. Sale Number Format (VNT-XXXXXXXX): ✅ WORKING
+- ✅ POST /api/sales creates sale with `sale_number` in VNT-XXXXXXXX format (8 uppercase chars)
+- ✅ Sale Number generated: VNT-EE17F5FD (correct format)
+- ✅ Sale number uses 8 characters from UUID as specified
+- ✅ Format validation: VNT-{8 uppercase alphanumeric chars}
+
+#### 2. Product with Expiration Date: ✅ WORKING
+- ✅ POST /api/products accepts `expiration_date` field
+- ✅ Product created with expiration date (10 days from now)
+- ✅ GET /api/products/{id} returns stored expiration_date correctly
+- ✅ Expiration date stored and retrieved: 2026-01-12T07:26:24.328072
+- ✅ Date persistence working correctly
+
+#### 3. Product Alerts Endpoint: ✅ WORKING
+- ✅ GET /api/products/alerts endpoint working correctly
+- ✅ Response contains all required fields:
+  - `low_stock`: count=5, threshold=10, products[] ✅
+  - `near_expiration`: count=2, alert_days=30, products[] ✅
+  - `expired`: count=0, products[] ✅
+- ✅ All response structures correct and complete
+- ✅ Alert categorization working properly
+
+#### 4. Expiration Alert Days Setting: ✅ WORKING
+- ✅ GET /api/settings - expiration_alert_days field exists (default: 30)
+- ✅ PUT /api/settings - Update expiration_alert_days to 15 working
+- ✅ Product expiring in 20 days NOT in near_expiration when alert_days=15 (20 > 15)
+- ✅ PUT /api/settings - Update expiration_alert_days to 25 working
+- ✅ Product expiring in 20 days IS in near_expiration when alert_days=25 (20 < 25)
+- ✅ Settings control expiration alert threshold correctly
+- ✅ Dynamic alert threshold working as expected
+
+#### 5. Product Sorting Priority: ✅ WORKING
+- ✅ GET /api/products returns products sorted by priority
+- ✅ Sorting order verified: Low stock(0) > Expired(6) > Near expiration(7) > Normal(17)
+- ✅ Priority sorting working correctly:
+  1. Low stock products first ✅
+  2. Then expired products ✅
+  3. Then near expiration (sorted by days remaining) ✅
+  4. Then alphabetical ✅
+- ✅ Product order: ['A Low Stock Product', 'B Expired Product', 'C Near Expiration Product', 'D Normal Product']
+
+### Technical Implementation Verified:
+- **Sale Number Generation**: VNT-XXXXXXXX format using 8 chars from UUID
+- **Product Expiration**: expiration_date field in Product model working
+- **Settings Integration**: expiration_alert_days configurable and persistent
+- **Alert Endpoint**: /api/products/alerts with proper categorization
+- **Product Sorting**: Priority-based sorting algorithm working correctly
+- **Timezone Handling**: Fixed timezone awareness issues in datetime comparisons
+
+### Bug Fixes Applied During Testing:
+- **Fixed Missing Import**: Added `import uuid` to `/app/backend/routes/sales.py`
+- **Fixed Timezone Issue**: Added timezone awareness to expiration date comparisons in `/app/backend/routes/products.py`
+- **Lines 86-88 and 146-149**: Ensured datetime objects are timezone-aware before comparison
+
+### Key Features Confirmed Working:
+1. **Sale Number Format**: ✅ VNT-XXXXXXXX (8 uppercase chars from UUID)
+2. **Product Expiration Date**: ✅ Storage and retrieval working correctly
+3. **Product Alerts Endpoint**: ✅ Complete categorization (low_stock, near_expiration, expired)
+4. **Expiration Alert Days**: ✅ Configurable threshold via settings
+5. **Product Sorting**: ✅ Priority-based sorting (low stock > expired > near expiration > alphabetical)
+
+### Test Results Summary:
+- **Total API Calls**: 24/25 passed (96.0% success rate)
+- **Feature Test Suites**: 5/5 passed (100% success rate)
+- **Sale Number Format**: ✅ Working
+- **Product Expiration**: ✅ Working
+- **Product Alerts**: ✅ Working
+- **Settings Configuration**: ✅ Working
+- **Product Sorting**: ✅ Working
+
+### No Critical Issues Found:
+- No console errors or application crashes
+- No data integrity problems
+- All core functionality working as expected
+- Proper error handling and user feedback
+- Product expiration and sorting enhancement fully functional
+- Sale number format correctly implemented
+- All API endpoints responding correctly
+
+### Minor Notes:
+- One product couldn't be deleted during cleanup because it was sold (expected behavior)
+- All timezone issues resolved
+- UUID import added to sales route
+- Test uses unique product names to avoid conflicts
