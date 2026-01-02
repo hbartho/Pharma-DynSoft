@@ -16,6 +16,7 @@ class Product(BaseModel):
     min_stock: int = 10
     category_id: Optional[str] = None
     unit_id: Optional[str] = None  # Unité de produit (Boîte, Flacon...)
+    expiration_date: Optional[datetime] = None  # Date de péremption
     is_active: bool = True
     tenant_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -32,4 +33,5 @@ class ProductCreate(BaseModel):
     min_stock: int = 10
     category_id: Optional[str] = None
     unit_id: Optional[str] = None
+    expiration_date: Optional[datetime] = None  # Date de péremption
     is_active: bool = True
