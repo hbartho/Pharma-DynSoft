@@ -54,7 +54,7 @@ const Layout = ({ children }) => {
   const allMenuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord', roles: ['admin', 'pharmacien', 'caissier'] },
     { path: '/products', icon: Package, label: 'Produits', roles: ['admin', 'pharmacien'] },
-    { path: '/supplies', icon: PackagePlus, label: 'Approvisionnements', roles: ['admin', 'pharmacien'] },
+    { path: '/supplies', icon: PackagePlus, label: 'Approvisionnements', roles: ['admin', 'pharmacien', 'caissier'] },
     { path: '/sales', icon: ShoppingCart, label: 'Ventes', roles: ['admin', 'pharmacien', 'caissier'] },
     { path: '/customers', icon: Users, label: 'Clients', roles: ['admin', 'pharmacien', 'caissier'] },
     { path: '/suppliers', icon: Truck, label: 'Fournisseurs', roles: ['admin', 'pharmacien'] },
