@@ -883,3 +883,16 @@
 - State management optimization successful
 - Employee code integration seamless
 
+
+## Sale Number Integration in Returns (2026-01-02)
+
+### Changes Made
+1. **Sale Model Update**: Added `sale_number` field (format: VNT-0001) and `employee_code`
+2. **Return Model Update**: Added `return_number`, `sale_number`, and `employee_code` fields
+3. **Sales Routes**: Auto-generates `sale_number` on creation (VNT-XXXX format)
+4. **Returns Routes**: 
+   - Auto-generates `return_number` (RET-XXXX format)
+   - Includes `sale_number` reference from original sale
+   - Uses `employee_code` for traceability
+
+### Test Status: Ready for backend testing
