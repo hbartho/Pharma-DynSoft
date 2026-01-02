@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 const Products = () => {
   const { user } = useAuth();
-  const [appSettings, setAppSettings] = useState({ currency: 'GNF' });
+  const [appSettings, setAppSettings] = useState({ currency: 'GNF', expiration_alert_days: 30 });
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [units, setUnits] = useState([]);
@@ -49,6 +49,7 @@ const Products = () => {
     min_stock: '10',
     category_id: '',
     unit_id: '',
+    expiration_date: '',
   });
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
