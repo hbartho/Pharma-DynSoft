@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from database import db
 from auth import get_current_user
 from models.returns import SaleReturn, SaleReturnCreate
@@ -9,9 +9,47 @@ router = APIRouter(prefix="/returns", tags=["Returns"])
 
 
 async def generate_return_number(tenant_id: str) -> str:
-    """Générer un numéro de retour unique et lisible (ex: RET-001)"""
+    """Générer un numéro de retour unique et lisible (ex: RET-0001)"""
     count = await db.returns.count_documents({"tenant_id": tenant_id})
     return f"RET-{str(count + 1).zfill(4)}"
+
+
+async def get_return_delay_days(tenant_id: str) -> int:
+    """Récupérer le délai de retour configuré dans les paramètres"""
+    settings = await db.settings.find_one({"tenant_id": tenant_id}, {"_id": 0})
+    if settings:
+        return settings.get("return_delay_days", 3)  # 3 jours par défaut
+    return 3
+
+
+async def check_sale_return_eligibility(sale: dict, tenant_id: str) -> tuple:
+    """
+    Vérifier si une vente est éligible au retour.
+    Retourne (is_eligible, message, days_remaining)
+    """
+    return_delay_days = await get_return_delay_days(tenant_id)
+    
+    # Parser la date de la vente
+    sale_date = sale.get('created_at')
+    if isinstance(sale_date, str):
+        sale_date = datetime.fromisoformat(sale_date.replace('Z', '+00:00'))
+    
+    # Calculer la date limite de retour
+    deadline = sale_date + timedelta(days=return_delay_days)
+    now = datetime.now(timezone.utc)
+    
+    # Vérifier si le délai est dépassé
+    if now > deadline:
+        days_elapsed = (now - sale_date).days
+        return (
+            False, 
+            f"Le délai de retour de {return_delay_days} jour(s) est dépassé. Cette vente date de {days_elapsed} jour(s).",
+            0
+        )
+    
+    # Calculer les jours restants
+    days_remaining = (deadline - now).days
+    return (True, f"{days_remaining} jour(s) restant(s) pour le retour", days_remaining)
 
 
 @router.post("", response_model=SaleReturn)
@@ -28,6 +66,11 @@ async def create_return(return_data: SaleReturnCreate, current_user: dict = Depe
     sale = await db.sales.find_one({"id": return_data.sale_id, "tenant_id": tenant_id})
     if not sale:
         raise HTTPException(status_code=404, detail="Vente non trouvée")
+    
+    # ⚠️ NOUVELLE VALIDATION : Vérifier le délai de retour
+    is_eligible, message, _ = await check_sale_return_eligibility(sale, tenant_id)
+    if not is_eligible:
+        raise HTTPException(status_code=400, detail=message)
     
     # Récupérer le numéro de vente (ou générer un fallback)
     sale_number = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
@@ -97,6 +140,27 @@ async def create_return(return_data: SaleReturnCreate, current_user: dict = Depe
     await db.returns.insert_one(doc)
     
     return return_obj
+
+
+@router.get("/check-eligibility/{sale_id}")
+async def check_return_eligibility(sale_id: str, current_user: dict = Depends(get_current_user)):
+    """Vérifier si une vente est éligible au retour (délai non dépassé)"""
+    tenant_id = current_user['tenant_id']
+    
+    sale = await db.sales.find_one({"id": sale_id, "tenant_id": tenant_id})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Vente non trouvée")
+    
+    is_eligible, message, days_remaining = await check_sale_return_eligibility(sale, tenant_id)
+    return_delay_days = await get_return_delay_days(tenant_id)
+    
+    return {
+        "sale_id": sale_id,
+        "is_eligible": is_eligible,
+        "message": message,
+        "days_remaining": days_remaining,
+        "return_delay_days": return_delay_days
+    }
 
 
 @router.get("", response_model=List[SaleReturn])
@@ -185,6 +249,9 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
     # Créer un map des ventes pour récupérer les numéros de vente
     sales_map = {s['id']: s for s in sales}
     
+    # Récupérer le délai de retour configuré
+    return_delay_days = await get_return_delay_days(tenant_id)
+    
     def get_user_info(user_id, existing_employee_code=None):
         """Récupère les informations de l'agent"""
         if existing_employee_code:
@@ -213,12 +280,29 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
             'user_name': 'Inconnu'
         }
     
+    def check_return_eligibility(sale_date_str):
+        """Vérifier si une vente est encore éligible au retour"""
+        if isinstance(sale_date_str, str):
+            sale_date = datetime.fromisoformat(sale_date_str.replace('Z', '+00:00'))
+        else:
+            sale_date = sale_date_str
+        
+        deadline = sale_date + timedelta(days=return_delay_days)
+        now = datetime.now(timezone.utc)
+        
+        if now > deadline:
+            return False, 0
+        return True, (deadline - now).days
+    
     # Créer l'historique unifié
     history = []
     
     for sale in sales:
         user_info = get_user_info(sale.get('user_id'), sale.get('employee_code'))
         sale_number = sale.get('sale_number') or f"VNT-{sale['id'][:8].upper()}"
+        
+        # Vérifier l'éligibilité au retour
+        is_returnable, days_remaining = check_return_eligibility(sale['created_at'])
         
         history.append({
             "id": sale['id'],
@@ -229,6 +313,8 @@ async def get_operations_history(current_user: dict = Depends(get_current_user))
             "items_count": len(sale.get('items', [])),
             "customer_id": sale.get('customer_id'),
             "user_id": sale.get('user_id'),
+            "is_returnable": is_returnable,
+            "return_days_remaining": days_remaining,
             **user_info,
             "details": sale
         })
