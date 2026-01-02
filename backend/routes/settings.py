@@ -21,6 +21,30 @@ async def get_public_settings():
         "currency": "GNF"
     }
 
+@router.get("/agencies")
+async def get_all_agencies():
+    """Get all available agencies/pharmacies - No authentication required for login page"""
+    # Récupérer toutes les agences depuis la collection settings
+    settings_list = await db.settings.find({}, {"_id": 0}).to_list(100)
+    
+    agencies = []
+    for setting in settings_list:
+        agencies.append({
+            "tenant_id": setting.get("tenant_id", "default"),
+            "pharmacy_name": setting.get("pharmacy_name", "Pharmacie"),
+            "currency": setting.get("currency", "GNF")
+        })
+    
+    # Si aucune agence, retourner l'agence par défaut
+    if not agencies:
+        agencies.append({
+            "tenant_id": "default",
+            "pharmacy_name": "DynSoft Pharma",
+            "currency": "GNF"
+        })
+    
+    return agencies
+
 @router.get("")
 async def get_settings(current_user: dict = Depends(get_current_user)):
     """Get application settings"""
