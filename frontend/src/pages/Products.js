@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '../components/ui/pagination';
-import { Plus, Search, Edit, Trash2, Package, Tag, Settings, Power, PowerOff, AlertTriangle, Calculator, TrendingUp } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Tag, Settings, Power, PowerOff, AlertTriangle, Calculator, TrendingUp, Box, Hash } from 'lucide-react';
 import api from '../services/api';
 import { addItem, getAllItems, updateItem, deleteItem as deleteFromDB, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
@@ -19,22 +19,28 @@ const Products = () => {
   const [appSettings, setAppSettings] = useState({ currency: 'GNF' });
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [units, setUnits] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDialog, setShowDialog] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showUnitDialog, setShowUnitDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [editingUnit, setEditingUnit] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [productsPerPage] = useState(9);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeleteCategoryDialog, setShowDeleteCategoryDialog] = useState(false);
+  const [showDeleteUnitDialog, setShowDeleteUnitDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [unitToDelete, setUnitToDelete] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [productSearchInForm, setProductSearchInForm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
+    internal_reference: '',
     barcode: '',
     description: '',
     purchase_price: '',
@@ -42,12 +48,18 @@ const Products = () => {
     stock: '',
     min_stock: '10',
     category_id: '',
+    unit_id: '',
   });
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
     description: '',
     color: '#3B82F6',
     markup_coefficient: '1.0',
+  });
+  const [unitFormData, setUnitFormData] = useState({
+    name: '',
+    abbreviation: '',
+    description: '',
   });
   const { isOnline } = useOffline();
 
@@ -77,11 +89,23 @@ const Products = () => {
         const timestamp = Date.now();
         const headers = forceRefresh ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {};
         const response = await api.get(`/categories?_t=${timestamp}`, { headers });
-        console.log('Categories loaded:', response.data.length);
         setCategories(response.data);
       }
     } catch (error) {
       console.error('Error loading categories:', error);
+    }
+  };
+
+  const loadUnits = async (forceRefresh = false) => {
+    try {
+      if (isOnline) {
+        const timestamp = Date.now();
+        const headers = forceRefresh ? { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } : {};
+        const response = await api.get(`/units?_t=${timestamp}`, { headers });
+        setUnits(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading units:', error);
     }
   };
 
@@ -129,7 +153,8 @@ const Products = () => {
       }
       await Promise.all([
         loadProducts(true),
-        loadCategories(true)
+        loadCategories(true),
+        loadUnits(true)
       ]);
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -141,6 +166,7 @@ const Products = () => {
       await loadAppSettings();
       await loadProducts();
       await loadCategories();
+      await loadUnits();
     };
     init();
   }, []); // eslint-disable-line
@@ -188,11 +214,13 @@ const Products = () => {
     try {
       const productData = {
         ...formData,
+        internal_reference: formData.internal_reference || null,
         purchase_price: parseFloat(formData.purchase_price) || 0,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         min_stock: parseInt(formData.min_stock),
         category_id: formData.category_id || null,
+        unit_id: formData.unit_id || null,
       };
 
       if (editingProduct) {
@@ -257,7 +285,27 @@ const Products = () => {
       await loadCategories(true);
     } catch (error) {
       console.error('Error saving category:', error);
-      toast.error('Erreur lors de l\'enregistrement de la catégorie');
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'enregistrement de la catégorie');
+    }
+  };
+
+  const handleUnitSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (editingUnit) {
+        await api.put(`/units/${editingUnit.id}`, unitFormData);
+        toast.success('Unité mise à jour');
+      } else {
+        await api.post('/units', unitFormData);
+        toast.success('Unité ajoutée');
+      }
+      resetUnitForm();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await loadUnits(true);
+    } catch (error) {
+      console.error('Error saving unit:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de l\'enregistrement de l\'unité');
     }
   };
 
@@ -325,10 +373,31 @@ const Products = () => {
     }
   };
 
+  const handleDeleteUnit = (unit) => {
+    setUnitToDelete(unit);
+    setShowDeleteUnitDialog(true);
+  };
+
+  const handleDeleteUnitConfirm = async () => {
+    if (!unitToDelete) return;
+    
+    try {
+      await api.delete(`/units/${unitToDelete.id}`);
+      toast.success('Unité supprimée');
+      setShowDeleteUnitDialog(false);
+      setUnitToDelete(null);
+      await loadUnits(true);
+    } catch (error) {
+      console.error('Error deleting unit:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
+    }
+  };
+
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
+      internal_reference: product.internal_reference || '',
       barcode: product.barcode || '',
       description: product.description || '',
       purchase_price: (product.purchase_price || 0).toString(),
@@ -336,6 +405,7 @@ const Products = () => {
       stock: product.stock.toString(),
       min_stock: product.min_stock.toString(),
       category_id: product.category_id || '',
+      unit_id: product.unit_id || '',
     });
     setShowDialog(true);
   };
@@ -348,7 +418,15 @@ const Products = () => {
       color: category.color || '#3B82F6',
       markup_coefficient: (category.markup_coefficient || 1.0).toString(),
     });
-    setShowCategoryDialog(true);
+  };
+
+  const handleEditUnit = (unit) => {
+    setEditingUnit(unit);
+    setUnitFormData({
+      name: unit.name,
+      abbreviation: unit.abbreviation || '',
+      description: unit.description || '',
+    });
   };
 
   const resetForm = () => {
@@ -356,6 +434,7 @@ const Products = () => {
     setProductSearchInForm('');
     setFormData({
       name: '',
+      internal_reference: '',
       barcode: '',
       description: '',
       purchase_price: '',
@@ -363,6 +442,7 @@ const Products = () => {
       stock: '',
       min_stock: '10',
       category_id: '',
+      unit_id: '',
     });
   };
 
@@ -376,6 +456,15 @@ const Products = () => {
     });
   };
 
+  const resetUnitForm = () => {
+    setEditingUnit(null);
+    setUnitFormData({
+      name: '',
+      abbreviation: '',
+      description: '',
+    });
+  };
+
   const getCategoryName = (categoryId) => {
     const category = categories.find(c => c.id === categoryId);
     return category?.name || 'Sans catégorie';
@@ -386,9 +475,14 @@ const Products = () => {
     return category?.color || '#94A3B8';
   };
 
-  const getCategoryCoefficient = (categoryId) => {
-    const category = categories.find(c => c.id === categoryId);
-    return category?.markup_coefficient || 1.0;
+  const getUnitName = (unitId) => {
+    const unit = units.find(u => u.id === unitId);
+    return unit?.name || '';
+  };
+
+  const getUnitAbbreviation = (unitId) => {
+    const unit = units.find(u => u.id === unitId);
+    return unit?.abbreviation || unit?.name || '';
   };
 
   const isAdmin = user?.role === 'admin';
@@ -396,14 +490,16 @@ const Products = () => {
   const filteredProductsInForm = products.filter((p) =>
     productSearchInForm && (
       p.name?.toLowerCase().includes(productSearchInForm.toLowerCase()) ||
-      p.barcode?.toLowerCase().includes(productSearchInForm.toLowerCase())
+      p.barcode?.toLowerCase().includes(productSearchInForm.toLowerCase()) ||
+      p.internal_reference?.toLowerCase().includes(productSearchInForm.toLowerCase())
     )
   );
 
   const filteredProducts = products
     .filter((p) => {
       const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.barcode?.toLowerCase().includes(searchQuery.toLowerCase());
+        p.barcode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.internal_reference?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = filterCategory === 'all' || p.category_id === filterCategory;
       const matchesStatus = filterStatus === 'all' || 
         (filterStatus === 'active' && p.is_active !== false) || 
@@ -453,6 +549,112 @@ const Products = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            {/* Bouton Gérer les unités */}
+            <Dialog open={showUnitDialog} onOpenChange={(open) => { 
+              setShowUnitDialog(open); 
+              if (open) {
+                loadUnits(true);
+              } else {
+                resetUnitForm(); 
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-full">
+                  <Box className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                  Unités
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    {editingUnit ? 'Modifier l\'unité' : 'Gestion des unités'}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                {/* Liste des unités existantes */}
+                {!editingUnit && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+                    {units.length === 0 ? (
+                      <p className="text-sm text-slate-500 text-center py-4">Aucune unité</p>
+                    ) : (
+                      units.map((unit) => (
+                        <div key={unit.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                              <Box className="w-4 h-4 text-indigo-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-900">{unit.name}</p>
+                              <p className="text-xs text-slate-500">
+                                {unit.abbreviation && <span className="font-mono bg-slate-200 px-1 rounded mr-2">{unit.abbreviation}</span>}
+                                {unit.description || 'Aucune description'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditUnit(unit)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteUnit(unit)} className="text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Formulaire d'ajout/modification d'unité */}
+                <form onSubmit={handleUnitSubmit} className="space-y-4 border-t pt-4">
+                  <p className="text-sm font-medium text-slate-700">
+                    {editingUnit ? 'Modifier' : 'Nouvelle unité'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="unit-name">Nom *</Label>
+                      <Input
+                        id="unit-name"
+                        value={unitFormData.name}
+                        onChange={(e) => setUnitFormData({ ...unitFormData, name: e.target.value })}
+                        required
+                        placeholder="Ex: Boîte"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="unit-abbr">Abréviation</Label>
+                      <Input
+                        id="unit-abbr"
+                        value={unitFormData.abbreviation}
+                        onChange={(e) => setUnitFormData({ ...unitFormData, abbreviation: e.target.value.toUpperCase() })}
+                        placeholder="Ex: BTE"
+                        className="font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="unit-desc">Description</Label>
+                    <Input
+                      id="unit-desc"
+                      value={unitFormData.description}
+                      onChange={(e) => setUnitFormData({ ...unitFormData, description: e.target.value })}
+                      placeholder="Description optionnelle"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    {editingUnit && (
+                      <Button type="button" variant="outline" onClick={resetUnitForm}>
+                        Annuler
+                      </Button>
+                    )}
+                    <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+                      {editingUnit ? 'Mettre à jour' : 'Ajouter'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
             {/* Bouton Gérer les catégories */}
             <Dialog open={showCategoryDialog} onOpenChange={(open) => { 
               setShowCategoryDialog(open); 
@@ -598,6 +800,7 @@ const Products = () => {
               setShowDialog(open); 
               if (open) {
                 loadCategories();
+                loadUnits();
               } else {
                 resetForm();
               }
@@ -618,11 +821,11 @@ const Products = () => {
                   {/* Recherche de produit existant */}
                   {!editingProduct && (
                     <div className="p-3 bg-slate-50 rounded-lg">
-                      <Label className="text-sm text-slate-600">Rechercher un produit existant (nom ou code-barres)</Label>
+                      <Label className="text-sm text-slate-600">Rechercher un produit existant</Label>
                       <div className="relative mt-2">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" strokeWidth={1.5} />
                         <Input
-                          placeholder="Tapez pour rechercher..."
+                          placeholder="Nom, code-barres ou référence interne..."
                           value={productSearchInForm}
                           onChange={(e) => setProductSearchInForm(e.target.value)}
                           className="pl-9"
@@ -642,9 +845,10 @@ const Products = () => {
                             >
                               <div>
                                 <p className="font-medium text-slate-900">{product.name}</p>
-                                {product.barcode && (
-                                  <p className="text-xs text-slate-500">{product.barcode}</p>
-                                )}
+                                <p className="text-xs text-slate-500">
+                                  {product.internal_reference && <span className="mr-2">Réf: {product.internal_reference}</span>}
+                                  {product.barcode && <span>Code: {product.barcode}</span>}
+                                </p>
                               </div>
                               <span className="text-teal-700 font-medium">{formatAmount(product.price)}</span>
                             </button>
@@ -657,6 +861,7 @@ const Products = () => {
                     </div>
                   )}
                   
+                  {/* Nom et Référence interne */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">Nom du produit *</Label>
@@ -669,15 +874,33 @@ const Products = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="barcode">Code-barres</Label>
+                      <Label htmlFor="internal_reference" className="flex items-center gap-1">
+                        <Hash className="w-3.5 h-3.5 text-slate-400" />
+                        Référence interne
+                      </Label>
                       <Input
-                        id="barcode"
-                        value={formData.barcode}
-                        onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                        data-testid="product-barcode-input"
+                        id="internal_reference"
+                        value={formData.internal_reference}
+                        onChange={(e) => setFormData({ ...formData, internal_reference: e.target.value.toUpperCase() })}
+                        data-testid="product-reference-input"
+                        placeholder="Ex: MED-001"
+                        className="font-mono"
                       />
                     </div>
                   </div>
+
+                  {/* Code-barres */}
+                  <div>
+                    <Label htmlFor="barcode">Code-barres</Label>
+                    <Input
+                      id="barcode"
+                      value={formData.barcode}
+                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                      data-testid="product-barcode-input"
+                    />
+                  </div>
+
+                  {/* Description */}
                   <div>
                     <Label htmlFor="description">Description</Label>
                     <Input
@@ -687,40 +910,67 @@ const Products = () => {
                     />
                   </div>
 
-                  {/* Catégorie - IMPORTANT: changer la catégorie recalcule le prix */}
-                  <div>
-                    <Label htmlFor="category">Catégorie</Label>
-                    <Select 
-                      value={formData.category_id || 'none'} 
-                      onValueChange={handleCategoryChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sans catégorie</SelectItem>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: cat.color || '#3B82F6' }}
-                              />
-                              {cat.name}
-                              <span className="text-xs text-slate-400 ml-1">
-                                (×{cat.markup_coefficient || 1.0})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {formData.category_id && (
-                      <p className="text-xs text-teal-600 mt-1 flex items-center gap-1">
-                        <Calculator className="w-3 h-3" />
-                        Coefficient d'intérêt: ×{getSelectedCategoryCoefficient()}
-                      </p>
-                    )}
+                  {/* Catégorie et Unité */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="category">Catégorie</Label>
+                      <Select 
+                        value={formData.category_id || 'none'} 
+                        onValueChange={handleCategoryChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sans catégorie</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: cat.color || '#3B82F6' }}
+                                />
+                                {cat.name}
+                                <span className="text-xs text-slate-400 ml-1">
+                                  (×{cat.markup_coefficient || 1.0})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formData.category_id && (
+                        <p className="text-xs text-teal-600 mt-1 flex items-center gap-1">
+                          <Calculator className="w-3 h-3" />
+                          Coefficient: ×{getSelectedCategoryCoefficient()}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="unit">Unité</Label>
+                      <Select 
+                        value={formData.unit_id || 'none'} 
+                        onValueChange={(value) => setFormData({ ...formData, unit_id: value === 'none' ? '' : value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une unité" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sans unité</SelectItem>
+                          {units.map((unit) => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              <div className="flex items-center gap-2">
+                                <Box className="w-3 h-3 text-indigo-500" />
+                                {unit.name}
+                                {unit.abbreviation && (
+                                  <span className="text-xs text-slate-400 font-mono">({unit.abbreviation})</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Prix */}
@@ -818,7 +1068,7 @@ const Products = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" strokeWidth={1.5} />
             <Input
-              placeholder="Rechercher par nom ou code-barres..."
+              placeholder="Rechercher par nom, code-barres ou référence..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               data-testid="product-search-input"
@@ -903,11 +1153,20 @@ const Products = () => {
                       </span>
                     )}
                   </div>
-                  {product.barcode && (
-                    <p className="text-sm text-slate-500" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
-                      {product.barcode}
-                    </p>
-                  )}
+                  {/* Référence interne et code-barres */}
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-500" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                    {product.internal_reference && (
+                      <span className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded">
+                        <Hash className="w-3 h-3" />
+                        {product.internal_reference}
+                      </span>
+                    )}
+                    {product.barcode && (
+                      <span className="bg-slate-100 px-1.5 py-0.5 rounded">
+                        {product.barcode}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className={`p-2 rounded-lg ${needsRestock && product.is_active !== false ? 'bg-amber-100' : 'bg-teal-50'}`}>
                   {needsRestock && product.is_active !== false ? (
@@ -918,9 +1177,9 @@ const Products = () => {
                 </div>
               </div>
               
-              {/* Category Badge */}
-              {product.category_id && (
-                <div className="mb-3">
+              {/* Category and Unit Badges */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {product.category_id && (
                   <span 
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
                     style={{ backgroundColor: getCategoryColor(product.category_id) }}
@@ -928,8 +1187,14 @@ const Products = () => {
                     <Tag className="w-3 h-3" />
                     {getCategoryName(product.category_id)}
                   </span>
-                </div>
-              )}
+                )}
+                {product.unit_id && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                    <Box className="w-3 h-3" />
+                    {getUnitAbbreviation(product.unit_id) || getUnitName(product.unit_id)}
+                  </span>
+                )}
+              </div>
               
               <div className="space-y-2 mb-3">
                 {product.purchase_price > 0 && (
@@ -952,7 +1217,7 @@ const Products = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Stock:</span>
                   <span className={`font-medium ${product.stock <= product.min_stock ? 'text-amber-600' : 'text-emerald-600'}`}>
-                    {product.stock} unités
+                    {product.stock} {product.unit_id ? getUnitAbbreviation(product.unit_id).toLowerCase() : 'unités'}
                   </span>
                 </div>
               </div>
@@ -1118,6 +1383,27 @@ const Products = () => {
               Annuler
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteCategoryConfirm} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialogue de confirmation de suppression unité */}
+      <AlertDialog open={showDeleteUnitDialog} onOpenChange={setShowDeleteUnitDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer l'unité</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer l'unité "{unitToDelete?.name}" ?
+              Cette action n'est possible que si aucun produit n'utilise cette unité.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowDeleteUnitDialog(false); setUnitToDelete(null); }}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUnitConfirm} className="bg-red-600 hover:bg-red-700">
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
