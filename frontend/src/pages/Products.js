@@ -1187,6 +1187,9 @@ const Products = () => {
           {currentProducts.map((product) => {
             const needsRestock = product.stock <= product.min_stock;
             const margin = calculateMargin(product.purchase_price, product.price);
+            const nearExp = isNearExpiration(product);
+            const expired = isExpired(product);
+            const daysUntil = getDaysUntilExpiration(product);
             return (
             <div
               key={product.id}
@@ -1194,14 +1197,18 @@ const Products = () => {
               className={`p-4 rounded-xl bg-white border transition-all cursor-pointer ${
                 product.is_active === false 
                   ? 'border-red-200 bg-red-50/30 opacity-75' 
-                  : needsRestock
-                    ? 'border-amber-300 bg-amber-50/30'
-                    : 'border-slate-100 hover:border-teal-200'
+                  : expired
+                    ? 'border-red-400 bg-red-50/50'
+                    : nearExp
+                      ? 'border-orange-300 bg-orange-50/30'
+                      : needsRestock
+                        ? 'border-amber-300 bg-amber-50/30'
+                        : 'border-slate-100 hover:border-teal-200'
               }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                       {product.name}
                     </h3>
@@ -1210,7 +1217,19 @@ const Products = () => {
                         Désactivé
                       </span>
                     )}
-                    {needsRestock && product.is_active !== false && (
+                    {expired && product.is_active !== false && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Périmé
+                      </span>
+                    )}
+                    {nearExp && !expired && product.is_active !== false && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {daysUntil}j
+                      </span>
+                    )}
+                    {needsRestock && product.is_active !== false && !expired && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" />
                         Réappro.
@@ -1232,8 +1251,16 @@ const Products = () => {
                     )}
                   </div>
                 </div>
-                <div className={`p-2 rounded-lg ${needsRestock && product.is_active !== false ? 'bg-amber-100' : 'bg-teal-50'}`}>
-                  {needsRestock && product.is_active !== false ? (
+                <div className={`p-2 rounded-lg ${
+                  expired ? 'bg-red-100' : 
+                  nearExp ? 'bg-orange-100' : 
+                  needsRestock && product.is_active !== false ? 'bg-amber-100' : 'bg-teal-50'
+                }`}>
+                  {expired ? (
+                    <Calendar className="w-5 h-5 text-red-600" strokeWidth={1.5} />
+                  ) : nearExp ? (
+                    <Clock className="w-5 h-5 text-orange-600" strokeWidth={1.5} />
+                  ) : needsRestock && product.is_active !== false ? (
                     <AlertTriangle className="w-5 h-5 text-amber-600" strokeWidth={1.5} />
                   ) : (
                     <Package className="w-5 h-5 text-teal-700" strokeWidth={1.5} />
