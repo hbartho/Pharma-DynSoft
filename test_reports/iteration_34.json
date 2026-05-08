@@ -1,0 +1,72 @@
+{
+  "summary": "Backend testing complete for TVA persistence bug fix. All 7 pytest tests passed. Bug fix verified: TVA (tax_rate) now correctly persists when editing supplies, including TVA=0.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "tva_persistence_tests": [
+      "test_scenario1_tva_0_to_18_persists - PASSED: Create TVA=0, edit to TVA=18, verify persistence",
+      "test_scenario2_tva_18_to_0_persists - PASSED: Create TVA=18, edit to TVA=0, verify persistence",
+      "test_scenario3_tva_18_unchanged_persists - PASSED: Create TVA=18, edit without change, verify persistence",
+      "test_scenario4_other_fields_persist - PASSED: Verify lot_number, shelf_location, expiration_date persist",
+      "test_tva_various_values - PASSED: Test TVA values 0, 5.5, 10, 18, 18.5, 20, 25",
+      "test_tva_rate_field_accepted - PASSED: Backend accepts 'tva_rate' field",
+      "test_response_contains_tva_aliases - PASSED: Response contains tax_rate/tva_rate aliases"
+    ],
+    "curl_verification": [
+      "Manual curl test: Create TVA=0 -> Update TVA=18 -> Fetch = TVA persists as 18",
+      "Manual curl test: lot_number persists correctly",
+      "Manual curl test: shelf_location persists correctly"
+    ]
+  },
+
+  "bug_fix_verification": {
+    "original_issue": "Quand on crée un approvisionnement sans TVA (tva_rate=0), puis on l'édite pour ajouter une TVA (par ex 18%), et qu'on rouvre l'approvisionnement, la TVA revient à 0",
+    "root_cause": "Conditions '!= 0' in create_supply and update_supply functions prevented explicit TVA=0 from being saved",
+    "fix_location": "/app/backend/routes/supplies.py - create_supply (lines 199-206) and update_supply (lines 415-422)",
+    "fix_description": "Removed '!= 0' conditions. Now uses 'is not None' checks to allow explicit TVA=0 values",
+    "fix_verified": true
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_tva_persistence.py",
+    "/app/test_reports/pytest/pytest_tva_persistence.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Fix correctly implemented: TVA handling now uses 'is not None' checks instead of '!= 0'",
+    "Backend properly handles all TVA aliases: tva_rate, tva, and tax_rate",
+    "Response correctly returns tax_rate, tva, and tva_rate fields for frontend compatibility",
+    "All related fields (lot_number, shelf_location, date_peremption) also persist correctly"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_tva_persistence.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (7/7 tests passed)"
+  },
+
+  "test_credentials": {
+    "admin": "admin@pharmaflow.com / admin123"
+  },
+
+  "seed_data_creation": "Test supplies created and cleaned up automatically during test execution",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "TVA persistence bug is FIXED and verified. Key code changes in supplies.py: removed '!= 0' conditions that prevented saving explicit TVA=0 values. Test file test_tva_persistence.py covers all scenarios and can be used for regression testing. Valid test IDs: Product=debt-tracking-1, Supplier=debt-tracking-1"
+}

@@ -1,0 +1,134 @@
+{
+  "identity": {
+    "name": "PharmaFlow",
+    "persona": "E1: The Anti-AI Designer",
+    "tone": "Bio-Tech Precision",
+    "description": "A pharmacy management system that feels like a modern cockpit. Clean, sterile, yet approachable and fluid."
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight lg:text-5xl",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "p": "leading-7 [&:not(:first-child)]:mt-6"
+    },
+    "weights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#0F766E",
+        "foreground": "#FFFFFF",
+        "hover": "#115E59"
+      },
+      "secondary": {
+        "DEFAULT": "#10B981",
+        "foreground": "#FFFFFF",
+        "hover": "#059669"
+      },
+      "accent": {
+        "DEFAULT": "#0EA5E9",
+        "foreground": "#FFFFFF",
+        "hover": "#0284C7"
+      },
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "text": {
+        "primary": "#0F172A",
+        "secondary": "#64748B",
+        "muted": "#94A3B8"
+      },
+      "border": "#E2E8F0",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    },
+    "gradients": {
+      "primary": "bg-gradient-to-r from-teal-600 to-emerald-600",
+      "surface": "bg-gradient-to-b from-white to-slate-50"
+    }
+  },
+  "layout": {
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-12 gap-6",
+      "pos": "grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-4rem)]",
+      "form": "grid grid-cols-1 md:grid-cols-2 gap-6"
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-10",
+      "section_gap": "gap-8",
+      "item_gap": "gap-4"
+    },
+    "containers": {
+      "card": "bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200",
+      "glass": "bg-white/80 backdrop-blur-md border border-white/20 shadow-lg"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-teal-700 text-white hover:bg-teal-800 rounded-full px-6 py-2 font-medium transition-all active:scale-95",
+      "secondary": "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-full px-6 py-2 font-medium transition-all active:scale-95",
+      "outline": "border-2 border-slate-200 text-slate-700 hover:border-teal-600 hover:text-teal-700 rounded-full px-6 py-2 font-medium transition-all"
+    },
+    "inputs": {
+      "default": "bg-slate-50 border-slate-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg px-4 py-2 transition-all",
+      "search": "pl-10 bg-white border-slate-200 rounded-full shadow-sm focus:ring-2 focus:ring-teal-500/20"
+    },
+    "cards": {
+      "stat": "p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group",
+      "product": "p-4 rounded-xl bg-white border border-slate-100 hover:border-teal-200 transition-all cursor-pointer"
+    }
+  },
+  "motion": {
+    "transitions": {
+      "default": "transition-all duration-200 ease-in-out",
+      "slow": "transition-all duration-500 ease-out",
+      "bounce": "transition-all duration-300 cubic-bezier(0.34, 1.56, 0.64, 1)"
+    },
+    "animations": {
+      "fade_in": "animate-in fade-in duration-500",
+      "slide_up": "animate-in slide-in-from-bottom-4 duration-500",
+      "scale_in": "animate-in zoom-in-95 duration-300"
+    }
+  },
+  "assets": {
+    "images": {
+      "pharmacist_hero": "https://images.unsplash.com/photo-1552406416-272abc535d27?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "pharmacy_interior": "https://images.unsplash.com/photo-1631367771698-606007aecd52?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "medicine_pills": "https://images.unsplash.com/photo-1599557835469-3e72e1be2802?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "login_bg": "https://images.unsplash.com/photo-1582146804102-b4a01b0a51ae?crop=entropy&cs=srgb&fm=jpg&q=85"
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "stroke-width={1.5} className='w-5 h-5'"
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure text contrast ratio of at least 4.5:1 against background",
+    "focus_states": "Visible focus rings on all interactive elements (ring-2 ring-teal-500 ring-offset-2)",
+    "aria": "Use aria-labels for icon-only buttons",
+    "reduced_motion": "Respect prefers-reduced-motion media query"
+  },
+  "universal_guidelines": [
+    "Do not use generic centered layouts. Use asymmetry and grid tension.",
+    "Use 2-3x more spacing than typical designs (p-8 instead of p-4).",
+    "Every interaction needs a micro-animation (hover, active, focus).",
+    "Use 'Manrope' for headings to give a modern, technical feel.",
+    "Avoid pure black (#000000). Use Slate-900 (#0F172A) instead.",
+    "Glassmorphism should be subtle: bg-white/80 backdrop-blur-md.",
+    "All interactive elements MUST have data-testid attributes."
+  ],
+  "instructions_to_main_agent": "Implement the design system using the provided Tailwind config and Shadcn components. Customize the Shadcn components to match the 'Bio-Tech Precision' aesthetic (rounded-xl, teal accents). Use the provided image URLs for placeholders. Ensure the layout is responsive and works well on tablet devices for the POS interface."
+}

@@ -1,0 +1,114 @@
+{
+  "summary": "Discount info in dashboard sales by payment - All features verified. Backend API /api/reports/today-sales-by-payment correctly returns discount_info (total_discount: 32125, discount_count: 19). Dashboard displays 'Rabais: -32 125 GNF (19 ventes)' next to total sales. All 3 discount rules (Volume, Loyalty, Expiration) are active and visible.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "backend_api_tests": [
+      "test_discount_rules_exist - PASSED: 3 rules found (volume, loyalty, expiration)",
+      "test_volume_discount_rule - PASSED: 'Rabais Volume > 50000 GNF' with 3% discount",
+      "test_loyalty_discount_rule - PASSED: 'Fidélité Client' with 5% discount for 20+ purchases",
+      "test_expiration_discount_rule - PASSED: 'Péremption Proche (30j)' with 10% discount",
+      "test_today_sales_by_payment_endpoint - PASSED: Returns 200",
+      "test_response_has_discount_info - PASSED: discount_info field present",
+      "test_discount_info_structure - PASSED: total_discount and discount_count present",
+      "test_discount_info_values_non_negative - PASSED",
+      "test_full_response_structure - PASSED: All required fields present",
+      "test_date_parameter - PASSED: Date parameter works correctly"
+    ],
+    "frontend_ui_tests": [
+      "Dashboard loads successfully - PASSED",
+      "Ventes par Mode de Paiement section visible - PASSED",
+      "Discount info displayed: 'Rabais: -32 125 GNF (19 ventes)' - PASSED",
+      "Sales list shows individual discounts in Payment column - PASSED",
+      "Discount Rules page shows all 3 rules - PASSED"
+    ]
+  },
+
+  "features_verified": {
+    "api_discount_info": {
+      "endpoint": "/api/reports/today-sales-by-payment",
+      "returns_discount_info": true,
+      "total_discount": 32125,
+      "discount_count": 19,
+      "status": "WORKING"
+    },
+    "dashboard_discount_display": {
+      "location": "Next to total sales in 'Ventes par Mode de Paiement' section",
+      "format": "Rabais: -32 125 GNF (19 ventes)",
+      "icon": "Green tag icon",
+      "status": "WORKING"
+    },
+    "discount_rules": {
+      "volume_rule": {
+        "name": "Rabais Volume > 50000 GNF",
+        "type": "volume",
+        "discount": "3% percent",
+        "condition": "min_amount: 50000 GNF",
+        "is_active": true
+      },
+      "loyalty_rule": {
+        "name": "Fidélité Client",
+        "type": "loyalty",
+        "discount": "5% percent",
+        "condition": "min_purchases: 20",
+        "is_active": true
+      },
+      "expiration_rule": {
+        "name": "Péremption Proche (30j)",
+        "type": "expiration",
+        "discount": "10% percent",
+        "condition": "days_before_expiry: 30",
+        "is_active": true
+      }
+    },
+    "sales_list_discount_display": {
+      "column": "Paiement",
+      "format": "Shows 'Rabais: -XXXX GNF' below payment method",
+      "status": "WORKING"
+    }
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_discount_dashboard.py",
+    "/app/test_reports/pytest/pytest_discount_dashboard.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Backend reports.py correctly calculates and returns discount_info in get_today_sales_by_payment()",
+    "Frontend Dashboard.js properly displays discount info with green Tag icon",
+    "useDashboard.js hook correctly extracts discount_info from API response",
+    "All 3 discount rules (Volume, Loyalty, Expiration) are active and properly configured"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_discount_dashboard.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+
+  "test_credentials": {
+    "admin": "admin@pharmaflow.com / admin123"
+  },
+
+  "seed_data_creation": "None - used existing sales data with discounts",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Discount info display in dashboard is fully working. API /api/reports/today-sales-by-payment returns discount_info with total_discount and discount_count. Dashboard shows this in the 'Ventes par Mode de Paiement' section with green tag icon. Sales list shows individual discounts in the Payment column. 3 active discount rules: Volume (3% for >50000 GNF), Loyalty (5% for 20+ purchases), Expiration (10% for products expiring in 30 days)."
+}

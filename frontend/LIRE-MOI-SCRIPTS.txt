@@ -1,0 +1,133 @@
+========================================
+Scripts d'installation Frontend
+DynSoft Pharma - Utilisation NPM
+========================================
+
+📁 FICHIERS DISPONIBLES
+========================================
+
+1. setup-and-run-frontend.bat
+   - Installation COMPLETE + Demarrage
+   - Utilise: npm install --legacy-peer-deps
+   - Option de nettoyage disponible
+
+2. start-frontend.bat
+   - Demarrage RAPIDE
+   - Installe les dependances si necessaire
+   - Ideal pour un usage quotidien
+
+3. clean-install.bat
+   - NETTOYAGE complet
+   - Reinstallation fraiche
+   - Utiliser en cas de problemes
+
+========================================
+🚀 PREMIERE INSTALLATION
+========================================
+
+Double-cliquez sur:
+   setup-and-run-frontend.bat
+
+Ou en ligne de commande:
+   cd C:\dev\Pharma\projet\frontend
+   setup-and-run-frontend.bat
+
+========================================
+⚡ DEMARRAGE RAPIDE (usage quotidien)
+========================================
+
+Double-cliquez sur:
+   start-frontend.bat
+
+Ou en ligne de commande:
+   cd C:\dev\Pharma\projet\frontend
+   start-frontend.bat
+
+========================================
+🔧 EN CAS DE PROBLEMES
+========================================
+
+1. Executez clean-install.bat
+2. Puis executez setup-and-run-frontend.bat
+
+Ou manuellement:
+   rmdir /s /q node_modules
+   del package-lock.json
+   npm cache clean --force
+   npm install --legacy-peer-deps
+   npm start
+
+========================================
+📝 COMMANDES MANUELLES NPM
+========================================
+
+Installation:
+   npm install --legacy-peer-deps
+
+Demarrage:
+   npm start
+
+Build production:
+   npm run build
+
+Nettoyage:
+   npm cache clean --force
+
+========================================
+✅ VERIFICATION
+========================================
+
+Apres le demarrage, vous devriez voir:
+   "Compiled successfully!"
+   "Local: http://localhost:3000"
+
+Le navigateur s'ouvre automatiquement.
+
+========================================
+🔐 IDENTIFIANTS DE TEST
+========================================
+
+Email: demo@pharmaflow.com
+Mot de passe: demo123
+
+========================================
+⚠️ POINTS IMPORTANTS
+========================================
+
+1. Le BACKEND doit être démarré AVANT
+   Port backend: http://localhost:8001
+
+2. Le fichier .env doit contenir:
+   REACT_APP_BACKEND_URL=http://localhost:8001
+
+3. MongoDB doit être en cours d'execution
+
+========================================
+🐛 ERREURS COMMUNES
+========================================
+
+Erreur: "Port 3000 already in use"
+Solution:
+   set PORT=3001
+   npm start
+
+Erreur: "Module not found"
+Solution:
+   Executez clean-install.bat
+
+Erreur: "ERESOLVE unable to resolve"
+Solution:
+   Deja corrigee avec --legacy-peer-deps
+
+========================================
+📧 BESOIN D'AIDE?
+========================================
+
+Consultez:
+- README-INSTALLATION.md
+- GUIDE_INSTALLATION_LOCAL.md
+
+========================================
+Version: DynSoft Pharma v1.0
+Date: Decembre 2024
+========================================

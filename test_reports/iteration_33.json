@@ -1,0 +1,76 @@
+{
+  "summary": "Bug fix verification complete for split payments (paiements mixtes) - is_split_payment and split_payments columns are now correctly saved during sale creation",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "backend_api_tests": [
+      "POST /api/sales with is_split_payment=true and split_payments array - PASSED",
+      "GET /api/sales/{id} returns is_split_payment and split_payments correctly - PASSED",
+      "GET /api/sales (paginated list) includes is_split_payment and split_payments - PASSED",
+      "Simple (non-split) sale with is_split_payment=false still works - PASSED",
+      "Existing split payment sale VNT-6F8CAD7D verified - PASSED"
+    ],
+    "frontend_ui_tests": [
+      "Sales list displays split payment methods with amounts (Espèces + Orange Money) - PASSED",
+      "Sale details dialog shows split payment breakdown - PASSED",
+      "New split payment sale VNT-0211C276 created and displayed correctly - PASSED"
+    ]
+  },
+
+  "bug_fix_verification": {
+    "original_issue": "Les colonnes is_split_payment et split_payments n'étaient pas sauvegardées lors de la création des ventes",
+    "root_cause": "Missing is_split_payment and split_payments assignment in SaleRepository.create() method (line 468 in repositories_extended.py)",
+    "fix_applied": "Added is_split_payment=data.get('is_split_payment', False) and split_payments=data.get('split_payments') to Sale model instantiation",
+    "fix_verified": true,
+    "test_sales_created": [
+      {"sale_number": "VNT-0211C276", "type": "split_payment", "methods": ["cash (5000 GNF)", "orange_money (1300 GNF)"]},
+      {"sale_number": "VNT-6F8CAD7D", "type": "split_payment", "methods": ["cash (3000 GNF)", "orange_money (2000 GNF)"]},
+      {"sale_number": "VNT-B9CC0B0B", "type": "simple_cash", "method": "cash"}
+    ]
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_split_payments_fix.py",
+    "/app/test_reports/pytest/pytest_split_payments_fix.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Fix correctly implemented: is_split_payment and split_payments now saved in SaleRepository.create()",
+    "to_dict() method correctly returns split payment data using getattr() for backward compatibility",
+    "Frontend Sales.js correctly displays split payment breakdown in list and details views (lines 1027-1029, 2353-2355)"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_split_payments_fix.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (5/5 tests passed)",
+    "frontend": "100% (all split payment UI tests passed)"
+  },
+
+  "test_credentials": {
+    "admin": "admin@pharmaflow.com / admin123"
+  },
+
+  "seed_data_creation": "Created test split payment sales: VNT-0211C276 (cash+orange_money), VNT-B9CC0B0B (cash only)",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Split payments bug fix verified. Key points: 1) SaleRepository.create() now saves is_split_payment and split_payments, 2) to_dict() uses getattr() for backward compatibility, 3) Frontend correctly displays split payment breakdown in both list and details views. Test file test_split_payments_fix.py can be used for regression testing.",
+
+  "mocked_api_note": "IMPORTANT: Mobile Money API integration is MOCKED on frontend only (OTP verification uses demo code '123456')"
+}

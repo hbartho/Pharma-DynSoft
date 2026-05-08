@@ -1,0 +1,81 @@
+{
+  "summary": "Bug fix verified for discount-debt issue. All 5 pytest tests passed (100%). The bug where discounts were incorrectly recorded as customer debt has been fixed in backend/routes/sales.py. Verification shows all recent sales with discounts have debt_amount=0 as expected.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": {
+    "discount_debt_bug_tests": [
+      "test_01_sale_with_manual_discount_no_debt - PASSED: Manual discount applied, debt_amount=0",
+      "test_02_sale_with_product_discount_no_debt - PASSED: Product discount applied, debt_amount=0",
+      "test_03_sale_with_percent_discount_no_debt - PASSED: Percentage discount (15%), debt_amount=0",
+      "test_04_sale_without_discount_normal - PASSED: Sale without discount works normally",
+      "test_05_sale_with_combined_discounts_no_debt - PASSED: Combined product+manual discounts, debt_amount=0"
+    ],
+    "api_tests": [
+      "test_sale_with_discount_via_api - PASSED: 2500 GNF discount, final total 8500 GNF, debt=0",
+      "test_sale_with_product_discount_via_api - PASSED: 1500 GNF product discount, debt=0"
+    ],
+    "database_verification": [
+      "VNT-DCC25B74: Discount=1500, Debt=0 ✅",
+      "VNT-9C8923C1: Discount=1650, Debt=0 ✅",
+      "VNT-0EE12D3D: Discount=1500, Debt=0 ✅",
+      "VNT-44A67652: Discount=2000, Debt=0 ✅",
+      "VNT-89DDCC60: Discount=2500, Debt=0 ✅",
+      "All 10 recent sales with discounts verified - NO INCORRECT DEBT"
+    ]
+  },
+
+  "bug_fix_verification": {
+    "original_issue": "Quand un rabais est appliqué à une vente, le montant du rabais était incorrectement enregistré comme une dette client",
+    "root_cause": "In backend/routes/sales.py create_sale(), only discount_amount (manual discount) was used instead of calculating total_discount_amount (manual + promo + auto + product discounts)",
+    "fix_location": "/app/backend/routes/sales.py - create_sale() lines 242-290",
+    "fix_description": "Changed to calculate total_discount_amount = manual_discount + promo_discount + auto_discount + product_discounts. The final_total is now correctly calculated as subtotal - total_discount_amount",
+    "fix_verified": true,
+    "verification_method": "5 pytest tests + API tests + database verification of 10 recent sales"
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_discount_debt_bug_complete.py",
+    "/app/backend/tests/test_discount_debt_api.py",
+    "/app/test_reports/pytest/pytest_discount_debt_bug.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Bug fix correctly implemented in sales.py lines 252-264",
+    "All discount types now properly summed: manual + promo + automatic + product",
+    "debt_amount correctly remains 0 when payment is complete (amount_paid = final_total)",
+    "Frontend properly sends discount data to backend API",
+    "No regression issues detected"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_discount_debt_bug_complete.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (5/5 tests passed)",
+    "frontend": "UI accessible, API integration working"
+  },
+
+  "test_credentials": {
+    "admin": "admin@pharmaflow.com / admin123"
+  },
+
+  "seed_data_creation": "Test sales created via API during test execution",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Discount-debt bug is FIXED and verified. Key fix in backend/routes/sales.py: total_discount_amount now correctly sums all discount types (manual + promo + auto + product). Test files test_discount_debt_bug_complete.py and test_discount_debt_api.py can be used for regression testing. Recent sales VNT-DCC25B74, VNT-89DDCC60 etc. can be checked to verify no incorrect debt was created."
+}

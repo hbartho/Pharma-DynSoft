@@ -1,0 +1,167 @@
+========================================
+GUIDE FINAL - DynSoft Pharma
+========================================
+
+📁 SCRIPTS DISPONIBLES
+========================================
+
+1. START-ALL.bat
+   📍 C:\dev\Pharma\projet\START-ALL.bat
+   🎯 Lance TOUT (Backend + Frontend)
+   ⚡ Méthode recommandée
+
+2. start-backend.bat
+   📍 C:\dev\Pharma\projet\backend\start-backend.bat
+   🎯 Lance uniquement le backend
+
+3. start-frontend.bat
+   📍 C:\dev\Pharma\projet\frontend\start-frontend.bat
+   🎯 Lance uniquement le frontend
+
+========================================
+🚀 UTILISATION SIMPLE
+========================================
+
+ÉTAPE 1: Démarrer MongoDB (une seule fois)
+   - Ouvrir CMD en Administrateur
+   - Taper: net start MongoDB
+
+ÉTAPE 2: Lancer l'application
+   - Double-cliquez sur: START-ALL.bat
+   
+ÉTAPE 3: Connexion
+   - Le navigateur s'ouvre automatiquement
+   - Email: demo@pharmaflow.com
+   - Mot de passe: demo123
+
+C'EST TOUT ! ✅
+
+========================================
+📊 CE QUE FONT LES SCRIPTS
+========================================
+
+START-ALL.bat:
+  ✓ Vérifie MongoDB
+  ✓ Lance le backend dans une fenêtre
+  ✓ Lance le frontend dans une autre fenêtre
+  ✓ Affiche les URLs et identifiants
+
+start-backend.bat:
+  ✓ Crée l'environnement virtuel (si besoin)
+  ✓ Installe les dépendances Python
+  ✓ Crée le fichier .env
+  ✓ Démarre uvicorn sur port 8001
+
+start-frontend.bat:
+  ✓ Vérifie Node.js
+  ✓ Installe les dépendances npm (si besoin)
+  ✓ Crée le fichier .env
+  ✓ Démarre le serveur sur port 3000
+
+========================================
+🛑 ARRÊTER L'APPLICATION
+========================================
+
+Méthode 1: Fermer les fenêtres
+  - Fermez les 2 fenêtres de commande
+
+Méthode 2: CTRL+C
+  - Dans chaque fenêtre: CTRL+C
+  - Confirmez avec O (Oui)
+
+========================================
+⚙️ CONFIGURATION AUTOMATIQUE
+========================================
+
+MongoDB au démarrage de Windows:
+  CMD admin: sc config MongoDB start= auto
+
+Raccourci bureau:
+  - Clic droit sur START-ALL.bat
+  - Créer un raccourci
+  - Glisser sur le Bureau
+
+========================================
+🔗 URLS IMPORTANTES
+========================================
+
+Application:    http://localhost:3000
+API Backend:    http://localhost:8001/docs
+Test API:       http://localhost:8001/api/reports/dashboard
+
+========================================
+🔐 IDENTIFIANTS
+========================================
+
+Email:          demo@pharmaflow.com
+Mot de passe:   demo123
+
+========================================
+✅ ORDRE DE DÉMARRAGE
+========================================
+
+1. MongoDB (port 27017)
+2. Backend (port 8001)
+3. Frontend (port 3000)
+
+⚠️ Respectez cet ordre !
+
+========================================
+🐛 DÉPANNAGE RAPIDE
+========================================
+
+Problème: MongoDB ne démarre pas
+Solution: CMD admin → net start MongoDB
+
+Problème: Port déjà utilisé
+Solution: 
+  netstat -ano | findstr :8001
+  taskkill /PID [PID] /F
+
+Problème: Login échoue
+Solution:
+  cd backend
+  venv\Scripts\activate.bat
+  python create_correct_user.py
+
+Problème: Frontend ne compile pas
+Solution:
+  cd frontend
+  rmdir /s /q node_modules
+  del package-lock.json
+  npm install --legacy-peer-deps
+
+========================================
+📝 RÉSUMÉ ULTRA-COURT
+========================================
+
+Pour démarrer DynSoft Pharma:
+
+1. CMD admin: net start MongoDB
+2. Double-clic: START-ALL.bat
+3. Attendre ~30 secondes
+4. Se connecter sur http://localhost:3000
+
+Email: demo@pharmaflow.com
+Mot de passe: demo123
+
+========================================
+🎉 FÉLICITATIONS !
+========================================
+
+Votre application DynSoft Pharma est prête !
+
+Fonctionnalités disponibles:
+  ✓ Gestion des produits
+  ✓ Gestion des prescriptions
+  ✓ Gestion des clients
+  ✓ Gestion des ventes
+  ✓ Gestion des fournisseurs
+  ✓ Rapports et statistiques
+  ✓ Dialogue de confirmation suppression
+  ✓ Authentification JWT
+
+========================================
+Version: DynSoft Pharma v1.0
+Date: Décembre 2024
+========================================

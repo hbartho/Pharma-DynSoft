@@ -1,0 +1,214 @@
+========================================
+GUIDE D'UTILISATION DES SCRIPTS
+DynSoft Pharma
+========================================
+
+📁 FICHIERS DISPONIBLES
+========================================
+
+1. start-all.bat
+   📍 Emplacement: C:\dev\Pharma\projet\
+   🎯 Usage: Lance backend ET frontend automatiquement
+   ⚡ Rapide: Double-cliquez pour tout démarrer
+
+2. script_installation.bat
+   📍 Emplacement: C:\dev\Pharma\projet\backend\
+   🎯 Usage: Lance UNIQUEMENT le backend
+   📝 Actions: Installe dépendances + démarre serveur
+
+3. setup-and-run-frontend.bat
+   📍 Emplacement: C:\dev\Pharma\projet\frontend\
+   🎯 Usage: Lance UNIQUEMENT le frontend
+   📝 Actions: Installe dépendances + démarre serveur
+
+========================================
+🚀 UTILISATION RECOMMANDÉE
+========================================
+
+OPTION A : Lancement Automatique Complet
+-----------------------------------------
+1. Double-cliquez sur: start-all.bat
+2. Attendez ~30 secondes
+3. Le navigateur s'ouvre automatiquement
+4. Connectez-vous avec demo@pharmaflow.com / demo123
+
+✅ C'est la méthode la plus simple !
+
+OPTION B : Lancement Manuel Séparé
+-----------------------------------------
+1. Backend:
+   - Allez dans: C:\dev\Pharma\projet\backend\
+   - Double-cliquez: script_installation.bat
+   - Attendez "Application startup complete"
+
+2. Frontend:
+   - Allez dans: C:\dev\Pharma\projet\frontend\
+   - Double-cliquez: setup-and-run-frontend.bat
+   - Attendez "Compiled successfully"
+
+========================================
+📋 CE QUE FONT LES SCRIPTS
+========================================
+
+start-all.bat:
+  ✓ Vérifie MongoDB
+  ✓ Propose de le démarrer (si nécessaire)
+  ✓ Lance le backend dans une fenêtre
+  ✓ Lance le frontend dans une autre fenêtre
+  ✓ Affiche les URLs et identifiants
+
+script_installation.bat:
+  ✓ Crée l'environnement virtuel Python (si nécessaire)
+  ✓ Installe les dépendances Python
+  ✓ Crée le fichier .env (si nécessaire)
+  ✓ Démarre uvicorn sur port 8001
+
+setup-and-run-frontend.bat:
+  ✓ Vérifie Node.js
+  ✓ Propose nettoyage de node_modules
+  ✓ Crée le fichier .env (si nécessaire)
+  ✓ Installe les dépendances npm
+  ✓ Démarre le serveur sur port 3000
+
+========================================
+⚙️ PRÉREQUIS
+========================================
+
+Avant d'utiliser les scripts:
+
+✓ Python 3.8+ installé
+✓ Node.js 14+ installé
+✓ MongoDB installé
+✓ Les fichiers du projet copiés localement
+
+========================================
+🛑 ARRÊTER LES SERVICES
+========================================
+
+Méthode 1: Fermer les fenêtres
+  - Fermez simplement les fenêtres de commande
+
+Méthode 2: CTRL+C
+  - Dans chaque fenêtre, appuyez sur CTRL+C
+  - Confirmez avec O (Oui)
+
+Pour arrêter MongoDB (optionnel):
+  - CMD en admin: net stop MongoDB
+
+========================================
+🐛 DÉPANNAGE
+========================================
+
+Problème: "MongoDB ne démarre pas"
+Solution:
+  1. Ouvrir CMD en administrateur
+  2. net start MongoDB
+  3. Relancer start-all.bat
+
+Problème: "Port 8001 déjà utilisé"
+Solution:
+  1. Tuer le processus existant:
+     netstat -ano | findstr :8001
+     taskkill /PID [PID] /F
+  2. Relancer le backend
+
+Problème: "Port 3000 déjà utilisé"
+Solution:
+  1. Tuer le processus existant:
+     netstat -ano | findstr :3000
+     taskkill /PID [PID] /F
+  2. Relancer le frontend
+
+Problème: "Module not found"
+Solution:
+  Backend: Supprimer venv + relancer script
+  Frontend: Supprimer node_modules + relancer script
+
+========================================
+📊 VÉRIFICATIONS
+========================================
+
+Backend OK si vous voyez:
+  "INFO: Application startup complete."
+
+Frontend OK si vous voyez:
+  "Compiled successfully!"
+  "Local: http://localhost:3000"
+
+Application fonctionne si:
+  ✓ http://localhost:8001/docs charge
+  ✓ http://localhost:3000 charge
+  ✓ Vous pouvez vous connecter
+
+========================================
+🔐 IDENTIFIANTS DE TEST
+========================================
+
+Email: demo@pharmaflow.com
+Mot de passe: demo123
+
+Si la connexion échoue:
+  cd backend
+  venv\Scripts\activate.bat
+  python add_user.py
+
+========================================
+📝 ORDRE DE DÉMARRAGE
+========================================
+
+IMPORTANT: Respectez cet ordre !
+
+1. MongoDB (automatique avec start-all.bat)
+2. Backend (port 8001)
+3. Frontend (port 3000)
+
+Si vous inversez l'ordre:
+  - Frontend ne peut pas appeler l'API
+  - Backend ne peut pas se connecter à MongoDB
+
+========================================
+🔗 URLS IMPORTANTES
+========================================
+
+Frontend:
+  http://localhost:3000
+
+Backend API:
+  http://localhost:8001/docs
+
+Tester Backend:
+  http://localhost:8001/api/dashboard-stats
+
+========================================
+💡 ASTUCES
+========================================
+
+Astuce 1: Créer un raccourci
+  - Clic droit sur start-all.bat
+  - Créer un raccourci
+  - Placez-le sur le Bureau
+
+Astuce 2: Épingler à la barre des tâches
+  - Glissez start-all.bat dans la barre
+
+Astuce 3: Démarrage automatique de MongoDB
+  - CMD admin: sc config MongoDB start= auto
+  - MongoDB démarrera automatiquement avec Windows
+
+Astuce 4: Bookmark dans le navigateur
+  - http://localhost:3000
+  - Accès rapide à l'application
+
+========================================
+📞 SUPPORT
+========================================
+
+Pour plus d'informations:
+  - GUIDE_INSTALLATION_LOCAL.md
+  - README-WINDOWS.md
+  - GUIDE-COMPLET-WINDOWS.md
+
+========================================
+Version: DynSoft Pharma v1.0
+Date: Décembre 2024
+========================================
