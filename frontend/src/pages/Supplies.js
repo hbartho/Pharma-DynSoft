@@ -300,8 +300,11 @@ const Supplies = () => {
       ? Math.round(sellingPrice * (1 + tvaRate / 100)) 
       : sellingPrice;
     
-    // Total = Prix TTC × Quantité
-    const totalPrice = prixTTC * quantity;
+    // Total = Prix Cession × Quantité × (1 + TVA/100)
+    // C'est le montant que l'on paye au fournisseur (coût d'achat TTC)
+    const totalPrice = tvaRate > 0
+      ? Math.round(purchasePrice * quantity * (1 + tvaRate / 100))
+      : purchasePrice * quantity;
     
     // Si on édite un item existant (via editingItemId)
     if (editingItemId) {
@@ -598,7 +601,7 @@ const Supplies = () => {
       const response = await api.get(`/supplies/${supply.id}`);
       const fullSupply = response.data;
       
-      // Recalculer les totaux selon: Prix TTC = Prix Cession × Coef × (1 + TVA), TOTAL = Prix TTC × Qté
+      // Recalculer les totaux selon: Total = Prix Cession × Qté × (1 + TVA/100)
       const itemsWithTotals = (fullSupply.items || []).map(item => {
         const quantity = item.quantity || 0;
         const unitPrice = item.unit_price || 0;  // Prix Cession
@@ -611,8 +614,10 @@ const Supplies = () => {
         // Prix TTC = Prix Cession × Coef × (1 + TVA/100)
         const prixTTC = tvaRate > 0 ? Math.round(prixPublicBase * (1 + tvaRate / 100)) : prixPublicBase;
         
-        // TOTAL = Prix TTC × Qté
-        const totalPrice = prixTTC * quantity;
+        // TOTAL = Prix Cession × Qté × (1 + TVA/100) - C'est le coût d'achat TTC
+        const totalPrice = tvaRate > 0 
+          ? Math.round(unitPrice * quantity * (1 + tvaRate / 100))
+          : unitPrice * quantity;
         
         // Récupérer le prix public modifié (peut être stocké dans prix_public_modifie ou selling_price)
         let prixPublicModifie = item.prix_public_modifie;
@@ -1144,14 +1149,12 @@ const Supplies = () => {
                               {(() => {
                                 const qty = parseInt(itemForm.quantity) || 0;
                                 const unitPrice = parseFloat(itemForm.unit_price) || 0;
-                                const coef = selectedProductInfo.markup_coefficient || 1;
                                 const tva = parseFloat(itemForm.tva_rate) || 0;
-                                const prixPublicBase = Math.round(unitPrice * coef);
-                                const prixPublic = itemForm.prix_public_modifie 
-                                  ? parseFloat(itemForm.prix_public_modifie) 
-                                  : prixPublicBase;
-                                const prixTTC = tva > 0 ? Math.round(prixPublic * (1 + tva / 100)) : prixPublic;
-                                return formatAmount(prixTTC * qty);
+                                // Total = Prix Cession × Quantité × (1 + TVA/100)
+                                const total = tva > 0 
+                                  ? Math.round(unitPrice * qty * (1 + tva / 100))
+                                  : unitPrice * qty;
+                                return formatAmount(total);
                               })()}
                             </span>
                           </div>
