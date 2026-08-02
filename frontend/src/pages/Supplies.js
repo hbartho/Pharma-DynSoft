@@ -1631,7 +1631,7 @@ const Supplies = () => {
 
       {/* View Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-teal-600" />
@@ -1709,25 +1709,64 @@ const Supplies = () => {
               <div className="border-t pt-4">
                 <h4 className="font-medium text-slate-900 mb-3">Produits ({viewingSupply.items?.length || 0})</h4>
                 <div className="border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="max-h-[220px] overflow-y-auto">
+                  <div className="max-h-[320px] overflow-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 sticky top-0">
                         <tr>
-                          <th className="text-left px-4 py-2 font-medium text-slate-600">Produit</th>
-                          <th className="text-right px-4 py-2 font-medium text-slate-600">Qté</th>
-                          <th className="text-right px-4 py-2 font-medium text-slate-600">Prix unit.</th>
-                          <th className="text-right px-4 py-2 font-medium text-slate-600">Total</th>
+                          <th className="text-left px-3 py-2 font-medium text-slate-600 whitespace-nowrap">Produit</th>
+                          <th className="text-right px-2 py-2 font-medium text-slate-600 whitespace-nowrap">Qté</th>
+                          <th className="text-right px-2 py-2 font-medium text-slate-600 whitespace-nowrap">P. Cession</th>
+                          <th className="text-center px-2 py-2 font-medium text-slate-600 whitespace-nowrap">Coef.</th>
+                          <th className="text-right px-2 py-2 font-medium text-slate-600 whitespace-nowrap">P. Public</th>
+                          <th className="text-center px-2 py-2 font-medium text-slate-600 whitespace-nowrap">Péremption</th>
+                          <th className="text-center px-2 py-2 font-medium text-slate-600 whitespace-nowrap">N° Lot</th>
+                          <th className="text-center px-2 py-2 font-medium text-slate-600 whitespace-nowrap">Rayon</th>
+                          <th className="text-center px-2 py-2 font-medium text-slate-600 whitespace-nowrap">TVA</th>
+                          <th className="text-right px-2 py-2 font-medium text-slate-600 whitespace-nowrap">P. TTC</th>
+                          <th className="text-right px-3 py-2 font-medium text-slate-600 whitespace-nowrap">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {viewingSupply.items?.map((item, index) => {
-                          const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+                          const prixCession = item.unit_price || item.purchase_price || 0;
+                          const coefficient = item.markup_coefficient || 1.4;
+                          const prixPublicBase = Math.round(prixCession * coefficient);
+                          const prixPublic = item.selling_price || prixPublicBase;
+                          const tvaRate = item.tva_rate || 0;
+                          const prixTTC = tvaRate > 0 ? Math.round(prixPublic * (1 + tvaRate / 100)) : prixPublic;
+                          const itemTotal = prixCession * (item.quantity || 0) * (1 + tvaRate / 100);
+                          const isPrixModifie = item.selling_price && item.selling_price !== prixPublicBase;
+                          
                           return (
                             <tr key={index} className="hover:bg-slate-50">
-                              <td className="px-4 py-2 font-medium">{item.product_name}</td>
-                              <td className="px-4 py-2 text-right">{item.quantity}</td>
-                              <td className="px-4 py-2 text-right">{formatAmount(item.unit_price)}</td>
-                              <td className="px-4 py-2 text-right font-medium">{formatAmount(itemTotal)}</td>
+                              <td className="px-3 py-2">
+                                <div className="font-medium text-slate-900">{item.product_name}</div>
+                                <div className="text-xs text-slate-500">{item.category_name || ''}</div>
+                              </td>
+                              <td className="px-2 py-2 text-right font-medium text-teal-600">{item.quantity}</td>
+                              <td className="px-2 py-2 text-right">{formatAmount(prixCession)}</td>
+                              <td className="px-2 py-2 text-center text-slate-500">×{coefficient}</td>
+                              <td className="px-2 py-2 text-right">
+                                {isPrixModifie ? (
+                                  <div>
+                                    <span className="line-through text-slate-400 text-xs">{formatAmount(prixPublicBase)}</span>
+                                    <br />
+                                    <span className="text-orange-600 font-medium">{formatAmount(prixPublic)}</span>
+                                  </div>
+                                ) : (
+                                  formatAmount(prixPublic)
+                                )}
+                              </td>
+                              <td className="px-2 py-2 text-center text-slate-600">
+                                {item.expiration_date || item.date_peremption 
+                                  ? new Date(item.expiration_date || item.date_peremption).toLocaleDateString('fr-FR')
+                                  : '-'}
+                              </td>
+                              <td className="px-2 py-2 text-center font-mono text-xs">{item.lot_number || '-'}</td>
+                              <td className="px-2 py-2 text-center text-slate-500">{item.shelf_location || '-'}</td>
+                              <td className="px-2 py-2 text-center">{tvaRate}%</td>
+                              <td className="px-2 py-2 text-right text-teal-700 font-medium">{formatAmount(prixTTC)}</td>
+                              <td className="px-3 py-2 text-right font-bold">{formatAmount(itemTotal)}</td>
                           </tr>
                         );
                       })}
@@ -1740,7 +1779,11 @@ const Supplies = () => {
                       <span className="font-bold text-teal-700">
                         {formatAmount(
                           viewingSupply.total_amount || 
-                          viewingSupply.items?.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0) || 
+                          viewingSupply.items?.reduce((sum, item) => {
+                            const prixCession = item.unit_price || item.purchase_price || 0;
+                            const tvaRate = item.tva_rate || 0;
+                            return sum + (prixCession * (item.quantity || 0) * (1 + tvaRate / 100));
+                          }, 0) || 
                           0
                         )}
                       </span>
