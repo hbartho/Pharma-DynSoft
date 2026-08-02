@@ -226,7 +226,7 @@ const Layout = ({ children }) => {
       items: [
         { path: '/reports', icon: BarChart3, label: 'Rapports', roles: ['admin', 'pharmacien'] },
         { path: '/debts', icon: Wallet, label: 'Dettes Clients', roles: ['admin'] },
-        { path: '/supplier-debts', icon: Building2, label: 'Dettes Fournisseurs', roles: ['admin'] },
+        { path: '/supplier-debts', icon: Building2, label: 'Solde Fournisseurs', roles: ['admin'] },
       ],
     },
     {

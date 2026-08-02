@@ -27,6 +27,12 @@ class WriteOffCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class CreditCreate(BaseModel):
+    amount: float = Field(..., gt=0, description="Montant de l'avoir")
+    reason: str = Field(..., description="Raison de l'avoir")
+    notes: Optional[str] = None
+
+
 class SupplierDebtResponse(BaseModel):
     id: str
     supplier_id: str
@@ -269,6 +275,78 @@ async def write_off_debt(
         
         return {
             "message": "Dette abandonnée",
+            "debt": debt_to_dict(debt, session)
+        }
+
+
+@router.post("/{debt_id}/credit")
+async def create_credit(
+    debt_id: str,
+    data: CreditCreate,
+    current_user: dict = Depends(require_admin)
+):
+    """
+    Crée un avoir sur une dette fournisseur.
+    Utilisé quand le fournisseur nous doit de l'argent (ex: produits manquants).
+    Admin uniquement.
+    """
+    with db_manager.get_tenant_session('default') as session:
+        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
+        if not debt:
+            raise HTTPException(status_code=404, detail="Dette non trouvée")
+        
+        if debt.status in [DebtStatus.PAID, DebtStatus.WRITTEN_OFF]:
+            raise HTTPException(status_code=400, detail="Cette dette est déjà soldée ou abandonnée")
+        
+        if data.amount > debt.remaining_amount:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Le montant de l'avoir ({data.amount}) ne peut pas dépasser le restant dû ({debt.remaining_amount})"
+            )
+        
+        # Traduire la raison en français
+        reason_labels = {
+            "produits_manquants": "Produits manquants à la livraison",
+            "produits_defectueux": "Produits défectueux/endommagés",
+            "erreur_facturation": "Erreur de facturation",
+            "retour_produits": "Retour de produits au fournisseur",
+            "remise_commerciale": "Remise commerciale accordée",
+            "autre": "Autre raison"
+        }
+        reason_text = reason_labels.get(data.reason, data.reason)
+        
+        # Enregistrer l'avoir comme un paiement de type "credit"
+        credit_entry = {
+            "date": datetime.now(timezone.utc).isoformat(),
+            "type": "credit",
+            "amount": data.amount,
+            "reason": reason_text,
+            "notes": data.notes,
+            "recorded_by": current_user.get('employee_code', current_user.get('user_id'))
+        }
+        
+        payments_list = list(debt.payments or [])
+        payments_list.append(credit_entry)
+        debt.payments = payments_list
+        
+        # Réduire le montant restant
+        debt.remaining_amount = debt.remaining_amount - data.amount
+        
+        # Mettre à jour le statut
+        if debt.remaining_amount <= 0:
+            debt.status = DebtStatus.PAID
+        elif debt.remaining_amount < debt.original_amount:
+            debt.status = DebtStatus.PARTIAL
+        
+        debt.notes = f"{debt.notes or ''}\n[AVOIR] {reason_text}: {data.amount} GNF".strip()
+        debt.updated_at = datetime.now(timezone.utc)
+        
+        session.commit()
+        
+        return {
+            "message": "Avoir créé avec succès",
+            "credit_amount": data.amount,
+            "new_remaining": debt.remaining_amount,
             "debt": debt_to_dict(debt, session)
         }
 

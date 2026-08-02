@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2, Calendar, CreditCard, AlertTriangle, Check, X, 
   Search, Filter, ChevronDown, Banknote, ArrowUpRight, Clock,
-  FileText, Trash2, DollarSign, TrendingDown
+  FileText, Trash2, DollarSign, TrendingDown, RotateCcw
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -68,6 +68,7 @@ export default function SupplierDebts() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showWriteOffModal, setShowWriteOffModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   
   // Form states
   const [paymentForm, setPaymentForm] = useState({
@@ -77,6 +78,11 @@ export default function SupplierDebts() {
     notes: ''
   });
   const [writeOffForm, setWriteOffForm] = useState({
+    reason: '',
+    notes: ''
+  });
+  const [creditForm, setCreditForm] = useState({
+    amount: '',
     reason: '',
     notes: ''
   });
@@ -137,6 +143,23 @@ export default function SupplierDebts() {
     }
   });
 
+  // Mutation pour créer un avoir
+  const creditMutation = useMutation({
+    mutationFn: async ({ debtId, data }) => {
+      const response = await api.post(`/supplier-debts/${debtId}/credit`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Avoir de ${formatAmount(data.credit_amount)} créé avec succès`);
+      queryClient.invalidateQueries(['supplier-debts']);
+      setShowCreditModal(false);
+      setCreditForm({ amount: '', reason: '', notes: '' });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.detail || "Erreur lors de la création de l'avoir");
+    }
+  });
+
   // Filtered debts
   const filteredDebts = useMemo(() => {
     if (!debtsData?.items) return [];
@@ -167,6 +190,31 @@ export default function SupplierDebts() {
   const handleViewDetails = (debt) => {
     setSelectedDebt(debt);
     setShowDetailsModal(true);
+  };
+
+  const handleCredit = (debt) => {
+    setSelectedDebt(debt);
+    setCreditForm({ amount: '', reason: '', notes: '' });
+    setShowCreditModal(true);
+  };
+
+  const submitCredit = () => {
+    if (!creditForm.amount || parseFloat(creditForm.amount) <= 0) {
+      toast.error('Montant invalide');
+      return;
+    }
+    if (!creditForm.reason) {
+      toast.error('Veuillez indiquer une raison');
+      return;
+    }
+    creditMutation.mutate({
+      debtId: selectedDebt.id,
+      data: {
+        amount: parseFloat(creditForm.amount),
+        reason: creditForm.reason,
+        notes: creditForm.notes || null
+      }
+    });
   };
 
   const submitPayment = () => {
@@ -203,7 +251,7 @@ export default function SupplierDebts() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            Dettes Fournisseurs
+            Solde Fournisseurs
           </h1>
           <p className="text-slate-500 text-sm mt-1">
             Gestion des créances envers les fournisseurs
@@ -370,6 +418,10 @@ export default function SupplierDebts() {
                                 <DropdownMenuItem onClick={() => handlePayment(debt)}>
                                   <CreditCard className="w-4 h-4 mr-2" />
                                   Enregistrer paiement
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleCredit(debt)}>
+                                  <RotateCcw className="w-4 h-4 mr-2" />
+                                  Créer un avoir
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
                                   onClick={() => handleWriteOff(debt)}
@@ -604,8 +656,12 @@ export default function SupplierDebts() {
                       <div key={idx} className="bg-white border rounded-lg p-2 text-sm">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="font-medium">
-                              {payment.type === 'write_off' ? 'Abandon' : formatAmount(payment.amount)}
+                            <p className={`font-medium ${payment.type === 'credit' ? 'text-blue-600' : ''}`}>
+                              {payment.type === 'write_off' 
+                                ? 'Abandon' 
+                                : payment.type === 'credit'
+                                  ? `- ${formatAmount(payment.amount)} (Avoir)`
+                                  : formatAmount(payment.amount)}
                             </p>
                             <p className="text-slate-500 text-xs">
                               {format(new Date(payment.date), 'dd/MM/yyyy HH:mm', { locale: fr })}
@@ -614,9 +670,15 @@ export default function SupplierDebts() {
                           <span className={`px-2 py-0.5 rounded text-xs ${
                             payment.type === 'write_off' 
                               ? 'bg-red-100 text-red-700' 
-                              : 'bg-green-100 text-green-700'
+                              : payment.type === 'credit'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-green-100 text-green-700'
                           }`}>
-                            {payment.type === 'write_off' ? 'Abandon' : payment.method}
+                            {payment.type === 'write_off' 
+                              ? 'Abandon' 
+                              : payment.type === 'credit' 
+                                ? 'Avoir' 
+                                : payment.method}
                           </span>
                         </div>
                         {payment.reference && (
@@ -626,7 +688,9 @@ export default function SupplierDebts() {
                           <p className="text-slate-600 text-xs mt-1">{payment.notes}</p>
                         )}
                         {payment.reason && (
-                          <p className="text-red-600 text-xs mt-1">Raison: {payment.reason}</p>
+                          <p className={`text-xs mt-1 ${payment.type === 'credit' ? 'text-blue-600' : 'text-red-600'}`}>
+                            Raison: {payment.reason}
+                          </p>
                         )}
                       </div>
                     ))}
@@ -637,6 +701,93 @@ export default function SupplierDebts() {
               <div className="flex justify-end pt-2">
                 <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
                   Fermer
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit (Avoir) Modal */}
+      <Dialog open={showCreditModal} onOpenChange={setShowCreditModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              <RotateCcw className="w-5 h-5 text-blue-600" />
+              Créer un avoir
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedDebt && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-600">Fournisseur</p>
+                <p className="font-medium text-slate-900">{selectedDebt.supplier_name}</p>
+                <p className="text-sm text-slate-500 mt-2">Dette actuelle</p>
+                <p className="font-bold text-lg text-slate-900">{formatAmount(selectedDebt.remaining_amount)}</p>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <Label>Montant de l'avoir *</Label>
+                  <Input
+                    type="number"
+                    value={creditForm.amount}
+                    onChange={(e) => setCreditForm({ ...creditForm, amount: e.target.value })}
+                    placeholder="0"
+                    max={selectedDebt.remaining_amount}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Maximum: {formatAmount(selectedDebt.remaining_amount)}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label>Raison de l'avoir *</Label>
+                  <Select
+                    value={creditForm.reason}
+                    onValueChange={(value) => setCreditForm({ ...creditForm, reason: value })}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Sélectionner une raison" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="produits_manquants">Produits manquants à la livraison</SelectItem>
+                      <SelectItem value="produits_defectueux">Produits défectueux/endommagés</SelectItem>
+                      <SelectItem value="erreur_facturation">Erreur de facturation</SelectItem>
+                      <SelectItem value="retour_produits">Retour de produits au fournisseur</SelectItem>
+                      <SelectItem value="remise_commerciale">Remise commerciale accordée</SelectItem>
+                      <SelectItem value="autre">Autre raison</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Notes (optionnel)</Label>
+                  <Textarea
+                    value={creditForm.notes}
+                    onChange={(e) => setCreditForm({ ...creditForm, notes: e.target.value })}
+                    placeholder="Détails supplémentaires sur l'avoir..."
+                    rows={2}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreditModal(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={submitCredit}
+                  disabled={creditMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {creditMutation.isPending ? 'Création...' : 'Créer l\'avoir'}
                 </Button>
               </div>
             </div>
