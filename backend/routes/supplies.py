@@ -464,13 +464,25 @@ if DATABASE_TYPE == "postgresql":
             if supply.is_validated:
                 raise HTTPException(status_code=400, detail="Approvisionnement déjà validé")
             
-            # Mettre à jour les stocks des produits
+            # Mettre à jour les stocks et les prix des produits
             for item in supply.items:
                 product = product_repo.get_by_id(item.product_id)
                 if product:
                     current_stock = product.get("stock", 0)
                     new_stock = current_stock + item.quantity
-                    product_repo.update(item.product_id, {"stock": new_stock})
+                    
+                    # Préparer les données de mise à jour
+                    update_data = {"stock": new_stock}
+                    
+                    # Mettre à jour le prix d'achat si défini
+                    if item.purchase_price and item.purchase_price > 0:
+                        update_data["purchase_price"] = item.purchase_price
+                    
+                    # Mettre à jour le prix de vente (prix public) si défini dans l'approvisionnement
+                    if item.selling_price and item.selling_price > 0:
+                        update_data["price"] = item.selling_price
+                    
+                    product_repo.update(item.product_id, update_data)
             
             # Marquer comme validé
             supply.is_validated = True
