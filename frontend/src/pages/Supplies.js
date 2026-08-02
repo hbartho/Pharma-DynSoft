@@ -256,6 +256,15 @@ const Supplies = () => {
       return;
     }
     
+    // Vérifier que la date de péremption est supérieure à aujourd'hui
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expirationDate = new Date(itemForm.date_peremption);
+    if (expirationDate <= today) {
+      toast.error('La date de péremption doit être supérieure à la date actuelle');
+      return;
+    }
+    
     const product = products.find(p => p.id === itemForm.product_id);
     if (!product) return;
     
@@ -1009,6 +1018,7 @@ const Supplies = () => {
                           type="date"
                           value={itemForm.date_peremption}
                           onChange={(e) => setItemForm({ ...itemForm, date_peremption: e.target.value })}
+                          min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                           className="mt-1"
                         />
                       </div>
