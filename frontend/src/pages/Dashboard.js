@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
-import { DollarSign, Package, AlertTriangle, FileText, Coins, PackagePlus, TrendingUp, ArrowUpRight, Loader2, Banknote, CreditCard, Smartphone, FileCheck, Wallet, Calendar, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { DollarSign, Package, AlertTriangle, FileText, Coins, PackagePlus, TrendingUp, ArrowUpRight, Loader2, Banknote, CreditCard, Smartphone, FileCheck, Wallet, Calendar, ChevronLeft, ChevronRight, Tag, Clock, RotateCcw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
@@ -242,6 +242,30 @@ const Dashboard = () => {
                 {stats.low_stock_count > 0 && (
                   <span className="text-xs font-medium text-amber-700 bg-amber-200 px-2 py-1 rounded-full">
                     Stock bas
+                  </span>
+                )}
+              </div>
+
+              <div 
+                className="flex items-center justify-between p-4 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => navigate('/products?filter=near_expiration')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <Clock className="w-5 h-5 text-red-700" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      Produits en péremption
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      {stats.expiring_products_count || 0}
+                    </p>
+                  </div>
+                </div>
+                {(stats.expiring_products_count || 0) > 0 && (
+                  <span className="text-xs font-medium text-red-700 bg-red-200 px-2 py-1 rounded-full">
+                    À surveiller
                   </span>
                 )}
               </div>
