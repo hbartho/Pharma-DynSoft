@@ -526,6 +526,7 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - [ ] Rapports avancés (TVA collectée vs déductible, marges)
 - [ ] Export PDF/Excel des rapports
 - [ ] Scroll infini sur pages restantes (Dettes dashboard, Pertes)
+- [ ] **Inclure Dettes/Avoirs fournisseurs dans les bilans financiers** (pastille dashboard + rapport)
 
 ### P2 - Souhaitable
 - [ ] Intégration réelle API Mobile Money (remplacer simulation OTP)
