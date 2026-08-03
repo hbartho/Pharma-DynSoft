@@ -2046,24 +2046,44 @@ const Supplies = () => {
           
           {supplyToValidate && (
             <div className="space-y-4">
-              {/* Informations générales */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
+              {/* Informations générales - 3 colonnes */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg text-sm">
                 <div>
-                  <span className="text-xs text-slate-500">N° Facture</span>
-                  <p className="font-semibold text-slate-900">{supplyToValidate.invoice_number || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500">N° Bon de livraison</span>
-                  <p className="font-semibold text-slate-900">{supplyToValidate.delivery_note_number || 'N/A'}</p>
+                  <span className="text-xs text-slate-500">Date d'appro</span>
+                  <p className="font-semibold text-slate-900">{formatDate(supplyToValidate.supply_date)}</p>
                 </div>
                 <div>
                   <span className="text-xs text-slate-500">Fournisseur</span>
                   <p className="font-semibold text-slate-900">{supplyToValidate.supplier_name || 'Non spécifié'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500">Date</span>
-                  <p className="font-semibold text-slate-900">{formatDate(supplyToValidate.supply_date)}</p>
+                  <span className="text-xs text-slate-500">Réf. Bon de commande</span>
+                  <p className="font-semibold text-slate-900">{supplyToValidate.purchase_order_ref || '-'}</p>
                 </div>
+                <div>
+                  <span className="text-xs text-slate-500">N° Bon livraison</span>
+                  <p className="font-semibold text-slate-900">{supplyToValidate.delivery_note_number || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-500">N° Facture</span>
+                  <p className="font-semibold text-slate-900">{supplyToValidate.invoice_number || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-500">Saisi par</span>
+                  <p className="font-semibold text-slate-900 font-mono">{supplyToValidate.created_by_name || supplyToValidate.created_by || 'N/A'}</p>
+                </div>
+                {supplyToValidate.updated_by_name && (
+                  <div>
+                    <span className="text-xs text-slate-500">Modifié par</span>
+                    <p className="font-semibold text-blue-600 font-mono">{supplyToValidate.updated_by_name}</p>
+                  </div>
+                )}
+                {supplyToValidate.is_validated && supplyToValidate.validated_by_name && (
+                  <div>
+                    <span className="text-xs text-slate-500">Validé par</span>
+                    <p className="font-semibold text-emerald-600 font-mono">{supplyToValidate.validated_by_name}</p>
+                  </div>
+                )}
               </div>
               
               {/* Tableau des produits */}
