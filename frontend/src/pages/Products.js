@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -44,11 +45,23 @@ const Products = () => {
   const isAdmin = user?.role === 'admin';
   const isWithinScheduledHours = isAdmin || shiftEligibility?.is_eligible;
   
+  // Lire les paramètres de l'URL
+  const [searchParams] = useSearchParams();
+  const initialFilter = searchParams.get('filter') || 'all';
+  
   // Local state pour filtres
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState(initialFilter);
+  
+  // Mettre à jour le filtre si l'URL change
+  useEffect(() => {
+    const urlFilter = searchParams.get('filter');
+    if (urlFilter && urlFilter !== filterStatus) {
+      setFilterStatus(urlFilter);
+    }
+  }, [searchParams]);
   
   // Ref pour l'intersection observer (infinite scroll)
   const loadMoreRef = useRef(null);
