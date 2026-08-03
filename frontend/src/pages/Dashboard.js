@@ -248,7 +248,7 @@ const Dashboard = () => {
 
               <div 
                 className="flex items-center justify-between p-4 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100 transition-colors"
-                onClick={() => navigate('/products?filter=near_expiration')}
+                onClick={() => navigate('/products?filter=expired')}
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-red-100 rounded-lg">
