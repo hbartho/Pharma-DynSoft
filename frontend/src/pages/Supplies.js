@@ -1660,7 +1660,7 @@ const Supplies = () => {
                 </span>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">Date d'approvisionnement</p>
                   <p className="font-medium">{formatDate(viewingSupply.supply_date)}</p>
