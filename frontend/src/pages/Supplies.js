@@ -2089,9 +2089,10 @@ const Supplies = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {supplyToValidate.items?.map((item, idx) => {
-                        const prixPublicBase = item.prix_public_base || item.selling_price || (item.unit_price * (item.markup_coefficient || 1));
-                        const prixTTC = item.prix_ttc || (item.tva_rate > 0 ? Math.round(prixPublicBase * (1 + item.tva_rate / 100)) : prixPublicBase);
-                        const total = prixTTC * item.quantity;
+                        const prixCession = item.unit_price || 0;
+                        const prixPublicBase = item.prix_public_base || item.selling_price || (prixCession * (item.markup_coefficient || 1));
+                        // Total HT = Prix Cession × Quantité
+                        const totalHT = prixCession * item.quantity;
                         return (
                           <tr key={idx} className="hover:bg-slate-50">
                             <td className="px-3 py-2">
@@ -2099,26 +2100,25 @@ const Supplies = () => {
                               {item.category_name && <div className="text-xs text-slate-500">{item.category_name}</div>}
                             </td>
                             <td className="px-2 py-2 text-right font-semibold text-teal-700">{item.quantity}</td>
-                            <td className="px-2 py-2 text-right">{formatAmount(item.unit_price)}</td>
+                            <td className="px-2 py-2 text-right">{formatAmount(prixCession)}</td>
                             <td className="px-2 py-2 text-right font-medium text-emerald-700">{formatAmount(prixPublicBase)}</td>
                             <td className="px-2 py-2 text-center text-xs">
                               {item.date_peremption ? new Date(item.date_peremption).toLocaleDateString('fr-FR') : '-'}
                             </td>
                             <td className="px-2 py-2 text-center text-xs font-mono">{item.lot_number || '-'}</td>
                             <td className="px-2 py-2 text-right text-xs">{item.tva_rate || 0}%</td>
-                            <td className="px-3 py-2 text-right font-semibold">{formatAmount(total)}</td>
+                            <td className="px-3 py-2 text-right font-semibold">{formatAmount(totalHT)}</td>
                           </tr>
                         );
                       })}
                     </tbody>
                     <tfoot className="bg-slate-100 font-semibold">
                       <tr>
-                        <td colSpan="7" className="px-3 py-2 text-right">Total approvisionnement :</td>
+                        <td colSpan="7" className="px-3 py-2 text-right">Total HT approvisionnement :</td>
                         <td className="px-3 py-2 text-right text-teal-700 text-lg">
                           {formatAmount(supplyToValidate.items?.reduce((acc, item) => {
-                            const prixPublicBase = item.prix_public_base || item.selling_price || (item.unit_price * (item.markup_coefficient || 1));
-                            const prixTTC = item.prix_ttc || (item.tva_rate > 0 ? Math.round(prixPublicBase * (1 + item.tva_rate / 100)) : prixPublicBase);
-                            return acc + (prixTTC * item.quantity);
+                            // Total HT = Somme(Prix Cession × Quantité)
+                            return acc + ((item.unit_price || 0) * item.quantity);
                           }, 0) || 0)}
                         </td>
                       </tr>
