@@ -179,6 +179,14 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+### 📖 MANUEL D'UTILISATION PDF (10 Juin 2026) - ✅ TERMINÉ
+- Manuel complet en français (22 chapitres, ~3 Mo) avec 17 captures d'écran réelles de l'application
+- Générateur : `/app/scripts/generate_manual_pdf.py` (reportlab) + captures via `/app/scripts/capture_manual_screens.py` (playwright)
+- PDF stocké : `/app/backend/static/manuel_utilisation_dynpharma.pdf`
+- Endpoint : `GET /api/manual/download` (`/app/backend/routes/manual.py`)
+- Bouton "Télécharger le manuel (PDF)" ajouté en haut de la page Paramètres (`Settings.js`, data-testid="download-manual-button")
+- Pour régénérer le manuel après évolution de l'UI : relancer les 2 scripts ci-dessus
+
 ### 🎉 LAYOUT RESPONSIVE (2026-02-15) - ✅ TERMINÉ
 **Application entièrement responsive** pour mobile, tablette et desktop.
 

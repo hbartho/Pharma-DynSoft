@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Download, Database, CheckCircle, Loader2, Users, Smartphone, Timer, Bell } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Download, Database, CheckCircle, Loader2, Users, Smartphone, Timer, Bell, BookOpen } from 'lucide-react';
 import { useSettingsQuery, useUpdateSettings, useStockValuation } from '../hooks';
 import { useSettings } from '../contexts/SettingsContext';
 import { useOffline } from '../contexts/OfflineContext';
@@ -213,6 +213,34 @@ const Settings = () => {
             )}
             {updateSettings.isPending ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
+        </div>
+
+        {/* Manuel d'utilisation */}
+        <div className="p-6 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4" data-testid="user-manual-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <BookOpen className="w-5 h-5 text-teal-600" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Manuel d'utilisation
+              </h2>
+              <p className="text-sm text-slate-600">
+                Guide complet PDF : ventes, stock, approvisionnements, dettes, shifts, rapports...
+              </p>
+            </div>
+          </div>
+          <a
+            href={`${process.env.REACT_APP_BACKEND_URL}/api/manual/download`}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="download-manual-button"
+          >
+            <Button className="bg-teal-600 hover:bg-teal-700 w-full sm:w-auto">
+              <Download className="w-4 h-4 mr-2" strokeWidth={1.5} />
+              Télécharger le manuel (PDF)
+            </Button>
+          </a>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
