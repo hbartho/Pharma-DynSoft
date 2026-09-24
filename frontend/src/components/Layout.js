@@ -862,7 +862,7 @@ const Layout = ({ children }) => {
             </button>
           </div>
         ) : (
-          !shiftLoading && user && user.role !== 'admin' && (
+          !shiftLoading && user && (
             <div className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-amber-50 border border-amber-200 rounded-full shadow-md">
               <AlertCircle className="w-3 h-3 md:w-4 md:h-4 text-amber-600" />
               <span className="text-xs md:text-sm text-amber-700 font-medium">Aucun shift</span>
