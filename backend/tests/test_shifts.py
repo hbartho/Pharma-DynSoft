@@ -55,7 +55,7 @@ class TestShiftManagement:
                         headers=headers,
                         json={"actual_closing_amount": 0, "closing_notes": "Test cleanup"}
                     )
-            except:
+            except Exception:
                 pass
     
     def _login_admin(self):

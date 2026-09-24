@@ -56,13 +56,13 @@ class SaleReturnNumberTester:
             if success:
                 try:
                     return True, response.json() if response.content else {}
-                except:
+                except Exception:
                     return True, {}
             else:
                 try:
                     error_detail = response.json()
                     return False, {"error": error_detail, "status": response.status_code}
-                except:
+                except Exception:
                     return False, {"error": response.text, "status": response.status_code}
 
         except Exception as e:

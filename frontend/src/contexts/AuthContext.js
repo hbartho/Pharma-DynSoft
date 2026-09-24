@@ -85,6 +85,7 @@ export const AuthProvider = ({ children }) => {
       await saveUserData(userData, access_token);
       setUser(userData);
       setToken(access_token);
+      sessionStorage.removeItem('adminShiftModalDismissed');
       
       // Déclencher la synchronisation après connexion (en arrière-plan)
       // Ne pas bloquer le login, la sync se fait en parallèle
@@ -109,6 +110,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await clearUserData();
+    sessionStorage.removeItem('adminShiftModalDismissed');
     setUser(null);
     setToken(null);
     setIsSyncing(false);

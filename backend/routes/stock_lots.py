@@ -96,6 +96,70 @@ if DATABASE_TYPE == "postgresql":
             
             return result
     
+    @router.get("/expiring", response_model=List[dict])
+    async def get_expiring_lots(
+        days: int = 90,
+        current_user: dict = Depends(get_current_user)
+    ):
+        """Récupérer les lots qui expirent bientôt"""
+        from datetime import timedelta
+        
+        with get_session() as session:
+            deadline = datetime.now().date() + timedelta(days=days)
+            
+            items = session.query(SupplyItem).filter(
+                SupplyItem.expiration_date <= deadline,
+                SupplyItem.expiration_date >= datetime.now().date(),
+                SupplyItem.quantity > 0
+            ).join(Supply).order_by(SupplyItem.expiration_date).all()
+            
+            return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
+
+    @router.put("/bulk-update", response_model=dict)
+    async def bulk_update_lots(
+        updates: List[dict],
+        current_user: dict = Depends(require_role(["admin", "pharmacien"]))
+    ):
+        """Mettre à jour plusieurs lots en une seule requête"""
+        updated = []
+        errors = []
+        
+        with get_session() as session:
+            for idx, update_data in enumerate(updates):
+                try:
+                    lot_id = update_data.get("id")
+                    if not lot_id:
+                        errors.append({"index": idx, "error": "ID manquant"})
+                        continue
+                    
+                    item = session.query(SupplyItem).filter(
+                        SupplyItem.id == uuid.UUID(lot_id)
+                    ).first()
+                    
+                    if not item:
+                        errors.append({"index": idx, "error": f"Lot {lot_id} non trouvé"})
+                        continue
+                    
+                    # Mettre à jour les champs
+                    if "lot_number" in update_data:
+                        item.lot_number = update_data["lot_number"]
+                    if "expiration_date" in update_data:
+                        item.expiration_date = update_data["expiration_date"]
+                    if "quantity" in update_data:
+                        item.quantity = update_data["quantity"]
+                    
+                    updated.append(str(lot_id))
+                except Exception as e:
+                    errors.append({"index": idx, "error": str(e)})
+            
+            session.commit()
+        
+        return {
+            "message": f"{len(updated)} lot(s) mis à jour",
+            "updated": updated,
+            "errors": errors
+        }
+
     @router.get("/{lot_id}", response_model=dict)
     async def get_stock_lot(
         lot_id: str,
@@ -156,51 +220,6 @@ if DATABASE_TYPE == "postgresql":
             
             return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
 
-    @router.put("/bulk-update", response_model=dict)
-    async def bulk_update_lots(
-        updates: List[dict],
-        current_user: dict = Depends(require_role(["admin", "pharmacien"]))
-    ):
-        """Mettre à jour plusieurs lots en une seule requête"""
-        updated = []
-        errors = []
-        
-        with get_session() as session:
-            for idx, update_data in enumerate(updates):
-                try:
-                    lot_id = update_data.get("id")
-                    if not lot_id:
-                        errors.append({"index": idx, "error": "ID manquant"})
-                        continue
-                    
-                    item = session.query(SupplyItem).filter(
-                        SupplyItem.id == uuid.UUID(lot_id)
-                    ).first()
-                    
-                    if not item:
-                        errors.append({"index": idx, "error": f"Lot {lot_id} non trouvé"})
-                        continue
-                    
-                    # Mettre à jour les champs
-                    if "lot_number" in update_data:
-                        item.lot_number = update_data["lot_number"]
-                    if "expiration_date" in update_data:
-                        item.expiration_date = update_data["expiration_date"]
-                    if "quantity" in update_data:
-                        item.quantity = update_data["quantity"]
-                    
-                    updated.append(str(lot_id))
-                except Exception as e:
-                    errors.append({"index": idx, "error": str(e)})
-            
-            session.commit()
-        
-        return {
-            "message": f"{len(updated)} lot(s) mis à jour",
-            "updated": updated,
-            "errors": errors
-        }
-
     @router.get("/product/{product_id}/lots", response_model=List[dict])
     async def get_product_lots(
         product_id: str,
@@ -214,25 +233,6 @@ if DATABASE_TYPE == "postgresql":
                 ).join(Supply).order_by(desc(Supply.supply_date)).all()
             except ValueError:
                 return []
-            
-            return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
-    
-    @router.get("/expiring", response_model=List[dict])
-    async def get_expiring_lots(
-        days: int = 90,
-        current_user: dict = Depends(get_current_user)
-    ):
-        """Récupérer les lots qui expirent bientôt"""
-        from datetime import timedelta
-        
-        with get_session() as session:
-            deadline = datetime.now().date() + timedelta(days=days)
-            
-            items = session.query(SupplyItem).filter(
-                SupplyItem.expiration_date <= deadline,
-                SupplyItem.expiration_date >= datetime.now().date(),
-                SupplyItem.quantity > 0
-            ).join(Supply).order_by(SupplyItem.expiration_date).all()
             
             return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
 

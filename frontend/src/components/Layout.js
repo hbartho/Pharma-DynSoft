@@ -79,6 +79,9 @@ const Layout = ({ children }) => {
   // Pour les autres: requis pour effectuer des opérations
   useEffect(() => {
     if (!shiftLoading && !currentShift && isOnline && user) {
+      if (user.role === 'admin' && sessionStorage.getItem('adminShiftModalDismissed') === '1') {
+        return;
+      }
       setShowOpenShiftModal(true);
     }
   }, [currentShift, shiftLoading, isOnline, user]);
@@ -986,7 +989,12 @@ const Layout = ({ children }) => {
       {/* Modal d'ouverture de shift - GLOBAL sur toutes les pages */}
       <OpenShiftModal
         isOpen={showOpenShiftModal}
-        onClose={() => setShowOpenShiftModal(false)}
+        onClose={() => {
+          setShowOpenShiftModal(false);
+          if (user?.role === 'admin') {
+            sessionStorage.setItem('adminShiftModalDismissed', '1');
+          }
+        }}
         onSuccess={() => refetchShift()}
       />
       

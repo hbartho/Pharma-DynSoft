@@ -111,7 +111,7 @@ if DATABASE_TYPE == "postgresql":
                 products = [p for p in products if p.get('updated_at') and datetime.fromisoformat(p['updated_at'].replace('Z', '+00:00')) > since_date]
                 customers = [c for c in customers if c.get('updated_at') and datetime.fromisoformat(c['updated_at'].replace('Z', '+00:00')) > since_date]
                 sales = [s for s in sales if s.get('updated_at') and datetime.fromisoformat(s['updated_at'].replace('Z', '+00:00')) > since_date]
-            except:
+            except Exception:
                 pass
         
         return {

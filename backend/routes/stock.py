@@ -450,14 +450,14 @@ if DATABASE_TYPE == "postgresql":
                 try:
                     from_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
                     query = query.filter(StockMovementModel.created_at >= from_date)
-                except:
+                except Exception:
                     pass
             
             if date_to:
                 try:
                     to_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
                     query = query.filter(StockMovementModel.created_at <= to_date)
-                except:
+                except Exception:
                     pass
             
             losses = query.order_by(desc(StockMovementModel.created_at)).limit(limit).all()

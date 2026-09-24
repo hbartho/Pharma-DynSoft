@@ -537,11 +537,6 @@ const Supplies = () => {
       return;
     }
     
-    if (!formData.delivery_note_number) {
-      toast.error('Veuillez saisir le N° Bon de livraison');
-      return;
-    }
-    
     if (!formData.invoice_number) {
       toast.error('Veuillez saisir le N° Facture');
       return;
@@ -559,7 +554,7 @@ const Supplies = () => {
       supply_date: supplyDateWithTime.toISOString(),
       supplier_id: formData.supplier_id,
       purchase_order_ref: formData.purchase_order_ref || null,
-      delivery_note_number: formData.delivery_note_number,
+      delivery_note_number: formData.delivery_note_number || null,
       invoice_number: formData.invoice_number,
       is_credit_note: formData.is_credit_note,
       notes: formData.notes || null,
@@ -895,7 +890,7 @@ const Supplies = () => {
                 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="delivery_note_number">N° Bon de livraison <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="delivery_note_number">N° Bon de livraison</Label>
                     <Input
                       id="delivery_note_number"
                       value={formData.delivery_note_number}

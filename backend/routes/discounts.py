@@ -513,7 +513,7 @@ def _check_rule_applicability(rule: DiscountRule, data: CalculateDiscountsReques
                 if isinstance(expiry_date, str):
                     try:
                         expiry_date = datetime.fromisoformat(expiry_date.replace("Z", "+00:00"))
-                    except:
+                    except Exception:
                         continue
                 if expiry_date <= threshold_date:
                     expiring_subtotal += item.get("subtotal", 0)

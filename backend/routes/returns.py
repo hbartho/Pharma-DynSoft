@@ -274,8 +274,6 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer l'historique des opérations (ventes + retours) avec pagination optimisée"""
-        from sqlalchemy.orm import joinedload
-        
         with get_session() as session:
             operations = []
             offset = (page - 1) * limit

@@ -187,7 +187,7 @@ if DATABASE_TYPE == "postgresql":
                         expected_end = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
                         if expected_end <= now:
                             expected_end += timedelta(days=1)
-                    except:
+                    except Exception:
                         pass  # Garder la valeur par défaut
             else:
                 expected_end = data.expected_end_time

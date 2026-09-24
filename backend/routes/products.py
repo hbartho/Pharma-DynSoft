@@ -160,7 +160,7 @@ if DATABASE_TYPE == "postgresql":
                             exp_date = exp_date.replace(tzinfo=timezone.utc)
                         product['near_expiration'] = exp_date <= expiration_threshold
                         product['days_until_expiration'] = (exp_date - now).days
-                    except:
+                    except Exception:
                         product['near_expiration'] = False
                         product['days_until_expiration'] = 9999
                 else:
@@ -227,7 +227,7 @@ if DATABASE_TYPE == "postgresql":
                         exp_date = exp_date.replace(tzinfo=timezone.utc)
                     product['_near_expiration'] = exp_date <= expiration_threshold
                     product['_days_until_expiration'] = (exp_date - now).days
-                except:
+                except Exception:
                     product['_near_expiration'] = False
                     product['_days_until_expiration'] = 9999
             else:
@@ -277,7 +277,7 @@ if DATABASE_TYPE == "postgresql":
                         expired_products.append({"id": p['id'], "name": p['name'], "expiration_date": exp_str})
                     else:
                         near_exp.append({"id": p['id'], "name": p['name'], "expiration_date": exp_str, "days_until_expiration": (exp_date - now).days})
-                except:
+                except Exception:
                     pass
         
         return {
