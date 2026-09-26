@@ -179,6 +179,18 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+### 🌍 COHÉRENCE FUSEAU HORAIRE GLOBALE (26 Sept 2026) - ✅ TERMINÉ & TESTÉ (iteration_41.json 100%)
+Toutes les dates du système se basent sur le fuseau de la pharmacie (settings.timezone, défaut Africa/Conakry), peu importe le fuseau du navigateur :
+- **Backend** : `services/tz_service.py` (get_pharmacy_tz, local_day_bounds, to_local_day_str, parse_local_date). Endpoints réécrits : `/reports/dashboard`, `/reports/today-sales-by-payment` (accepte YYYY-MM-DD), `/reports/weekly`, `/reports/sales`, `/reports/sales-summary`, filtre date ventes paginées (`repositories_extended.py`), `/shifts/history`, `/shift-schedules/my-schedule`
+- **Frontend** : `services/dateService.js` (setAppTimezone + patch global Date.prototype.toLocale*String appliqué dans index.js) ; SettingsContext propage le timezone ; Dashboard envoie la date en YYYY-MM-DD (jour pharmacie) ; calculs offline useDashboard.js en jour pharmacie ; date-fns remplacé par formatDateTz/formatDateTimeTz dans DiscountHistory, PromoCodes, SupplierDebts
+- **Shifts** : saisie/affichage heure de fin en heure pharmacie (`utils/timezoneUtils.js`, ShiftModals, Layout)
+- Bug d'origine résolu : vente affichée le 20 dans le graphe mais le 21 dans le widget paiements
+
+### 🔧 UX Shifts & Approvisionnements (24-26 Sept 2026) - ✅ TERMINÉ
+- BL et Bon de commande optionnels dans les approvisionnements
+- Modale Ouverture de Caisse optionnelle pour l'admin (affichée à la connexion, ne réapparaît pas après fermeture — sessionStorage)
+- Badge flottant « Aucun shift » + bouton « Ouvrir » visible aussi pour l'admin
+
 ### 📖 MANUEL D'UTILISATION PDF (10 Juin 2026) - ✅ TERMINÉ
 - Manuel complet en français (22 chapitres, ~3 Mo) avec 17 captures d'écran réelles de l'application
 - Générateur : `/app/scripts/generate_manual_pdf.py` (reportlab) + captures via `/app/scripts/capture_manual_screens.py` (playwright)
