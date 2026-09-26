@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { useCurrentShift, useMarkShiftAlert } from '../hooks/useShifts';
+import { useSettingsQuery } from '../hooks/useSettings';
+import { formatTimeInTz, DEFAULT_TZ } from '../utils/timezoneUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { ShiftAlertModal, CloseShiftModal, OpenShiftModal } from './ShiftModals';
 import {
@@ -61,6 +63,8 @@ const Layout = ({ children }) => {
   const { user, logout, isSyncing: isLoginSyncing, syncProgress } = useAuth();
   const { isOnline, isSyncing, performSync, lastSyncTime, pendingChangesCount, getTimeSinceLastSync } = useOffline();
   const { data: currentShift, isLoading: shiftLoading, refetch: refetchShift } = useCurrentShift();
+  const { data: layoutSettings } = useSettingsQuery();
+  const pharmacyTz = layoutSettings?.timezone || DEFAULT_TZ;
   
   // État pour la modal de blocage de déconnexion
   const [showLogoutBlockedModal, setShowLogoutBlockedModal] = useState(false);
@@ -848,9 +852,9 @@ const Layout = ({ children }) => {
           <div className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-green-50 border border-green-200 rounded-full shadow-md">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             <span className="text-xs md:text-sm text-green-700 font-medium">
-              {new Date(currentShift.opened_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              {formatTimeInTz(currentShift.opened_at, pharmacyTz)}
               {currentShift.expected_end_time && (
-                <span className="text-green-600 hidden sm:inline"> → {new Date(currentShift.expected_end_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="text-green-600 hidden sm:inline"> → {formatTimeInTz(currentShift.expected_end_time, pharmacyTz)}</span>
               )}
             </span>
             <button
@@ -948,7 +952,7 @@ const Layout = ({ children }) => {
                 <Clock className="w-4 h-4" />
                 <span>
                   Heure de fin prévue: <strong>
-                    {new Date(currentShift.expected_end_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    {formatTimeInTz(currentShift.expected_end_time, pharmacyTz)}
                   </strong>
                 </span>
               </div>

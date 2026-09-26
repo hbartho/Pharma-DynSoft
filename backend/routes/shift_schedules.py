@@ -217,7 +217,13 @@ if DATABASE_TYPE == "postgresql":
         user_id = current_user['user_id']
         from datetime import date as date_type
         
-        target_date = datetime.strptime(date, '%Y-%m-%d').date() if date else datetime.now(timezone.utc).date()
+        tz_name = await get_tenant_timezone("pharmacie_centrale")
+        try:
+            local_tz = ZoneInfo(tz_name)
+        except Exception:
+            local_tz = ZoneInfo(DEFAULT_TIMEZONE)
+        
+        target_date = datetime.strptime(date, '%Y-%m-%d').date() if date else datetime.now(timezone.utc).astimezone(local_tz).date()
         
         with get_session() as session:
             schedule = session.query(ShiftScheduleModel).filter(

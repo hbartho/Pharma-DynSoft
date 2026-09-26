@@ -8,6 +8,7 @@ import { useOpenShift, useCloseShift, useMarkShiftAlert } from '../hooks/useShif
 import { useShiftEligibility } from '../hooks/useShiftSchedules';
 import { useSettingsQuery } from '../hooks/useSettings';
 import { useAuth } from '../contexts/AuthContext';
+import { nowTimeInTz, tzTimeToUtcDate, formatTimeInTz, DEFAULT_TZ } from '../utils/timezoneUtils';
 import api from '../services/api';
 
 // Modal d'ouverture de shift
@@ -36,11 +37,8 @@ export function OpenShiftModal({ isOpen, onClose, onSuccess }) {
         setExpectedEndTime(eligibility.suggested_end_time);
       } else {
         const defaultDuration = settings?.default_shift_duration_hours || 8;
-        const now = new Date();
-        const endTime = new Date(now.getTime() + defaultDuration * 60 * 60 * 1000);
-        const hours = String(endTime.getHours()).padStart(2, '0');
-        const minutes = String(endTime.getMinutes()).padStart(2, '0');
-        setExpectedEndTime(`${hours}:${minutes}`);
+        const tz = settings?.timezone || DEFAULT_TZ;
+        setExpectedEndTime(nowTimeInTz(tz, defaultDuration * 60));
       }
     }
   }, [isOpen, settings, eligibility]);
@@ -59,19 +57,18 @@ export function OpenShiftModal({ isOpen, onClose, onSuccess }) {
       return;
     }
     
-    // Convertir l'heure saisie (HH:MM) en date/heure ISO complète
+    // Convertir l'heure saisie (HH:MM, fuseau de la pharmacie) en date/heure UTC
     let endTimeISO = null;
     if (expectedEndTime) {
-      const [hours, minutes] = expectedEndTime.split(':').map(Number);
+      const tz = settings?.timezone || DEFAULT_TZ;
       const now = new Date();
-      const endDate = new Date(now);
-      endDate.setHours(hours, minutes, 0, 0);
+      let endDate = tzTimeToUtcDate(expectedEndTime, tz);
       
       // Si l'heure de fin est avant maintenant (moins de 5 min de tolérance), 
       // c'est probablement pour demain
       const diffMinutes = (endDate - now) / (1000 * 60);
       if (diffMinutes < -5) {
-        endDate.setDate(endDate.getDate() + 1);
+        endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
       }
       
       // Vérifier que la durée ne dépasse pas 8 heures
@@ -235,7 +232,7 @@ export function OpenShiftModal({ isOpen, onClose, onSuccess }) {
               </p>
             ) : (
               <p className="text-xs text-slate-500 mt-2">
-                Vous recevrez des alertes 30min et 5min avant la fin du shift.
+                Heure de la pharmacie ({settings?.timezone || DEFAULT_TZ}) — actuellement {nowTimeInTz(settings?.timezone || DEFAULT_TZ)}. Vous recevrez des alertes 30min et 5min avant la fin du shift.
               </p>
             )}
           </div>
@@ -530,6 +527,7 @@ const playAlertSound = (alertType) => {
 
 // Modal d'alerte de fin de shift (pour l'alerte 'end' uniquement)
 export function ShiftAlertModal({ isOpen, onClose, alertType, expectedEndTime, onCloseShift }) {
+  const { data: alertSettings } = useSettingsQuery();
   const markAlert = useMarkShiftAlert();
   
   // Jouer le son quand la modal s'ouvre
@@ -552,8 +550,7 @@ export function ShiftAlertModal({ isOpen, onClose, alertType, expectedEndTime, o
   
   const formatEndTime = () => {
     if (!expectedEndTime) return '';
-    const date = new Date(expectedEndTime);
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return formatTimeInTz(expectedEndTime, alertSettings?.timezone || DEFAULT_TZ);
   };
 
   // Notifications simples pour 30min et 5min (avec bouton OK uniquement)
