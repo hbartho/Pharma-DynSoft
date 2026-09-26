@@ -38,6 +38,14 @@ export function tzTimeToUtcDate(hhmm, tz = DEFAULT_TZ) {
   return utc;
 }
 
+// Formate un instant en date "YYYY-MM-DD" dans le fuseau de la pharmacie
+export function formatDateInTz(value, tz = DEFAULT_TZ) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(value));
+}
+
 // Formate un instant ISO/Date en "HH:MM" dans le fuseau de la pharmacie
 export function formatTimeInTz(value, tz = DEFAULT_TZ) {
   if (!value) return '';

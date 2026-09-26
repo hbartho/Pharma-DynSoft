@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 import os
 
 from auth import require_role, get_current_user
+from services.tz_service import get_pharmacy_tz, local_day_bounds, parse_local_date, to_local_day_str, now_local
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
 
@@ -36,12 +37,13 @@ if DATABASE_TYPE == "postgresql":
     @router.get("/dashboard")
     async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         """Get dashboard statistics"""
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_start, day_end = local_day_bounds()
         
         with get_session() as session:
             # Ventes du jour
             today_sales = session.query(Sale).filter(
-                Sale.created_at >= today,
+                Sale.created_at >= day_start,
+                Sale.created_at < day_end,
                 Sale.status != SaleStatus.CANCELLED
             ).all()
             
@@ -79,22 +81,18 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Get sales breakdown by payment method for a specific date"""
-        if date:
-            try:
-                selected_date = datetime.fromisoformat(date.replace('Z', '+00:00'))
-                selected_date = selected_date.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
-            except ValueError:
-                selected_date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        else:
-            selected_date = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        tz = get_pharmacy_tz()
+        local_date = parse_local_date(date) if date else None
+        if local_date is None:
+            local_date = now_local(tz).date()
         
-        end_of_day = selected_date.replace(hour=23, minute=59, second=59)
+        day_start, day_end = local_day_bounds(local_date, tz)
         
         with get_session() as session:
             sales = session.query(Sale).filter(
                 and_(
-                    Sale.created_at >= selected_date,
-                    Sale.created_at <= end_of_day,
+                    Sale.created_at >= day_start,
+                    Sale.created_at < day_end,
                     Sale.status != SaleStatus.CANCELLED
                 )
             ).all()
@@ -150,7 +148,7 @@ if DATABASE_TYPE == "postgresql":
             total_revenue = sum(s.total or 0 for s in sales)
             
             return {
-                "date": selected_date.strftime('%Y-%m-%d'),
+                "date": local_date.isoformat(),
                 "total_sales": len(sales),
                 "total_revenue": total_revenue,
                 "by_payment_method": list(by_payment.values()),
@@ -163,34 +161,34 @@ if DATABASE_TYPE == "postgresql":
     @router.get("/weekly")
     async def get_weekly_stats(current_user: dict = Depends(get_current_user)):
         """Get weekly sales statistics"""
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        week_ago = today - timedelta(days=7)
+        tz = get_pharmacy_tz()
+        today_local = now_local(tz).date()
+        week_start_utc, _ = local_day_bounds(today_local - timedelta(days=6), tz)
         
         with get_session() as session:
             sales = session.query(Sale).filter(
                 and_(
-                    Sale.created_at >= week_ago,
+                    Sale.created_at >= week_start_utc,
                     Sale.status != SaleStatus.CANCELLED
                 )
             ).all()
             
             daily_stats = {}
             for i in range(7):
-                day = today - timedelta(days=6-i)
-                day_str = day.strftime('%Y-%m-%d')
+                day_str = (today_local - timedelta(days=6-i)).strftime('%Y-%m-%d')
                 daily_stats[day_str] = {"date": day_str, "sales_count": 0, "revenue": 0}
             
             for sale in sales:
                 if sale.created_at:
-                    day_str = sale.created_at.strftime('%Y-%m-%d')
+                    day_str = to_local_day_str(sale.created_at, tz)
                     if day_str in daily_stats:
                         daily_stats[day_str]["sales_count"] += 1
                         daily_stats[day_str]["revenue"] += sale.total or 0
             
             return {
                 "period": "7 derniers jours",
-                "start_date": week_ago.strftime('%Y-%m-%d'),
-                "end_date": today.strftime('%Y-%m-%d'),
+                "start_date": (today_local - timedelta(days=6)).strftime('%Y-%m-%d'),
+                "end_date": today_local.strftime('%Y-%m-%d'),
                 "daily_stats": list(daily_stats.values()),
                 "total_sales": len(sales),
                 "total_revenue": sum(s.total or 0 for s in sales)
@@ -231,27 +229,27 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Get sales report for the last N days - used for charts"""
-        now = datetime.now(timezone.utc)
-        start_date = (now - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
+        tz = get_pharmacy_tz()
+        today_local = now_local(tz).date()
+        start_utc, _ = local_day_bounds(today_local - timedelta(days=days-1), tz)
         
         with get_session() as session:
             sales = session.query(Sale).filter(
                 and_(
-                    Sale.created_at >= start_date,
+                    Sale.created_at >= start_utc,
                     Sale.status != SaleStatus.CANCELLED
                 )
             ).all()
             
-            # Agrégation par jour
+            # Agrégation par jour (fuseau pharmacie)
             daily_stats = {}
             for i in range(days):
-                day = (now - timedelta(days=days-1-i)).replace(hour=0, minute=0, second=0, microsecond=0)
-                day_str = day.strftime('%Y-%m-%d')
+                day_str = (today_local - timedelta(days=days-1-i)).strftime('%Y-%m-%d')
                 daily_stats[day_str] = {"count": 0, "revenue": 0}
             
             for sale in sales:
                 if sale.created_at:
-                    day_str = sale.created_at.strftime('%Y-%m-%d')
+                    day_str = to_local_day_str(sale.created_at, tz)
                     if day_str in daily_stats:
                         daily_stats[day_str]["count"] += 1
                         daily_stats[day_str]["revenue"] += sale.total or 0
@@ -271,23 +269,29 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Get sales summary for a date range"""
+        tz = get_pharmacy_tz()
         now = datetime.now(timezone.utc)
         
-        if start_date:
-            start = datetime.fromisoformat(start_date.replace('Z', '+00:00')).replace(tzinfo=timezone.utc)
+        sd = parse_local_date(start_date) if start_date else None
+        if sd:
+            start, _ = local_day_bounds(sd, tz)
         else:
-            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            first_of_month = now_local(tz).date().replace(day=1)
+            start, _ = local_day_bounds(first_of_month, tz)
+            sd = first_of_month
         
-        if end_date:
-            end = datetime.fromisoformat(end_date.replace('Z', '+00:00')).replace(tzinfo=timezone.utc)
+        ed = parse_local_date(end_date) if end_date else None
+        if ed:
+            _, end = local_day_bounds(ed, tz)
         else:
             end = now
+            ed = now_local(tz).date()
         
         with get_session() as session:
             sales = session.query(Sale).filter(
                 and_(
                     Sale.created_at >= start,
-                    Sale.created_at <= end,
+                    Sale.created_at < end,
                     Sale.status != SaleStatus.CANCELLED
                 )
             ).all()
@@ -306,8 +310,8 @@ if DATABASE_TYPE == "postgresql":
                 by_payment[method]["total"] += sale.total or 0
             
             return {
-                "start_date": start.strftime('%Y-%m-%d'),
-                "end_date": end.strftime('%Y-%m-%d'),
+                "start_date": sd.strftime('%Y-%m-%d'),
+                "end_date": ed.strftime('%Y-%m-%d'),
                 "total_sales": len(sales),
                 "total_revenue": round(total_revenue, 2),
                 "total_items_sold": total_items,

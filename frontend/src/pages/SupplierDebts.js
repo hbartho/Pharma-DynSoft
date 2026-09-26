@@ -6,6 +6,7 @@ import {
   FileText, Trash2, DollarSign, TrendingDown, RotateCcw
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { formatDateTz, formatDateTimeTz } from '../services/dateService';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import api from '../services/api';
@@ -384,7 +385,7 @@ export default function SupplierDebts() {
                       <td className="py-3 px-4 text-center">
                         {debt.due_date ? (
                           <div className={`text-sm ${debt.is_overdue ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
-                            {format(new Date(debt.due_date), 'dd/MM/yyyy', { locale: fr })}
+                            {formatDateTz(debt.due_date)}
                             {debt.is_overdue && (
                               <p className="text-xs text-red-500">
                                 +{debt.days_overdue} jours
@@ -625,7 +626,7 @@ export default function SupplierDebts() {
                   <p className="text-sm text-slate-500">Date d'échéance</p>
                   <p className={`font-medium ${selectedDebt.is_overdue ? 'text-red-600' : ''}`}>
                     {selectedDebt.due_date 
-                      ? format(new Date(selectedDebt.due_date), 'dd/MM/yyyy', { locale: fr })
+                      ? formatDateTz(selectedDebt.due_date)
                       : '-'
                     }
                   </p>
@@ -664,7 +665,7 @@ export default function SupplierDebts() {
                                   : formatAmount(payment.amount)}
                             </p>
                             <p className="text-slate-500 text-xs">
-                              {format(new Date(payment.date), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                              {formatDateTimeTz(payment.date)}
                             </p>
                           </div>
                           <span className={`px-2 py-0.5 rounded text-xs ${

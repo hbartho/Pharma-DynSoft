@@ -470,7 +470,8 @@ if DATABASE_TYPE == "postgresql":
         """Récupérer l'historique des shifts (Admin)."""
         repo = ShiftRepository()
         
-        end_date = datetime.now(timezone.utc).date()
+        from services.tz_service import now_local
+        end_date = now_local().date()
         start_date = end_date - timedelta(days=days)
         
         shifts = repo.get_by_date_range(start_date, end_date)

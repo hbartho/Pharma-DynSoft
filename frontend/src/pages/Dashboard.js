@@ -12,6 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { Calendar as CalendarComponent } from '../components/ui/calendar';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { todayInTz } from '../utils/timezoneUtils';
+import { getAppTimezone } from '../services/dateService';
+
+const pharmacyToday = () => new Date(`${todayInTz(getAppTimezone())}T12:00:00`);
 
 // Couleurs pour les modes de paiement
 const PAYMENT_COLORS = {
@@ -41,11 +45,11 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { formatAmount } = useSettings();
   
-  // État pour la date sélectionnée (null = aujourd'hui)
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  // État pour la date sélectionnée (initialisée au jour de la pharmacie)
+  const [selectedDate, setSelectedDate] = useState(() => pharmacyToday());
   
-  // Formater la date pour l'API (ISO string)
-  const formattedDate = selectedDate ? selectedDate.toISOString() : null;
+  // Formater la date pour l'API (date locale pharmacie YYYY-MM-DD)
+  const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
   
   const {
     stats,
@@ -56,9 +60,9 @@ const Dashboard = () => {
     isSalesByPaymentLoading,
   } = useDashboardData(formattedDate);
 
-  // Vérifier si c'est aujourd'hui
+  // Vérifier si c'est aujourd'hui (jour de la pharmacie)
   const isToday = selectedDate && 
-    selectedDate.toDateString() === new Date().toDateString();
+    format(selectedDate, 'yyyy-MM-dd') === todayInTz(getAppTimezone());
 
   // Navigation rapide entre les dates
   const goToPreviousDay = () => {
@@ -70,14 +74,14 @@ const Dashboard = () => {
   const goToNextDay = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + 1);
-    // Ne pas permettre d'aller dans le futur
-    if (newDate <= new Date()) {
+    // Ne pas permettre d'aller dans le futur (jour de la pharmacie)
+    if (format(newDate, 'yyyy-MM-dd') <= todayInTz(getAppTimezone())) {
       setSelectedDate(newDate);
     }
   };
 
   const goToToday = () => {
-    setSelectedDate(new Date());
+    setSelectedDate(pharmacyToday());
   };
 
   if (isLoading) {

@@ -329,10 +329,14 @@ class SaleRepository(BaseRepository):
             filters = []
             
             # Filtre par date
-            if date_from:
-                filters.append(func.date(Sale.created_at) >= date_from)
-            if date_to:
-                filters.append(func.date(Sale.created_at) <= date_to)
+            if date_from or date_to:
+                from services.tz_service import local_day_bounds
+                if date_from:
+                    start_utc, _ = local_day_bounds(date_from)
+                    filters.append(Sale.created_at >= start_utc)
+                if date_to:
+                    _, end_utc = local_day_bounds(date_to)
+                    filters.append(Sale.created_at < end_utc)
             
             # Filtre par mode de paiement
             if payment_method:

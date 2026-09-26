@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { formatDateTz } from '../services/dateService';
 import { fr } from 'date-fns/locale';
 import { 
   Plus, Search, Trash2, Edit2, Tag, Percent, DollarSign, 
@@ -347,9 +348,9 @@ const PromoCodes = () => {
                         {(code.start_date || code.end_date) && (
                           <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
                             <Calendar className="w-3 h-3" />
-                            {code.start_date && format(new Date(code.start_date), 'dd/MM/yyyy', { locale: fr })}
+                            {code.start_date && formatDateTz(code.start_date)}
                             {code.start_date && code.end_date && ' → '}
-                            {code.end_date && format(new Date(code.end_date), 'dd/MM/yyyy', { locale: fr })}
+                            {code.end_date && formatDateTz(code.end_date)}
                           </div>
                         )}
                       </div>

@@ -6,6 +6,8 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { getAllItems } from '../services/indexedDB';
+import { todayInTz, formatDateInTz } from '../utils/timezoneUtils';
+import { getAppTimezone } from '../services/dateService';
 
 // ============================================
 // Helper pour calculs offline du dashboard
@@ -15,14 +17,12 @@ const calculateOfflineDashboardStats = async () => {
   const sales = await getAllItems('sales') || [];
   const products = await getAllItems('products') || [];
   
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const tz = getAppTimezone();
+  const todayStr = todayInTz(tz);
   
-  const todaySales = sales.filter(s => {
-    const saleDate = new Date(s.created_at);
-    saleDate.setHours(0, 0, 0, 0);
-    return saleDate.getTime() === today.getTime() && s.status !== 'CANCELLED';
-  });
+  const todaySales = sales.filter(s => 
+    formatDateInTz(s.created_at, tz) === todayStr && s.status !== 'CANCELLED'
+  );
   
   const todayRevenue = todaySales.reduce((sum, s) => sum + (s.total || 0), 0);
   const lowStockCount = products.filter(p => (p.stock || 0) <= (p.min_stock || 10)).length;
@@ -42,19 +42,17 @@ const calculateOfflineDashboardStats = async () => {
 
 const calculateOfflineWeeklyStats = async () => {
   const sales = await getAllItems('sales') || [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const tz = getAppTimezone();
+  const base = new Date(`${todayInTz(tz)}T12:00:00Z`);
   
   const dailyStats = [];
   for (let i = 6; i >= 0; i--) {
-    const day = new Date(today);
-    day.setDate(day.getDate() - i);
+    const day = new Date(base.getTime() - i * 86400000);
     const dayStr = day.toISOString().split('T')[0];
     
-    const daySales = sales.filter(s => {
-      const saleDate = new Date(s.created_at);
-      return saleDate.toISOString().split('T')[0] === dayStr && s.status !== 'CANCELLED';
-    });
+    const daySales = sales.filter(s => 
+      formatDateInTz(s.created_at, tz) === dayStr && s.status !== 'CANCELLED'
+    );
     
     dailyStats.push({
       date: dayStr,
@@ -74,20 +72,13 @@ const calculateOfflineWeeklyStats = async () => {
 
 const calculateOfflineSalesByPayment = async (selectedDate) => {
   const sales = await getAllItems('sales') || [];
+  const tz = getAppTimezone();
   
-  let targetDate;
-  if (selectedDate) {
-    targetDate = new Date(selectedDate);
-  } else {
-    targetDate = new Date();
-  }
-  targetDate.setHours(0, 0, 0, 0);
+  const targetStr = selectedDate ? String(selectedDate).split('T')[0] : todayInTz(tz);
   
-  const daySales = sales.filter(s => {
-    const saleDate = new Date(s.created_at);
-    saleDate.setHours(0, 0, 0, 0);
-    return saleDate.getTime() === targetDate.getTime() && s.status !== 'CANCELLED';
-  });
+  const daySales = sales.filter(s => 
+    formatDateInTz(s.created_at, tz) === targetStr && s.status !== 'CANCELLED'
+  );
   
   const byPayment = {};
   let totalDiscount = 0;
@@ -118,7 +109,7 @@ const calculateOfflineSalesByPayment = async (selectedDate) => {
   });
   
   return {
-    date: targetDate.toISOString().split('T')[0],
+    date: targetStr,
     total_sales: daySales.length,
     total_revenue: daySales.reduce((sum, s) => sum + (s.total || 0), 0),
     by_payment_method: Object.values(byPayment),
@@ -362,7 +353,7 @@ export const useDashboardData = (salesDate = null) => {
   // L'API retourne by_payment_method et total_sales, on normalise les noms
   const rawSalesByPayment = salesByPaymentQuery.data || {};
   const salesByPayment = {
-    date: rawSalesByPayment.date || new Date().toISOString(),
+    date: rawSalesByPayment.date || todayInTz(getAppTimezone()),
     total_count: rawSalesByPayment.total_sales || 0,
     total_revenue: rawSalesByPayment.total_revenue || 0,
     by_payment: rawSalesByPayment.by_payment_method || [],

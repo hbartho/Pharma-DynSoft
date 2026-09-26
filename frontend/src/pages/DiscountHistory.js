@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { formatDateTimeTz } from '../services/dateService';
 import { fr } from 'date-fns/locale';
 import { 
   History, Search, Filter, Calendar, User, Tag, Zap, 
@@ -117,7 +118,7 @@ const DiscountHistory = () => {
     
     const headers = ['Date', 'Vente', 'Source', 'Code/Règle', 'Produit', 'Client', 'Type', 'Valeur', 'Montant', 'Agent', 'Motif'];
     const rows = history.map(h => [
-      h.created_at ? format(new Date(h.created_at), 'dd/MM/yyyy HH:mm') : '',
+      h.created_at ? formatDateTimeTz(h.created_at) : '',
       h.sale_number || '',
       getSourceConfig(h.discount_source).label,
       h.promo_code || h.rule_name || '',
@@ -378,7 +379,7 @@ const DiscountHistory = () => {
                         return (
                           <TableRow key={item.id}>
                             <TableCell className="whitespace-nowrap">
-                              {item.created_at && format(new Date(item.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                              {item.created_at && formatDateTimeTz(item.created_at)}
                             </TableCell>
                             <TableCell>
                               <span className="font-mono text-sm text-teal-600">

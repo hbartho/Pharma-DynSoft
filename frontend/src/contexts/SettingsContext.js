@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../services/api';
 import { formatCurrency, getCurrencySymbol } from '../services/currencyService';
+import { setAppTimezone } from '../services/dateService';
 
 const SettingsContext = createContext();
 
@@ -10,6 +11,7 @@ const DEFAULT_SETTINGS = {
   stock_valuation_method: 'weighted_average',
   pharmacy_name: '',
   low_stock_threshold: 10,
+  timezone: 'Africa/Conakry',
 };
 
 export const useSettings = () => {
@@ -63,8 +65,10 @@ export const SettingsProvider = ({ children }) => {
         currency: response.data.currency || 'GNF',
         pharmacy_name: response.data.pharmacy_name || '',
         low_stock_threshold: response.data.low_stock_threshold || 10,
+        timezone: response.data.timezone || 'Africa/Conakry',
       };
       setSettings(newSettings);
+      setAppTimezone(newSettings.timezone);
       setLastFetchTime(Date.now());
       setInitialized(true);
       
@@ -76,7 +80,9 @@ export const SettingsProvider = ({ children }) => {
       const cached = localStorage.getItem('app_settings');
       if (cached) {
         try {
-          setSettings(JSON.parse(cached));
+          const parsed = JSON.parse(cached);
+          setSettings(parsed);
+          setAppTimezone(parsed.timezone);
           setInitialized(true);
         } catch (e) {
           // Garder les valeurs par défaut
@@ -93,6 +99,7 @@ export const SettingsProvider = ({ children }) => {
       setSettings(prev => {
         const updated = { ...prev, ...newSettings };
         localStorage.setItem('app_settings', JSON.stringify(updated));
+        setAppTimezone(updated.timezone);
         return updated;
       });
       setLastFetchTime(Date.now());
