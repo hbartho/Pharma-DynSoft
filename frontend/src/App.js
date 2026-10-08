@@ -33,10 +33,11 @@ import StockMovements from './pages/StockMovements';
 import PromoCodes from './pages/PromoCodes';
 import DiscountRules from './pages/DiscountRules';
 import DiscountHistory from './pages/DiscountHistory';
+import PlatformAdmin from './pages/PlatformAdmin';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -51,7 +52,15 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user?.role === 'super_admin') {
+    return <Navigate to="/platform" />;
+  }
+
+  return children;
 };
 
 // Role-based protected route
@@ -87,6 +96,14 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route
+        path="/platform"
+        element={
+          <RoleProtectedRoute allowedRoles={['super_admin']}>
+            <PlatformAdmin />
+          </RoleProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={

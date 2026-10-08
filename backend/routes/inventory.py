@@ -1,3 +1,4 @@
+from database.tenant_context import get_current_tenant
 """
 Inventory Routes - PostgreSQL Implementation with Database Persistence
 """
@@ -28,8 +29,8 @@ from sqlalchemy import desc, func
 
 def get_session():
     if USE_SUPABASE:
-        return db_manager.get_tenant_session("default")
-    return db_manager.get_tenant_session("pharmacie_centrale")
+        return db_manager.get_tenant_session(get_current_tenant())
+    return db_manager.get_tenant_session(get_current_tenant())
 
 
 def session_to_dict(session: InventorySessionModel, include_items: bool = True) -> dict:

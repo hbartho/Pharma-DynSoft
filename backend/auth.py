@@ -45,15 +45,17 @@ def create_access_token(data: dict, session_id: str = None) -> str:
 
 
 # PostgreSQL Implementation
+from fastapi import Request
 from database.repositories import UserRepository
+from database.tenant_context import set_current_tenant, DEFAULT_TENANT
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get the current authenticated user from JWT token"""
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
-        tenant_id: str = payload.get("tenant_id", "default")
+        tenant_id: str = payload.get("tenant_id") or DEFAULT_TENANT
         role: str = payload.get("role")
         employee_code: str = payload.get("employee_code")
         session_id: str = payload.get("session_id")
@@ -61,8 +63,25 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
         
+        if role == "super_admin":
+            path = request.url.path if request else ""
+            if not (path.startswith("/api/platform") or path.startswith("/api/auth")):
+                raise HTTPException(status_code=403, detail="Compte plateforme: accès réservé à la gestion des pharmacies")
+            return {
+                "user_id": user_id,
+                "tenant_id": None,
+                "role": "super_admin",
+                "employee_code": "SUPER",
+                "session_id": session_id,
+                "name": payload.get("name", "Super Admin"),
+                "email": payload.get("email")
+            }
+        
+        # Positionner le tenant courant pour toute la requête
+        set_current_tenant(tenant_id)
+        
         # Vérifier que l'utilisateur existe
-        repo = UserRepository()
+        repo = UserRepository(tenant_id)
         user = repo.get_by_id_str(user_id)
         if not user:
             raise HTTPException(status_code=401, detail="Utilisateur non trouvé")

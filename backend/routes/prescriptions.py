@@ -11,6 +11,8 @@ from auth import require_role, get_current_user
 from models.prescription import Prescription, PrescriptionCreate, PrescriptionUpdate
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/prescriptions", tags=["Prescriptions"])
 
@@ -23,8 +25,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def prescription_to_dict(p) -> dict:
         if p is None:
@@ -39,7 +41,7 @@ if DATABASE_TYPE == "postgresql":
             "notes": p.notes,
             "status": p.status.value if p.status else "pending",
             "created_at": p.created_at,
-            "tenant_id": "pharmacie_centrale",
+            "tenant_id": get_current_tenant(),
         }
     
     @router.get("/stats")
@@ -114,7 +116,7 @@ if DATABASE_TYPE == "postgresql":
             prescriptions = []
             for p in prescriptions_orm:
                 data = prescription_to_dict(p)
-                data['tenant_id'] = 'pharmacie_centrale'
+                data['tenant_id'] = get_current_tenant()
                 prescriptions.append(data)
             
             pages = (total + limit - 1) // limit if total > 0 else 1
@@ -148,7 +150,7 @@ if DATABASE_TYPE == "postgresql":
             session.refresh(prescription)
             
             result = prescription_to_dict(prescription)
-            result['tenant_id'] = 'pharmacie_centrale'
+            result['tenant_id'] = get_current_tenant()
             return Prescription(**result)
     
     @router.get("", response_model=List[Prescription])
@@ -164,7 +166,7 @@ if DATABASE_TYPE == "postgresql":
             result = []
             for p in prescriptions:
                 data = prescription_to_dict(p)
-                data['tenant_id'] = 'pharmacie_centrale'
+                data['tenant_id'] = get_current_tenant()
                 result.append(Prescription(**data))
             return result
     
@@ -219,7 +221,7 @@ if DATABASE_TYPE == "postgresql":
             session.refresh(prescription)
             
             result = prescription_to_dict(prescription)
-            result['tenant_id'] = 'pharmacie_centrale'
+            result['tenant_id'] = get_current_tenant()
             return Prescription(**result)
     
     @router.delete("/{prescription_id}")

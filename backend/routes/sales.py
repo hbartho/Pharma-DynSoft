@@ -26,12 +26,13 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories_extended import SaleRepository
     from database.repositories import ProductRepository, CustomerRepository, SettingsRepository, UserRepository
     from database.config import db_manager
+    from database.tenant_context import get_current_tenant
     from database.models_tenant import DiscountHistory, DiscountSource
     
     def record_discount_history(sale_id, sale_number, sale_data, customer, employee_code, user_name):
         """Enregistre tous les rabais d'une vente dans l'historique."""
         try:
-            with db_manager.get_master_session() as session:
+            with db_manager.get_tenant_session(get_current_tenant()) as session:
                 # 1. Rabais par produit (items)
                 if hasattr(sale_data, 'items') and sale_data.items:
                     for item in sale_data.items:

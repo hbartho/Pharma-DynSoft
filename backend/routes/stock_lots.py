@@ -35,6 +35,8 @@ class StockLotResponse(BaseModel):
     supplier_name: Optional[str] = None
 
 DATABASE_TYPE = os.environ.get("DB_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
@@ -43,8 +45,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def lot_to_dict(item, supply=None, product=None, supplier=None) -> dict:
         """Convertir un supply_item en lot de stock"""
@@ -62,7 +64,7 @@ if DATABASE_TYPE == "postgresql":
             "supplier_name": supplier.name if supplier else None,
             "supplier_id": str(supply.supplier_id) if supply and supply.supplier_id else None,
             "lot_number": None,  # Pas de numéro de lot dans ce modèle
-            "tenant_id": "pharmacie_centrale"
+            "tenant_id": get_current_tenant()
         }
     
     @router.get("", response_model=List[dict])

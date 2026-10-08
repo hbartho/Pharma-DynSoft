@@ -18,6 +18,8 @@ from models.shift_schedule import (
 )
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/shift-schedules", tags=["Shift Schedules"])
 
@@ -32,8 +34,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def schedule_to_dict(s) -> dict:
         if s is None:
@@ -51,7 +53,7 @@ if DATABASE_TYPE == "postgresql":
             "notes": s.notes,
             "is_active": True,
             "created_at": s.created_at,
-            "tenant_id": "pharmacie_centrale",
+            "tenant_id": get_current_tenant(),
         }
     
     async def get_tenant_timezone(tenant_id: str) -> str:
@@ -147,7 +149,7 @@ if DATABASE_TYPE == "postgresql":
                 max_duration_hours=8.0
             )
         
-        tz_name = await get_tenant_timezone("pharmacie_centrale")
+        tz_name = await get_tenant_timezone(get_current_tenant())
         try:
             local_tz = ZoneInfo(tz_name)
         except Exception:
@@ -217,7 +219,7 @@ if DATABASE_TYPE == "postgresql":
         user_id = current_user['user_id']
         from datetime import date as date_type
         
-        tz_name = await get_tenant_timezone("pharmacie_centrale")
+        tz_name = await get_tenant_timezone(get_current_tenant())
         try:
             local_tz = ZoneInfo(tz_name)
         except Exception:

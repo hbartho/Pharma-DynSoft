@@ -8,6 +8,8 @@ from models.settings import Settings, SettingsUpdate
 import os
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
@@ -38,7 +40,7 @@ if DATABASE_TYPE == "postgresql":
         
         # Pour PostgreSQL multi-tenant, chaque base = une agence
         return [{
-            "tenant_id": "pharmacie_centrale",
+            "tenant_id": get_current_tenant(),
             "pharmacy_name": pharmacy_name,
             "currency": settings.get("currency", "GNF")
         }]

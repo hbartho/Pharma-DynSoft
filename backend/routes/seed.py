@@ -1,3 +1,4 @@
+from database.tenant_context import get_current_tenant
 """
 Database Seed Routes - Reset and populate with test data
 """
@@ -34,7 +35,7 @@ async def reset_and_seed_database(current_user: dict = Depends(require_role(["ad
         }
         
         # ========== STEP 1: DELETE ALL DATA VIA SQL ==========
-        session = db_manager.get_tenant_session("default")
+        session = db_manager.get_tenant_session(get_current_tenant())
         with session as s:
             # Order matters due to foreign keys - delete in reverse dependency order
             tables_to_clear = [
@@ -56,7 +57,9 @@ async def reset_and_seed_database(current_user: dict = Depends(require_role(["ad
             
             for table in tables_to_clear:
                 try:
-                    result = s.execute(text(f"DELETE FROM {table}"))
+                    from database.tenant_context import tenant_schema_name
+                    schema = tenant_schema_name(get_current_tenant())
+                    result = s.execute(text(f'DELETE FROM "{schema}"."{table}"'))
                     results["deleted"][table] = result.rowcount
                     s.commit()  # Commit each delete separately to avoid transaction issues
                 except Exception as e:
@@ -218,14 +221,14 @@ async def get_seed_status():
 async def migrate_split_payments(current_user: dict = Depends(require_role(["admin"]))):
     """Add split payment columns to sales table if they don't exist."""
     try:
-        session = db_manager.get_tenant_session("default")
+        session = db_manager.get_tenant_session(get_current_tenant())
         results = {"columns_added": []}
         
         with session as s:
             # Add is_split_payment column
             try:
                 s.execute(text("""
-                    ALTER TABLE sales 
+                    ALTER TABLE public.sales 
                     ADD COLUMN IF NOT EXISTS is_split_payment BOOLEAN DEFAULT FALSE;
                 """))
                 s.commit()
@@ -237,7 +240,7 @@ async def migrate_split_payments(current_user: dict = Depends(require_role(["adm
             # Add split_payments column
             try:
                 s.execute(text("""
-                    ALTER TABLE sales 
+                    ALTER TABLE public.sales 
                     ADD COLUMN IF NOT EXISTS split_payments JSONB DEFAULT NULL;
                 """))
                 s.commit()

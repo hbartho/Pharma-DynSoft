@@ -11,6 +11,8 @@ from auth import get_current_user
 from models.pending_sale import PendingSale, PendingSaleCreate, PendingSaleUpdate
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/pending-sales", tags=["Pending Sales"])
 
@@ -24,8 +26,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def pending_sale_to_dict(p) -> dict:
         if p is None:
@@ -57,7 +59,7 @@ if DATABASE_TYPE == "postgresql":
             "created_at": p.created_at,
             "expires_at": p.expires_at,
             "time_remaining_minutes": time_remaining,
-            "tenant_id": "pharmacie_centrale",
+            "tenant_id": get_current_tenant(),
         }
     
     async def cleanup_expired_pending_sales():

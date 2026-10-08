@@ -13,6 +13,7 @@ from pydantic import BaseModel
 import logging
 
 from database.config import db_manager
+from database.tenant_context import get_current_tenant
 from database.models_tenant import (
     PromoCode, PromoCodeStatus, PromoCodeUsage,
     DiscountRule, DiscountRuleType,
@@ -115,7 +116,7 @@ async def list_promo_codes(
     current_user: dict = Depends(get_current_user)
 ):
     """Liste tous les codes promo."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         query = session.query(PromoCode)
         
         if status:
@@ -144,7 +145,7 @@ async def create_promo_code(
     current_user: dict = Depends(require_role(["admin"]))
 ):
     """Crée un nouveau code promo."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         # Vérifier unicité du code
         existing = session.query(PromoCode).filter(PromoCode.code == data.code.upper()).first()
         if existing:
@@ -181,7 +182,7 @@ async def get_promo_code(
     current_user: dict = Depends(get_current_user)
 ):
     """Récupère un code promo par ID."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         promo = session.query(PromoCode).filter(PromoCode.id == promo_id).first()
         if not promo:
             raise HTTPException(status_code=404, detail="Code promo non trouvé")
@@ -195,7 +196,7 @@ async def update_promo_code(
     current_user: dict = Depends(require_role(["admin"]))
 ):
     """Met à jour un code promo."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         promo = session.query(PromoCode).filter(PromoCode.id == promo_id).first()
         if not promo:
             raise HTTPException(status_code=404, detail="Code promo non trouvé")
@@ -217,7 +218,7 @@ async def delete_promo_code(
     current_user: dict = Depends(require_role(["admin"]))
 ):
     """Supprime un code promo."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         promo = session.query(PromoCode).filter(PromoCode.id == promo_id).first()
         if not promo:
             raise HTTPException(status_code=404, detail="Code promo non trouvé")
@@ -234,7 +235,7 @@ async def validate_promo_code(
     """Valide un code promo et retourne le rabais applicable."""
     code = data.code.upper().strip()
     
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         promo = session.query(PromoCode).filter(PromoCode.code == code).first()
         if not promo:
             raise HTTPException(status_code=404, detail="Code promo invalide")
@@ -302,7 +303,7 @@ async def list_discount_rules(
     current_user: dict = Depends(get_current_user)
 ):
     """Liste toutes les règles de rabais."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         query = session.query(DiscountRule)
         
         if rule_type:
@@ -325,7 +326,7 @@ async def create_discount_rule(
     current_user: dict = Depends(require_role(["admin"]))
 ):
     """Crée une nouvelle règle de rabais."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         rule = DiscountRule(
             name=data.name,
             description=data.description,
@@ -352,7 +353,7 @@ async def get_discount_rule(
     current_user: dict = Depends(get_current_user)
 ):
     """Récupère une règle par ID."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         rule = session.query(DiscountRule).filter(DiscountRule.id == rule_id).first()
         if not rule:
             raise HTTPException(status_code=404, detail="Règle non trouvée")
@@ -366,7 +367,7 @@ async def update_discount_rule(
     current_user: dict = Depends(require_role(["admin"]))
 ):
     """Met à jour une règle de rabais."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         rule = session.query(DiscountRule).filter(DiscountRule.id == rule_id).first()
         if not rule:
             raise HTTPException(status_code=404, detail="Règle non trouvée")
@@ -385,7 +386,7 @@ async def delete_discount_rule(
     current_user: dict = Depends(require_role(["admin"]))
 ):
     """Supprime une règle de rabais."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         rule = session.query(DiscountRule).filter(DiscountRule.id == rule_id).first()
         if not rule:
             raise HTTPException(status_code=404, detail="Règle non trouvée")
@@ -408,7 +409,7 @@ async def calculate_applicable_discounts(
     total_automatic_discount = 0
     promo_discount = None
     
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         # Charger le client si fourni
         customer = None
         if data.customer_id:
@@ -567,7 +568,7 @@ async def get_discount_history(
     current_user: dict = Depends(get_current_user)
 ):
     """Récupère l'historique des rabais accordés."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         query = session.query(DiscountHistory)
         
         if date_from:
@@ -597,7 +598,7 @@ async def get_discount_stats(
     current_user: dict = Depends(get_current_user)
 ):
     """Statistiques des rabais accordés."""
-    with db_manager.get_master_session() as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         query = session.query(DiscountHistory)
         
         if date_from:

@@ -9,6 +9,8 @@ from auth import require_role, get_current_user
 from services.tz_service import get_pharmacy_tz, local_day_bounds, parse_local_date, to_local_day_str, now_local
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -31,8 +33,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/dashboard")
     async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):

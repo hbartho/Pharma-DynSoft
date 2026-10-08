@@ -19,6 +19,8 @@ router = APIRouter(prefix="/payment-methods", tags=["payment-methods"])
 
 # Configuration base de données
 DATABASE_TYPE = os.environ.get("DB_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
@@ -26,45 +28,21 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def get_payment_methods_from_db():
-        """Récupérer les modes de paiement depuis la table settings"""
-        with get_session() as session:
-            result = session.execute(
-                text("SELECT value FROM public.settings WHERE key = 'payment_methods'")
-            ).fetchone()
-            
-            if result and result[0]:
-                methods = result[0] if isinstance(result[0], list) else json.loads(result[0])
-                return methods
-            
-            # Retourner les méthodes par défaut si aucune n'existe
-            return get_default_payment_methods()
+        """Récupérer les modes de paiement depuis la table settings (tenant courant)"""
+        from database.repositories import SettingsRepository
+        value = SettingsRepository().get("payment_methods")
+        if value:
+            return value if isinstance(value, list) else json.loads(value)
+        return get_default_payment_methods()
     
     def save_payment_methods_to_db(methods: List[dict]):
-        """Sauvegarder les modes de paiement dans la table settings"""
-        with get_session() as session:
-            # Vérifier si l'entrée existe
-            result = session.execute(
-                text("SELECT id FROM public.settings WHERE key = 'payment_methods'")
-            ).fetchone()
-            
-            methods_json = json.dumps(methods)
-            
-            if result:
-                session.execute(
-                    text("UPDATE public.settings SET value = :value WHERE key = 'payment_methods'"),
-                    {"value": methods_json}
-                )
-            else:
-                session.execute(
-                    text("INSERT INTO public.settings (id, key, value, description) VALUES (:id, 'payment_methods', :value, 'Modes de paiement disponibles')"),
-                    {"id": str(uuid.uuid4()), "value": methods_json}
-                )
-            
-            session.commit()
+        """Sauvegarder les modes de paiement dans la table settings (tenant courant)"""
+        from database.repositories import SettingsRepository
+        SettingsRepository().set("payment_methods", methods, "Modes de paiement disponibles")
     
     def get_default_payment_methods():
         """Retourner les modes de paiement par défaut"""

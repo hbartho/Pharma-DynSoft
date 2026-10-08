@@ -14,6 +14,8 @@ from models.stock import StockMovement, StockMovementCreate, StockMovementType, 
 router = APIRouter(prefix="/stock", tags=["Stock"])
 
 DATABASE_TYPE = os.environ.get("DB_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
@@ -23,8 +25,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def get_product_info(product_id: str) -> dict:
         """Récupérer les infos d'un produit"""

@@ -37,6 +37,7 @@ from routes.pending_sales import router as pending_sales_router
 from routes.seed import router as seed_router
 from routes.discounts import router as discounts_router
 from routes.manual import router as manual_router
+from routes.platform import router as platform_router
 
 # Configure logging
 logging.basicConfig(
@@ -90,6 +91,7 @@ app.include_router(pending_sales_router, prefix="/api")
 app.include_router(seed_router, prefix="/api")
 app.include_router(discounts_router, prefix="/api")
 app.include_router(manual_router, prefix="/api")
+app.include_router(platform_router, prefix="/api")
 
 @app.on_event("shutdown")
 async def shutdown_event():

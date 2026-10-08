@@ -17,6 +17,8 @@ from contextlib import contextmanager, asynccontextmanager
 from typing import Optional, Generator, AsyncGenerator
 import logging
 
+from database.tenant_context import tenant_schema_name
+
 logger = logging.getLogger(__name__)
 
 # Configuration PostgreSQL - Support Supabase et local
@@ -65,6 +67,7 @@ class DatabaseManager:
         self._async_engines: dict = {}
         self._session_factories: dict = {}
         self._async_session_factories: dict = {}
+        self._schema_session_factories: dict = {}
         
         # Initialiser la connexion (master pour local, postgres pour Supabase)
         self._init_connection()
@@ -169,18 +172,25 @@ class DatabaseManager:
         finally:
             await session.close()
     
+    def _get_schema_session_factory(self, schema: str):
+        """Factory de sessions liée à un schéma tenant (via schema_translate_map)."""
+        if schema not in self._schema_session_factories:
+            base_engine = self._engines["supabase"] if USE_SUPABASE else self._engines["master"]
+            engine = base_engine.execution_options(schema_translate_map={None: schema})
+            self._schema_session_factories[schema] = sessionmaker(
+                bind=engine, autocommit=False, autoflush=False
+            )
+        return self._schema_session_factories[schema]
+
     @contextmanager
     def get_tenant_session(self, tenant_slug: str) -> Generator[Session, None, None]:
-        """Context manager pour une session tenant synchrone."""
-        if USE_SUPABASE:
-            # Supabase: réutiliser la session principale
-            key = "supabase"
+        """Context manager pour une session tenant synchrone (schéma par pharmacie)."""
+        schema = tenant_schema_name(tenant_slug)
+        if schema == "public":
+            key = "supabase" if USE_SUPABASE else "master"
+            session = self._session_factories[key]()
         else:
-            db_name = get_tenant_db_name(tenant_slug)
-            self.get_tenant_engine(tenant_slug)  # S'assurer que l'engine existe
-            key = db_name
-        
-        session = self._session_factories[key]()
+            session = self._get_schema_session_factory(schema)()
         try:
             yield session
             session.commit()
@@ -211,6 +221,40 @@ class DatabaseManager:
         finally:
             await session.close()
     
+    def create_tenant_schema(self, tenant_slug: str) -> str:
+        """Crée le schéma PostgreSQL et les tables pour une nouvelle pharmacie."""
+        from database.base import Base
+        import database.models_tenant  # noqa: F401 - charge les modèles
+        
+        schema = tenant_schema_name(tenant_slug)
+        if schema == "public":
+            raise ValueError("Slug réservé")
+        
+        base_engine = self._engines["supabase"] if USE_SUPABASE else self._engines["master"]
+        with base_engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
+            conn.commit()
+        
+        tenant_tables = [t for t in Base.metadata.sorted_tables if t.schema is None]
+        translated = base_engine.execution_options(schema_translate_map={None: schema})
+        Base.metadata.create_all(translated, tables=tenant_tables, checkfirst=True)
+        logger.info(f"Schéma tenant créé: {schema}")
+        return schema
+
+    def drop_tenant_schema(self, tenant_slug: str) -> bool:
+        """Supprime définitivement le schéma d'une pharmacie."""
+        schema = tenant_schema_name(tenant_slug)
+        if schema == "public":
+            raise ValueError("Impossible de supprimer le schéma public")
+        
+        base_engine = self._engines["supabase"] if USE_SUPABASE else self._engines["master"]
+        with base_engine.connect() as conn:
+            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+            conn.commit()
+        self._schema_session_factories.pop(schema, None)
+        logger.info(f"Schéma tenant supprimé: {schema}")
+        return True
+
     def create_tenant_database(self, tenant_slug: str) -> bool:
         """Crée une nouvelle base de données pour un tenant."""
         db_name = get_tenant_db_name(tenant_slug)

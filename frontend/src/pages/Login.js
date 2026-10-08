@@ -64,18 +64,13 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!selectedAgency) {
-      toast.error('Veuillez sélectionner une agence');
-      return;
-    }
-    
     setLoading(true);
 
     const result = await login(formData.email, formData.password);
     
     if (result.success) {
       toast.success('Connexion réussie!');
-      navigate('/dashboard');
+      navigate(result.user?.role === 'super_admin' ? '/platform' : '/dashboard');
     } else {
       toast.error(result.message || 'Erreur de connexion');
     }
@@ -173,27 +168,6 @@ const Login = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" data-testid="login-form">
-            {/* Agence / Nom de la pharmacie - Affichage direct (mono-tenant) */}
-            <div>
-              <Label htmlFor="agency-display" className="text-sm font-medium text-slate-700 mb-2 block">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-teal-600" />
-                  Agence
-                </div>
-              </Label>
-              <div 
-                id="agency-display"
-                className="w-full h-12 px-4 flex items-center gap-3 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-lg"
-              >
-                <div className="p-1.5 bg-teal-100 rounded-lg">
-                  <Building2 className="w-4 h-4 text-teal-700" />
-                </div>
-                <span className="font-medium text-teal-900">
-                  {selectedAgency?.pharmacy_name || 'Chargement...'}
-                </span>
-              </div>
-            </div>
-
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -245,7 +219,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              disabled={loading || !selectedAgency}
+              disabled={loading}
               data-testid="login-submit-button"
               className="w-full bg-teal-700 hover:bg-teal-800 text-white rounded-full py-6 text-lg font-medium transition-all active:scale-95"
             >

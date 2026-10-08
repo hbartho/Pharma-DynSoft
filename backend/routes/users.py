@@ -35,6 +35,8 @@ def normalize_user_data(user: dict) -> dict:
 if DATABASE_TYPE == "postgresql":
     # ============ PostgreSQL Implementation ============
     from database.repositories import UserRepository
+    from database.tenant_context import get_current_tenant
+    from database.directory import get_directory_entry, upsert_directory_entry, remove_directory_entry
     
     @router.get("")
     async def get_users(current_user: dict = Depends(require_admin)):
@@ -45,7 +47,7 @@ if DATABASE_TYPE == "postgresql":
         result = []
         for user in users:
             user = {k: v for k, v in user.items() if k != 'password'}
-            user['tenant_id'] = 'pharmacie_centrale'
+            user['tenant_id'] = get_current_tenant()
             if 'is_active' not in user:
                 user['is_active'] = True
             user = normalize_user_data(user)
@@ -62,7 +64,7 @@ if DATABASE_TYPE == "postgresql":
             raise HTTPException(status_code=404, detail="User not found")
         
         user = {k: v for k, v in user.items() if k != 'password'}
-        user['tenant_id'] = 'pharmacie_centrale'
+        user['tenant_id'] = get_current_tenant()
         if 'is_active' not in user:
             user['is_active'] = True
         user = normalize_user_data(user)
@@ -73,6 +75,9 @@ if DATABASE_TYPE == "postgresql":
         """Create a new user (Admin only)"""
         repo = UserRepository()
         
+        directory_entry = get_directory_entry(user_data.email)
+        if directory_entry:
+            raise HTTPException(status_code=400, detail="Email already registered")
         existing_user = repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
@@ -88,8 +93,11 @@ if DATABASE_TYPE == "postgresql":
         password = user_dict.pop("password")
         hashed_password = hash_password(password)
         user_dict['password'] = hashed_password
+        if not user_dict.get('name'):
+            user_dict['name'] = f"{user_data.first_name} {user_data.last_name}".strip()
         
         result = repo.create(user_dict)
+        upsert_directory_entry(user_data.email, get_current_tenant())
         
         return {
             "id": result['id'],
@@ -98,7 +106,7 @@ if DATABASE_TYPE == "postgresql":
             "last_name": result.get('last_name', ''),
             "employee_code": result['employee_code'],
             "role": result['role'],
-            "tenant_id": 'pharmacie_centrale',
+            "tenant_id": get_current_tenant(),
             "is_active": result.get('is_active', True),
             "created_at": result.get('created_at')
         }
@@ -130,7 +138,7 @@ if DATABASE_TYPE == "postgresql":
         
         updated_user = repo.get_by_id_str(user_id)
         updated_user = {k: v for k, v in updated_user.items() if k != 'password'}
-        updated_user['tenant_id'] = 'pharmacie_centrale'
+        updated_user['tenant_id'] = get_current_tenant()
         if 'is_active' not in updated_user:
             updated_user['is_active'] = True
         updated_user = normalize_user_data(updated_user)
@@ -148,6 +156,8 @@ if DATABASE_TYPE == "postgresql":
             raise HTTPException(status_code=404, detail="User not found")
         
         repo.delete(uuid.UUID(user_id))
+        if existing.get('email'):
+            remove_directory_entry(existing['email'])
         return {"message": "User deleted successfully"}
     
     @router.patch("/{user_id}/toggle-status")
@@ -168,7 +178,7 @@ if DATABASE_TYPE == "postgresql":
         
         updated_user = repo.get_by_id_str(user_id)
         updated_user = {k: v for k, v in updated_user.items() if k != 'password'}
-        updated_user['tenant_id'] = 'pharmacie_centrale'
+        updated_user['tenant_id'] = get_current_tenant()
         updated_user = normalize_user_data(updated_user)
         return updated_user
     

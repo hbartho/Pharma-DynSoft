@@ -17,6 +17,8 @@ from models.debt import (
 from auth import get_current_user, require_open_shift
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/debts", tags=["debts"])
 
@@ -60,8 +62,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def debt_to_dict(d, sale_number: str = None) -> dict:
         if d is None:
@@ -78,7 +80,7 @@ if DATABASE_TYPE == "postgresql":
             "payments": d.payments or [],
             "notes": d.notes,
             "created_at": d.created_at,
-            "tenant_id": "pharmacie_centrale",
+            "tenant_id": get_current_tenant(),
         }
     
     @router.get("/paginated")

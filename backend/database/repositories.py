@@ -115,8 +115,9 @@ def _to_dict_supplier(supplier: Supplier) -> Dict[str, Any]:
 class BaseRepository:
     """Repository de base avec méthodes communes."""
     
-    def __init__(self, tenant_slug: str = "pharmacie_centrale"):
-        self.tenant_slug = tenant_slug
+    def __init__(self, tenant_slug: str = None):
+        from database.tenant_context import get_current_tenant
+        self.tenant_slug = tenant_slug or get_current_tenant()
     
     def get_session(self):
         """Récupère une session synchrone."""
@@ -201,6 +202,13 @@ class UserRepository(BaseRepository):
             result = _to_dict_user(user)
             session.commit()
             return result
+
+    def delete(self, user_id: uuid.UUID) -> bool:
+        """Supprime un utilisateur."""
+        with self.get_session() as session:
+            result = session.query(User).filter(User.id == user_id).delete()
+            session.commit()
+            return result > 0
 
 
 # ==================== CATEGORY REPOSITORY ====================

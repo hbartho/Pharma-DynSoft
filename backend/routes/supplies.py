@@ -11,6 +11,8 @@ from auth import require_role, get_current_user, require_open_shift
 from models.supply import Supply, SupplyCreate, SupplyUpdate, SupplyItem, SupplyItemCreate
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/supplies", tags=["Supplies"])
 
@@ -23,8 +25,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def supply_to_dict(s, include_items=True) -> dict:
         if s is None:
@@ -52,7 +54,7 @@ if DATABASE_TYPE == "postgresql":
             "supply_date": s.supply_date,
             "created_at": s.created_at,
             "validated_at": s.validated_at,
-            "tenant_id": "pharmacie_centrale",
+            "tenant_id": get_current_tenant(),
         }
         
         if include_items and s.items:

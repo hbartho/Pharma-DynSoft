@@ -10,6 +10,8 @@ import os
 import uuid
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/shifts", tags=["Shifts"])
 
@@ -23,8 +25,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/paginated")
     async def get_shifts_paginated(
@@ -124,7 +126,7 @@ if DATABASE_TYPE == "postgresql":
                     "duration_minutes": duration_minutes,
                     "is_active": s.is_active,
                     "status": 'open' if s.is_active else 'closed',
-                    "tenant_id": "pharmacie_centrale",
+                    "tenant_id": get_current_tenant(),
                 })
             
             pages = (total + limit - 1) // limit if total > 0 else 1

@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         performLoginSync();
       }, 500);
       
-      return { success: true };
+      return { success: true, user: userData };
     } catch (error) {
       return { success: false, message: error.response?.data?.detail || 'Login failed' };
     }

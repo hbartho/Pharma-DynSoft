@@ -14,6 +14,8 @@ from models.returns import SaleReturn, SaleReturnCreate
 router = APIRouter(prefix="/returns", tags=["Returns"])
 
 DATABASE_TYPE = os.environ.get("DB_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
@@ -25,8 +27,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     def generate_return_number() -> str:
         """Générer un numéro de retour unique"""
@@ -34,14 +36,15 @@ if DATABASE_TYPE == "postgresql":
         return f"RET-{unique_id}"
     
     def get_return_delay_days() -> int:
-        """Récupérer le délai de retour configuré"""
-        with get_session() as session:
-            result = session.execute(
-                text("SELECT value FROM public.settings WHERE key = 'return_delay_days'")
-            ).fetchone()
-            if result and result[0]:
-                return int(result[0]) if isinstance(result[0], (int, str)) else 3
-            return 3  # 3 jours par défaut
+        """Récupérer le délai de retour configuré (tenant courant)"""
+        from database.repositories import SettingsRepository
+        value = SettingsRepository().get("return_delay_days")
+        if value:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 3
+        return 3  # 3 jours par défaut
     
     def check_sale_return_eligibility(sale_created_at) -> tuple:
         """Vérifier si une vente est éligible au retour"""
@@ -76,7 +79,7 @@ if DATABASE_TYPE == "postgresql":
             "agent_code": r.agent_code,
             "agent_name": r.agent_name,
             "created_at": r.created_at.isoformat() if r.created_at else None,
-            "tenant_id": "pharmacie_centrale"
+            "tenant_id": get_current_tenant()
         }
     
     # ============== ROUTES ==============

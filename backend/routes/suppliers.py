@@ -9,6 +9,8 @@ from models.supplier import Supplier, SupplierCreate, SupplierUpdate
 import os
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
+from database.tenant_context import get_current_tenant
+
 
 router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
 
@@ -21,8 +23,8 @@ if DATABASE_TYPE == "postgresql":
     
     def get_session():
         if USE_SUPABASE:
-            return db_manager.get_tenant_session("default")
-        return db_manager.get_tenant_session("pharmacie_centrale")
+            return db_manager.get_tenant_session(get_current_tenant())
+        return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/paginated")
     async def get_suppliers_paginated(

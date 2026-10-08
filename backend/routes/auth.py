@@ -41,13 +41,20 @@ def normalize_user_data(user: dict) -> dict:
 
 if DATABASE_TYPE == "postgresql":
     # ============ PostgreSQL Implementation ============
+    from auth import require_admin
     from database.repositories import UserRepository
+    from database.tenant_context import set_current_tenant, get_current_tenant, DEFAULT_TENANT
+    from database.directory import get_directory_entry, upsert_directory_entry, is_tenant_active
     
     @router.post("/register", response_model=User)
-    async def register(user_data: UserCreate):
-        """Register a new user"""
-        repo = UserRepository()
+    async def register(user_data: UserCreate, current_user: dict = Depends(require_admin)):
+        """Register a new user in the current pharmacy (Admin only)"""
+        tenant = get_current_tenant()
+        repo = UserRepository(tenant)
         
+        directory_entry = get_directory_entry(user_data.email)
+        if directory_entry:
+            raise HTTPException(status_code=400, detail="Email already registered")
         existing_user = repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
@@ -61,16 +68,63 @@ if DATABASE_TYPE == "postgresql":
         password = user_dict.pop("password")
         hashed_password = hash_password(password)
         user_dict['password'] = hashed_password
+        user_dict['tenant_id'] = tenant
+        if not user_dict.get('name'):
+            user_dict['name'] = f"{user_data.first_name} {user_data.last_name}".strip()
         
         result = repo.create(user_dict)
+        upsert_directory_entry(user_data.email, tenant)
+        result['tenant_id'] = tenant
+        result = normalize_user_data(result)
         return User(**result)
     
     @router.post("/login", response_model=Token)
     async def login(credentials: UserLogin):
-        """Login and get access token"""
-        repo = UserRepository()
+        """Login and get access token (multi-pharmacies: le tenant est détecté via l'email)"""
+        email = credentials.email.strip().lower()
+        directory_entry = get_directory_entry(email)
+        
+        # --- Super Admin (plateforme DynSoft) ---
+        if directory_entry and directory_entry.get('is_super_admin'):
+            if not directory_entry.get('password_hash') or not verify_password(credentials.password, directory_entry['password_hash']):
+                raise HTTPException(status_code=401, detail="Incorrect email or password")
+            
+            session_id = generate_session_id()
+            access_token = create_access_token(
+                data={
+                    "sub": directory_entry['id'],
+                    "tenant_id": None,
+                    "role": "super_admin",
+                    "employee_code": "SUPER",
+                    "name": directory_entry.get('name') or "Super Admin",
+                    "email": email,
+                },
+                session_id=session_id
+            )
+            super_user = User(
+                id=directory_entry['id'],
+                email=email,
+                first_name=directory_entry.get('name') or "Super",
+                last_name="Admin" if not directory_entry.get('name') else "",
+                employee_code="SUPER",
+                role="super_admin",
+                tenant_id="platform",
+                is_active=True,
+            )
+            return Token(access_token=access_token, token_type="bearer", user=super_user)
+        
+        # --- Utilisateur de pharmacie ---
+        tenant_slug = directory_entry['tenant_slug'] if directory_entry and directory_entry.get('tenant_slug') else DEFAULT_TENANT
+        
+        if tenant_slug != DEFAULT_TENANT and not is_tenant_active(tenant_slug):
+            raise HTTPException(status_code=403, detail="Cette pharmacie est désactivée. Contactez DynSoft.")
+        
+        set_current_tenant(tenant_slug)
+        repo = UserRepository(tenant_slug)
         
         user = repo.get_by_email(credentials.email)
+        if not user:
+            user = repo.get_by_email(email)
         if not user or not verify_password(credentials.password, user['password']):
             raise HTTPException(status_code=401, detail="Incorrect email or password")
         
@@ -90,7 +144,7 @@ if DATABASE_TYPE == "postgresql":
         access_token = create_access_token(
             data={
                 "sub": user['id'], 
-                "tenant_id": "pharmacie_centrale",  # Tenant par défaut pour PostgreSQL
+                "tenant_id": tenant_slug,
                 "role": user['role'],
                 "employee_code": user.get('employee_code', '')
             },
@@ -107,13 +161,26 @@ if DATABASE_TYPE == "postgresql":
             user_response['created_at'] = datetime.now(timezone.utc)
         
         # Ajouter tenant_id pour la compatibilité
-        user_response['tenant_id'] = 'pharmacie_centrale'
+        user_response['tenant_id'] = tenant_slug
         
         return Token(access_token=access_token, token_type="bearer", user=User(**user_response))
     
     @router.get("/me", response_model=UserResponse)
     async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         """Get current user information"""
+        if current_user.get('role') == 'super_admin':
+            return UserResponse(
+                id=current_user['user_id'],
+                email=current_user.get('email') or '',
+                first_name=current_user.get('name') or 'Super',
+                last_name='Admin',
+                employee_code='SUPER',
+                role='super_admin',
+                tenant_id='platform',
+                is_active=True,
+                created_at=datetime.now(timezone.utc),
+            )
+        
         repo = UserRepository()
         
         user = repo.get_by_id_str(current_user['user_id'])
@@ -130,7 +197,7 @@ if DATABASE_TYPE == "postgresql":
             user['is_active'] = True
         
         # Ajouter tenant_id pour la compatibilité
-        user['tenant_id'] = 'pharmacie_centrale'
+        user['tenant_id'] = get_current_tenant()
         
         # Normaliser les données utilisateur
         user = normalize_user_data(user)
