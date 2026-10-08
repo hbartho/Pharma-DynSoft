@@ -210,9 +210,11 @@ export default function PlatformAdmin() {
                     <Button variant="outline" size="sm" onClick={() => { setResetTarget(p); setResetForm({ email: '', new_password: '' }); }} data-testid={`reset-password-${p.slug}`}>
                       <KeyRound className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => { setDeleteTarget(p); setDeleteConfirm(''); }} data-testid={`delete-pharmacy-${p.slug}`}>
-                      <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                    </Button>
+                    {p.slug !== 'pharmacie_centrale' && (
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => { setDeleteTarget(p); setDeleteConfirm(''); }} data-testid={`delete-pharmacy-${p.slug}`}>
+                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

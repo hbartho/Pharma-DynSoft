@@ -179,6 +179,21 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+### 🏢 ARCHITECTURE MULTI-PHARMACIES (8 Oct 2026) - ✅ TERMINÉ & TESTÉ (iteration_42.json + pytest test_multi_tenant.py 15/15)
+Déploiement multi-pharmacies sur le même domaine, choix utilisateur : détection auto de la pharmacie à la connexion (email), un schéma PostgreSQL par pharmacie (même base Supabase), interface Super-Admin, chaque pharmacie démarre vide.
+- **Backend** :
+  - `database/tenant_context.py` : contextvar tenant courant ; pharmacie_centrale→schéma public (legacy), autres→t_<slug>
+  - `database/config.py` : sessions tenant via schema_translate_map ; create_tenant_schema/drop_tenant_schema
+  - `database/models_master.py` : public.tenants + public.user_directory (annuaire global email→pharmacie, comptes super admin)
+  - `database/directory.py` : helpers annuaire ; `auth.py` : tenant positionné depuis le JWT, super_admin restreint à /api/platform
+  - `routes/auth.py` : login multi-tenant via annuaire (emails normalisés lowercase), register admin-only + sync annuaire
+  - `routes/platform.py` : CRUD pharmacies super admin (créer avec admin initial, activer/désactiver, supprimer avec confirmation slug, reset mot de passe)
+  - Toutes les routes utilisent le tenant courant (plus aucun hardcode pharmacie_centrale)
+  - Scripts : `scripts/seed_super_admin.py`, `scripts/backfill_directory.py` (exécutés — à relancer en production après déploiement !)
+- **Frontend** : `pages/PlatformAdmin.js` (route /platform), redirections par rôle, bloc « Agence » supprimé du login
+- **Comptes** : voir /app/memory/test_credentials.md (superadmin@dynsoftgn.com / DynSoft#2026)
+- ⚠️ IMPORTANT PRODUCTION : après déploiement, exécuter `python scripts/seed_super_admin.py` et `python scripts/backfill_directory.py` sur l'environnement de prod (même base Supabase = déjà fait si même DB)
+
 ### 🌍 COHÉRENCE FUSEAU HORAIRE GLOBALE (26 Sept 2026) - ✅ TERMINÉ & TESTÉ (iteration_41.json 100%)
 Toutes les dates du système se basent sur le fuseau de la pharmacie (settings.timezone, défaut Africa/Conakry), peu importe le fuseau du navigateur :
 - **Backend** : `services/tz_service.py` (get_pharmacy_tz, local_day_bounds, to_local_day_str, parse_local_date). Endpoints réécrits : `/reports/dashboard`, `/reports/today-sales-by-payment` (accepte YYYY-MM-DD), `/reports/weekly`, `/reports/sales`, `/reports/sales-summary`, filtre date ventes paginées (`repositories_extended.py`), `/shifts/history`, `/shift-schedules/my-schedule`

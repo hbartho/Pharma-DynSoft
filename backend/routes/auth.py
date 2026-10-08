@@ -51,11 +51,12 @@ if DATABASE_TYPE == "postgresql":
         """Register a new user in the current pharmacy (Admin only)"""
         tenant = get_current_tenant()
         repo = UserRepository(tenant)
+        email = user_data.email.strip().lower()
         
-        directory_entry = get_directory_entry(user_data.email)
+        directory_entry = get_directory_entry(email)
         if directory_entry:
             raise HTTPException(status_code=400, detail="Email already registered")
-        existing_user = repo.get_by_email(user_data.email)
+        existing_user = repo.get_by_email(email) or repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -68,12 +69,13 @@ if DATABASE_TYPE == "postgresql":
         password = user_dict.pop("password")
         hashed_password = hash_password(password)
         user_dict['password'] = hashed_password
+        user_dict['email'] = email
         user_dict['tenant_id'] = tenant
         if not user_dict.get('name'):
             user_dict['name'] = f"{user_data.first_name} {user_data.last_name}".strip()
         
         result = repo.create(user_dict)
-        upsert_directory_entry(user_data.email, tenant)
+        upsert_directory_entry(email, tenant)
         result['tenant_id'] = tenant
         result = normalize_user_data(result)
         return User(**result)

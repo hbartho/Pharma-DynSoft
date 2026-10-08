@@ -198,11 +198,14 @@ async def delete_pharmacy(
         tenant = session.query(Tenant).filter(Tenant.slug == slug).first()
         if not tenant:
             raise HTTPException(status_code=404, detail="Pharmacie non trouvée")
-        session.delete(tenant)
-        session.commit()
     
+    # Supprimer le schéma d'abord : en cas d'échec, l'enregistrement reste et on peut réessayer
     db_manager.drop_tenant_schema(slug)
     remove_directory_entries_for_tenant(slug)
+    
+    with db_manager.get_master_session() as session:
+        session.query(Tenant).filter(Tenant.slug == slug).delete(synchronize_session=False)
+        session.commit()
     
     return {"message": f"Pharmacie '{slug}' supprimée définitivement"}
 

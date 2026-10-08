@@ -74,11 +74,12 @@ if DATABASE_TYPE == "postgresql":
     async def create_user_admin(user_data: UserCreate, current_user: dict = Depends(require_admin)):
         """Create a new user (Admin only)"""
         repo = UserRepository()
+        email = user_data.email.strip().lower()
         
-        directory_entry = get_directory_entry(user_data.email)
+        directory_entry = get_directory_entry(email)
         if directory_entry:
             raise HTTPException(status_code=400, detail="Email already registered")
-        existing_user = repo.get_by_email(user_data.email)
+        existing_user = repo.get_by_email(email) or repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -93,11 +94,12 @@ if DATABASE_TYPE == "postgresql":
         password = user_dict.pop("password")
         hashed_password = hash_password(password)
         user_dict['password'] = hashed_password
+        user_dict['email'] = email
         if not user_dict.get('name'):
             user_dict['name'] = f"{user_data.first_name} {user_data.last_name}".strip()
         
         result = repo.create(user_dict)
-        upsert_directory_entry(user_data.email, get_current_tenant())
+        upsert_directory_entry(email, get_current_tenant())
         
         return {
             "id": result['id'],
