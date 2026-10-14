@@ -46,6 +46,8 @@ class PharmacyCreate(BaseModel):
     admin_last_name: str
     admin_email: str
     admin_password: str
+    import_products: bool = False
+    source_slug: Optional[str] = None  # pharmacie source du catalogue (défaut: pharmacie centrale)
 
 
 class PharmacyUpdate(BaseModel):
@@ -91,6 +93,53 @@ async def list_pharmacies(current_user: dict = Depends(require_super_admin)):
     for r in result:
         r["users_count"] = counts.get(r["slug"], 0)
     return result
+
+
+def _copy_catalog(source_slug: str, target_slug: str) -> dict:
+    """Copie le catalogue (catégories, unités, produits) d'une pharmacie vers une autre.
+    Stock remis à zéro — seules les fiches produits et les prix sont importés."""
+    from database.models_tenant import Product, Category, Unit
+    
+    with db_manager.get_tenant_session(source_slug) as src:
+        categories = [
+            {"name": c.name, "description": c.description, "color": c.color,
+             "markup_coefficient": c.markup_coefficient, "min_stock": c.min_stock, "old_id": c.id}
+            for c in src.query(Category).all()
+        ]
+        units = [
+            {"name": u.name, "abbreviation": u.abbreviation, "description": u.description, "old_id": u.id}
+            for u in src.query(Unit).all()
+        ]
+        products = [
+            {"name": p.name, "internal_reference": p.internal_reference, "barcode": p.barcode,
+             "description": p.description, "purchase_price": p.purchase_price, "price": p.price,
+             "min_stock": p.min_stock, "is_active": p.is_active,
+             "category_id": p.category_id, "unit_id": p.unit_id}
+            for p in src.query(Product).filter(Product.is_active == True).all()
+        ]
+    
+    cat_map, unit_map = {}, {}
+    with db_manager.get_tenant_session(target_slug) as dst:
+        for c in categories:
+            new_id = uuid.uuid4()
+            cat_map[c.pop("old_id")] = new_id
+            dst.add(Category(id=new_id, **c))
+        for u in units:
+            new_id = uuid.uuid4()
+            unit_map[u.pop("old_id")] = new_id
+            dst.add(Unit(id=new_id, **u))
+        dst.flush()
+        for p in products:
+            dst.add(Product(
+                id=uuid.uuid4(),
+                stock=0,
+                category_id=cat_map.get(p.pop("category_id")),
+                unit_id=unit_map.get(p.pop("unit_id")),
+                **p,
+            ))
+        dst.commit()
+    
+    return {"categories": len(categories), "units": len(units), "products": len(products)}
 
 
 @router.post("/pharmacies")
@@ -155,10 +204,24 @@ async def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(
     
     upsert_directory_entry(admin_email, slug)
     
+    # 5. Import optionnel du catalogue produits (stock à zéro)
+    imported = None
+    if payload.import_products:
+        source = payload.source_slug or DEFAULT_TENANT
+        with db_manager.get_master_session() as session:
+            if source != DEFAULT_TENANT and not session.query(Tenant).filter(Tenant.slug == source).first():
+                raise HTTPException(status_code=400, detail=f"Pharmacie source '{source}' introuvable")
+        imported = _copy_catalog(source, slug)
+    
+    message = f"Pharmacie '{payload.name}' créée avec succès"
+    if imported:
+        message += f" — catalogue importé : {imported['products']} produits, {imported['categories']} catégories"
+    
     return {
-        "message": f"Pharmacie '{payload.name}' créée avec succès",
+        "message": message,
         "pharmacy": tenant_dict,
         "admin": {"email": admin_email, "id": admin_user["id"]},
+        "imported": imported,
     }
 
 

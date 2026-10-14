@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Switch } from '../components/ui/switch';
+import { Checkbox } from '../components/ui/checkbox';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '../components/ui/dialog';
@@ -18,6 +19,7 @@ import {
 const emptyForm = {
   name: '', slug: '', address: '', phone: '', email: '',
   admin_first_name: '', admin_last_name: '', admin_email: '', admin_password: '',
+  import_products: false, source_slug: 'pharmacie_centrale',
 };
 
 export default function PlatformAdmin() {
@@ -271,6 +273,39 @@ export default function PlatformAdmin() {
                 <Label htmlFor="ad-pw">Mot de passe admin * (min. 6 caractères)</Label>
                 <Input id="ad-pw" type="password" value={form.admin_password} onChange={set('admin_password')} required minLength={6} data-testid="admin-password-input" />
               </div>
+            </div>
+            <div className="pt-2 border-t border-slate-100">
+              <p className="text-sm font-medium text-slate-700 mb-2">Données initiales</p>
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors">
+                <Checkbox
+                  checked={form.import_products}
+                  onCheckedChange={(v) => setForm({ ...form, import_products: !!v })}
+                  data-testid="import-products-checkbox"
+                  className="mt-0.5"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-slate-800">Importer le catalogue produits</span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Copie les fiches produits, catégories et unités (avec les prix) — <strong>stock à zéro</strong>. Ventes, stocks et autres données démarrent vides.
+                  </span>
+                </span>
+              </label>
+              {form.import_products && (
+                <div className="mt-3">
+                  <Label htmlFor="source-slug">Pharmacie source du catalogue</Label>
+                  <select
+                    id="source-slug"
+                    value={form.source_slug}
+                    onChange={(e) => setForm({ ...form, source_slug: e.target.value })}
+                    data-testid="source-pharmacy-select"
+                    className="mt-1 w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm"
+                  >
+                    {pharmacies.map((p) => (
+                      <option key={p.slug} value={p.slug}>{p.name} ({p.slug})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Annuler</Button>

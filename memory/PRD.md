@@ -192,6 +192,9 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 - Note : la « Pharmacie Test Kaloum » a été supprimée via /platform (suppression en cascade validée en conditions réelles)
 
 ### 🏢 ARCHITECTURE MULTI-PHARMACIES (8 Oct 2026) - ✅ TERMINÉ & TESTÉ (iteration_42.json + pytest test_multi_tenant.py 15/15)
+#### Option import catalogue (Oct 2026) - ✅ TESTÉ (curl + UI)
+- Création de pharmacie : checkbox « Importer le catalogue produits » + choix de la pharmacie source — copie produits/catégories/unités avec prix, **stock à zéro** ; toutes les autres tables démarrent vides (config seedée par défaut)
+- Backend : `_copy_catalog()` dans routes/platform.py ; champs `import_products`/`source_slug` de PharmacyCreate
 Déploiement multi-pharmacies sur le même domaine, choix utilisateur : détection auto de la pharmacie à la connexion (email), un schéma PostgreSQL par pharmacie (même base Supabase), interface Super-Admin, chaque pharmacie démarre vide.
 - **Backend** :
   - `database/tenant_context.py` : contextvar tenant courant ; pharmacie_centrale→schéma public (legacy), autres→t_<slug>
