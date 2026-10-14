@@ -50,7 +50,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="DynSoft Pharma API",
     description="API for pharmacy management system",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # Add CORS middleware (origines restreintes + domaines emergent pour la préversion/production)
