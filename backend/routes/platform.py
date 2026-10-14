@@ -63,6 +63,32 @@ class AdminPasswordReset(BaseModel):
     new_password: str
 
 
+class ChangeOwnPassword(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_own_password(payload: ChangeOwnPassword, current_user: dict = Depends(require_super_admin)):
+    """Le super admin change son propre mot de passe (stocké haché en BD)."""
+    from auth import verify_password
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caractères")
+    
+    email = (current_user.get("email") or "").strip().lower()
+    entry = get_directory_entry(email)
+    if not entry or not entry.get("is_super_admin"):
+        raise HTTPException(status_code=404, detail="Compte super admin introuvable")
+    if not verify_password(payload.current_password, entry.get("password_hash") or ""):
+        raise HTTPException(status_code=401, detail="Mot de passe actuel incorrect")
+    
+    upsert_directory_entry(
+        email, tenant_slug=None, is_super_admin=True,
+        password_hash=hash_password(payload.new_password), name=entry.get("name"),
+    )
+    return {"message": "Mot de passe modifié avec succès"}
+
+
 def _tenant_to_dict(t: Tenant) -> dict:
     return {
         "id": str(t.id),

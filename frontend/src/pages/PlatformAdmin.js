@@ -34,6 +34,8 @@ export default function PlatformAdmin() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [resetTarget, setResetTarget] = useState(null);
   const [resetForm, setResetForm] = useState({ email: '', new_password: '' });
+  const [showOwnPassword, setShowOwnPassword] = useState(false);
+  const [ownPwForm, setOwnPwForm] = useState({ current_password: '', new_password: '' });
 
   const loadPharmacies = useCallback(async () => {
     try {
@@ -100,6 +102,18 @@ export default function PlatformAdmin() {
     }
   };
 
+  const handleChangeOwnPassword = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/platform/change-password', ownPwForm);
+      toast.success('Mot de passe modifié avec succès');
+      setShowOwnPassword(false);
+      setOwnPwForm({ current_password: '', new_password: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Erreur');
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -123,10 +137,16 @@ export default function PlatformAdmin() {
               <p className="text-xs text-slate-400">Gestion des pharmacies · {user?.email}</p>
             </div>
           </div>
-          <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800" onClick={handleLogout} data-testid="platform-logout-button">
-            <LogOut className="w-4 h-4 mr-2" strokeWidth={1.5} />
-            Déconnexion
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800" onClick={() => setShowOwnPassword(true)} data-testid="change-own-password-button">
+              <KeyRound className="w-4 h-4 mr-2" strokeWidth={1.5} />
+              Mot de passe
+            </Button>
+            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800" onClick={handleLogout} data-testid="platform-logout-button">
+              <LogOut className="w-4 h-4 mr-2" strokeWidth={1.5} />
+              Déconnexion
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -336,6 +356,30 @@ export default function PlatformAdmin() {
               Supprimer
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog changement de mot de passe super admin */}
+      <Dialog open={showOwnPassword} onOpenChange={(o) => !o && setShowOwnPassword(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Changer mon mot de passe</DialogTitle>
+            <DialogDescription>Stocké haché (bcrypt) en base de données.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleChangeOwnPassword} className="space-y-4">
+            <div>
+              <Label htmlFor="own-current">Mot de passe actuel</Label>
+              <Input id="own-current" type="password" value={ownPwForm.current_password} onChange={(e) => setOwnPwForm({ ...ownPwForm, current_password: e.target.value })} required data-testid="own-current-password-input" />
+            </div>
+            <div>
+              <Label htmlFor="own-new">Nouveau mot de passe (min. 8 caractères)</Label>
+              <Input id="own-new" type="password" value={ownPwForm.new_password} onChange={(e) => setOwnPwForm({ ...ownPwForm, new_password: e.target.value })} required minLength={8} data-testid="own-new-password-input" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowOwnPassword(false)}>Annuler</Button>
+              <Button type="submit" className="bg-teal-600 hover:bg-teal-700" data-testid="submit-own-password">Modifier</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

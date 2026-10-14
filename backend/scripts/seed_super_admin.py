@@ -17,8 +17,14 @@ def main():
     from database.directory import upsert_directory_entry
     from auth import hash_password
 
-    email = (sys.argv[1] if len(sys.argv) > 1 else "superadmin@dynsoftgn.com").strip().lower()
-    password = sys.argv[2] if len(sys.argv) > 2 else "DynSoft#2026"
+    if len(sys.argv) < 3:
+        print("Usage: python scripts/seed_super_admin.py <email> <mot_de_passe>")
+        print("Aucun mot de passe par défaut n'est accepté : il doit être fourni explicitement.")
+        raise SystemExit(1)
+    email = sys.argv[1].strip().lower()
+    password = sys.argv[2]
+    if len(password) < 8:
+        raise SystemExit("Le mot de passe du super admin doit contenir au moins 8 caractères")
 
     engine = db_manager._engines["supabase"] if USE_SUPABASE else db_manager._engines["master"]
     Base.metadata.create_all(engine, tables=[Tenant.__table__, UserDirectory.__table__], checkfirst=True)

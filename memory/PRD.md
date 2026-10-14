@@ -180,6 +180,11 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 ## Dernière mise à jour : 2026-02-15
 
 ### 🛡️ DURCISSEMENT SÉCURITÉ (Oct 2026) - ✅ TERMINÉ & TESTÉ (curl)
+#### Credentials en BD (Oct 2026) - ✅
+- Confirmé : TOUS les mots de passe (utilisateurs + super admin) sont en BD hachés bcrypt ($2b$12) — aucun credential utilisateur dans .env
+- seed_super_admin.py : mot de passe par défaut codé en dur SUPPRIMÉ (argument obligatoire, min 8 car.)
+- Nouveau : POST /api/platform/change-password + bouton « Mot de passe » sur /platform (le super admin change son mdp, testé OK)
+- .env ne contient que les secrets d'infrastructure (POSTGRES_PASSWORD, JWT_SECRET_KEY) qui ne peuvent pas être en BD par nature
 Audit des classes de vulnérabilités demandées par l'utilisateur :
 - **Brute force login** : verrouillage 15 min après 5 échecs par IP(X-Forwarded-For)+email → 429 (auth.py: check_login_lockout/record_failed_login, en mémoire)
 - **CORS restreint** : .env CORS_ORIGINS = domaines dynsoftgn/dynpharmagn + localhost ; regex *.emergentagent.com/*.emergent.host dans server.py (plus de wildcard *)
