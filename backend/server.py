@@ -53,14 +53,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+# Add CORS middleware (origines restreintes + domaines emergent pour la préversion/production)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.emergentagent\.com|https://.*\.emergent\.host",
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# En-têtes de sécurité HTTP
+@app.middleware("http")
+async def security_headers_middleware(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
 
 # Include all routers with /api prefix
 app.include_router(auth_router, prefix="/api")

@@ -179,6 +179,15 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+### 🛡️ DURCISSEMENT SÉCURITÉ (Oct 2026) - ✅ TERMINÉ & TESTÉ (curl)
+Audit des classes de vulnérabilités demandées par l'utilisateur :
+- **Brute force login** : verrouillage 15 min après 5 échecs par IP(X-Forwarded-For)+email → 429 (auth.py: check_login_lockout/record_failed_login, en mémoire)
+- **CORS restreint** : .env CORS_ORIGINS = domaines dynsoftgn/dynpharmagn + localhost ; regex *.emergentagent.com/*.emergent.host dans server.py (plus de wildcard *)
+- **JWT_SECRET_KEY** : fail-fast si absent (plus de clé par défaut faible dans config.py)
+- **En-têtes sécurité** : middleware X-Content-Type-Options, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy
+- **Endpoints publics fermés** : /api/seed/status et /api/settings/agencies exigent désormais l'auth (appel agencies retiré de Login.js)
+- **Non applicables / déjà sûrs** : SQLi (ORM + schémas assainis par regex), XSS (React, aucun dangerouslySetInnerHTML), LDAP/XML/OS command/file upload/RFI (inexistants), CSRF (JWT en header, pas de cookies), IDOR (isolation par schéma + rôles), open redirect (aucun)
+
 ### 🔐 ACCÈS GRANULAIRES PAR UTILISATEUR (Oct 2026) - ✅ TERMINÉ & TESTÉ (iteration_43.json 100%)
 - Section « Configuration Accès » dans le dialog Nouvel utilisateur/Éditer (page /users) : 21 pages cochables groupées (Général, Opérations, Stocks, Finances, Rabais, Administration)
 - Défauts pré-cochés selon le rôle (admin=21, pharmacien=9, caissier=5), modifiables à tout moment ; boutons « Défauts du rôle » / « Tout cocher »

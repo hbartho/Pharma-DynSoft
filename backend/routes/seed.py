@@ -199,8 +199,8 @@ async def reset_and_seed_database(current_user: dict = Depends(require_role(["ad
 
 
 @router.get("/status")
-async def get_seed_status():
-    """Get current data counts in database"""
+async def get_seed_status(current_user: dict = Depends(require_role(["admin"]))):
+    """Get current data counts in database (Admin only)"""
     try:
         counts = {}
         

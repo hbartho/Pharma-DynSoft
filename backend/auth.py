@@ -14,6 +14,42 @@ from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
+# ==================== Protection anti-brute force (login) ====================
+from collections import defaultdict
+import time as _time
+
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_WINDOW_SECONDS = 15 * 60
+
+_failed_logins: dict = defaultdict(list)
+
+
+def _login_key(ip: str, email: str) -> str:
+    return f"{ip}:{email}"
+
+
+def check_login_lockout(ip: str, email: str):
+    """Lève 429 si trop de tentatives échouées récentes pour ce couple IP+email."""
+    key = _login_key(ip, email)
+    now = _time.time()
+    attempts = [t for t in _failed_logins.get(key, []) if now - t < LOCKOUT_WINDOW_SECONDS]
+    _failed_logins[key] = attempts
+    if len(attempts) >= MAX_LOGIN_ATTEMPTS:
+        from fastapi import HTTPException
+        remaining = int((LOCKOUT_WINDOW_SECONDS - (now - attempts[0])) / 60) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=f"Trop de tentatives échouées. Réessayez dans {remaining} minute(s)."
+        )
+
+
+def record_failed_login(ip: str, email: str):
+    _failed_logins[_login_key(ip, email)].append(_time.time())
+
+
+def clear_login_attempts(ip: str, email: str):
+    _failed_logins.pop(_login_key(ip, email), None)
+
 # Role hierarchy for RBAC
 ROLE_HIERARCHY = {
     "admin": 3,

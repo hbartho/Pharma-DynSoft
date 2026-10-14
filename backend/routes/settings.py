@@ -28,8 +28,8 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/agencies")
-    async def get_all_agencies():
-        """Get all available agencies - No authentication required"""
+    async def get_all_agencies(current_user: dict = Depends(get_current_user)):
+        """Get all available agencies (authentification requise)"""
         repo = SettingsRepository()
         settings = repo.get_all()
         

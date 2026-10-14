@@ -18,8 +18,6 @@ const Login = () => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
-  const [agencies, setAgencies] = useState([]);
-  const [selectedAgency, setSelectedAgency] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   
   // État pour le dialogue de changement de mot de passe
@@ -33,33 +31,6 @@ const Login = () => {
   const [changingPassword, setChangingPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-
-  // Charger les agences depuis les paramètres
-  useEffect(() => {
-    const loadAgencies = async () => {
-      try {
-        const response = await api.get('/settings/agencies');
-        const agenciesList = response.data || [];
-        setAgencies(agenciesList);
-        
-        // Sélectionner la première agence par défaut
-        if (agenciesList.length > 0) {
-          setSelectedAgency(agenciesList[0]);
-        }
-      } catch (error) {
-        console.error('Error loading agencies:', error);
-        // Agence par défaut en cas d'erreur
-        const defaultAgency = {
-          tenant_id: 'default',
-          pharmacy_name: 'DynSoft Pharma',
-          currency: 'GNF'
-        };
-        setAgencies([defaultAgency]);
-        setSelectedAgency(defaultAgency);
-      }
-    };
-    loadAgencies();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

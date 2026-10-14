@@ -1,12 +1,12 @@
 """
 Routes - PostgreSQL Implementation
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import os
 
-from auth import hash_password, verify_password, create_access_token, get_current_user, generate_session_id
+from auth import hash_password, verify_password, create_access_token, get_current_user, generate_session_id, check_login_lockout, record_failed_login, clear_login_attempts
 from models.user import User, UserCreate, UserLogin, Token, UserResponse
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
@@ -81,15 +81,20 @@ if DATABASE_TYPE == "postgresql":
         return User(**result)
     
     @router.post("/login", response_model=Token)
-    async def login(credentials: UserLogin):
+    async def login(credentials: UserLogin, request: Request):
         """Login and get access token (multi-pharmacies: le tenant est détecté via l'email)"""
         email = credentials.email.strip().lower()
+        forwarded = request.headers.get("x-forwarded-for", "")
+        client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
+        check_login_lockout(client_ip, email)
         directory_entry = get_directory_entry(email)
         
         # --- Super Admin (plateforme DynSoft) ---
         if directory_entry and directory_entry.get('is_super_admin'):
             if not directory_entry.get('password_hash') or not verify_password(credentials.password, directory_entry['password_hash']):
+                record_failed_login(client_ip, email)
                 raise HTTPException(status_code=401, detail="Incorrect email or password")
+            clear_login_attempts(client_ip, email)
             
             session_id = generate_session_id()
             access_token = create_access_token(
@@ -128,7 +133,9 @@ if DATABASE_TYPE == "postgresql":
         if not user:
             user = repo.get_by_email(email)
         if not user or not verify_password(credentials.password, user['password']):
+            record_failed_login(client_ip, email)
             raise HTTPException(status_code=401, detail="Incorrect email or password")
+        clear_login_attempts(client_ip, email)
         
         # Vérifier si l'utilisateur est actif
         if user.get('is_active') == False:
