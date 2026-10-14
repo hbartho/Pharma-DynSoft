@@ -5,7 +5,7 @@
 
 ## Pharmacie Centrale (legacy, schéma public)
 - **Admin**: admin@pharmaflow.com / admin123
+- **Pharmacien**: pharmacien@pharmaflow.com (mdp inconnu, réinitialisable)
+- **Caissier**: caissier@pharmaflow.com (mdp inconnu, réinitialisable)
 
-## Pharmacie Test Kaloum (tenant, schéma t_pharmacie_test_kaloum)
-- **Admin**: admin@kaloum.test / kaloum123
-- **Caissier**: caissier@kaloum.test / caisse123
+Note: la "Pharmacie Test Kaloum" a été supprimée via l'interface /platform.

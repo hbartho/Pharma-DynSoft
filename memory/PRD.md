@@ -179,6 +179,18 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+### 🔐 ACCÈS GRANULAIRES PAR UTILISATEUR (Oct 2026) - ✅ TERMINÉ & TESTÉ (iteration_43.json 100%)
+- Section « Configuration Accès » dans le dialog Nouvel utilisateur/Éditer (page /users) : 21 pages cochables groupées (Général, Opérations, Stocks, Finances, Rabais, Administration)
+- Défauts pré-cochés selon le rôle (admin=21, pharmacien=9, caissier=5), modifiables à tout moment ; boutons « Défauts du rôle » / « Tout cocher »
+- Menu latéral et routes filtrés selon les permissions (PermissionGate dans App.js) ; badge violet « X accès » sur les cartes utilisateurs personnalisés
+- Backend : colonne `users.permissions` (JSON, null = défauts du rôle) ; migration `scripts/add_permissions_column.py` (exécutée) ; login//me renvoient permissions
+- Fichiers : `frontend/src/config/pagesAccess.js`, `Users.js`, `Layout.js`, `App.js`, `backend/models/user.py`, `models_tenant.py`, `repositories.py`
+- Note : les permissions sont rechargées à la connexion (un utilisateur modifié doit se reconnecter)
+
+### 🙈 Ordonnances masquées (Oct 2026) - ✅
+- Retirées du menu, du dashboard et des routes (backend intact) ; route inconnue → redirect /dashboard
+- Note : la « Pharmacie Test Kaloum » a été supprimée via /platform (suppression en cascade validée en conditions réelles)
+
 ### 🏢 ARCHITECTURE MULTI-PHARMACIES (8 Oct 2026) - ✅ TERMINÉ & TESTÉ (iteration_42.json + pytest test_multi_tenant.py 15/15)
 Déploiement multi-pharmacies sur le même domaine, choix utilisateur : détection auto de la pharmacie à la connexion (email), un schéma PostgreSQL par pharmacie (même base Supabase), interface Super-Admin, chaque pharmacie démarre vide.
 - **Backend** :
