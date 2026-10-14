@@ -198,60 +198,6 @@ const Login = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-slate-600">
-              Pas de compte?{' '}
-              <Link to="/register" className="text-teal-700 hover:text-teal-800 font-medium" data-testid="register-link">
-                Créer un compte
-              </Link>
-            </p>
-          </div>
-
-          <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <p className="text-sm font-semibold text-slate-800 mb-3">🔐 Comptes de démonstration:</p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'admin@pharmaflow.com', password: 'admin123' })}
-                className="w-full text-left p-2 rounded-lg hover:bg-teal-50 transition-colors border border-transparent hover:border-teal-200"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">ADM-001</span>
-                    <p className="text-sm text-slate-700 mt-1">admin@pharmaflow.com</p>
-                  </div>
-                  <span className="text-xs text-slate-400">admin123</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'pharmacien@pharmaflow.com', password: 'pharma123' })}
-                className="w-full text-left p-2 rounded-lg hover:bg-teal-50 transition-colors border border-transparent hover:border-teal-200"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">PHA-001</span>
-                    <p className="text-sm text-slate-700 mt-1">pharmacien@pharmaflow.com</p>
-                  </div>
-                  <span className="text-xs text-slate-400">pharma123</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'caissier@pharmaflow.com', password: 'caisse123' })}
-                className="w-full text-left p-2 rounded-lg hover:bg-teal-50 transition-colors border border-transparent hover:border-teal-200"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">CAI-001</span>
-                    <p className="text-sm text-slate-700 mt-1">caissier@pharmaflow.com</p>
-                  </div>
-                  <span className="text-xs text-slate-400">caisse123</span>
-                </div>
-              </button>
-            </div>
-            <p className="text-xs text-slate-500 mt-3 text-center">Cliquez pour remplir automatiquement</p>
-          </div>
         </div>
       </div>
 

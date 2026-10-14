@@ -179,6 +179,10 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+#### Changement de mot de passe employés (Oct 2026) - ✅ TESTÉ
+- Bouton « Changer mot de passe » dans la barre latérale (desktop réduit/étendu + mobile) pour TOUS les employés → dialogue (actuel + nouveau + confirmation) via PUT /auth/change-password (tenant-aware)
+- Composant : frontend/src/components/ChangePasswordDialog.js
+- Bloc « Comptes de démonstration » (mots de passe affichés !) et lien « Créer un compte » RETIRÉS de la page de connexion
 ### 🛡️ DURCISSEMENT SÉCURITÉ (Oct 2026) - ✅ TERMINÉ & TESTÉ (curl)
 #### Credentials en BD (Oct 2026) - ✅
 - Confirmé : TOUS les mots de passe (utilisateurs + super admin) sont en BD hachés bcrypt ($2b$12) — aucun credential utilisateur dans .env

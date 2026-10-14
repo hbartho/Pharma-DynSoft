@@ -6,6 +6,8 @@ import { useCurrentShift, useMarkShiftAlert } from '../hooks/useShifts';
 import { useSettingsQuery } from '../hooks/useSettings';
 import { formatTimeInTz, DEFAULT_TZ } from '../utils/timezoneUtils';
 import { hasPageAccess } from '../config/pagesAccess';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { KeyRound } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { ShiftAlertModal, CloseShiftModal, OpenShiftModal } from './ShiftModals';
 import {
@@ -296,6 +298,8 @@ const Layout = ({ children }) => {
     }
   };
 
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
   const handleLogout = async () => {
     // Vérifier si un shift est ouvert
     if (currentShift && currentShift.status === 'open') {
@@ -447,7 +451,11 @@ const Layout = ({ children }) => {
         </nav>
 
         {/* Footer Mobile */}
-        <div className="p-4 border-t border-slate-200">
+        <div className="p-4 border-t border-slate-200 space-y-2">
+          <Button onClick={() => { setShowChangePassword(true); setMobileMenuOpen(false); }} variant="outline" className="w-full flex items-center gap-2 justify-center" data-testid="change-password-button-mobile">
+            <KeyRound className="w-4 h-4" strokeWidth={1.5} />
+            Changer mot de passe
+          </Button>
           <Button onClick={handleLogout} variant="outline" className="w-full flex items-center gap-2 justify-center">
             <LogOut className="w-4 h-4" strokeWidth={1.5} />
             Déconnexion
@@ -781,6 +789,20 @@ const Layout = ({ children }) => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
+                    onClick={() => setShowChangePassword(true)}
+                    data-testid="change-password-button"
+                    className="w-full flex items-center justify-center p-3 rounded-lg text-slate-600 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                  >
+                    <KeyRound className="w-5 h-5" strokeWidth={1.5} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  Changer mot de passe
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
                     onClick={handleLogout}
                     data-testid="logout-button"
                     className="w-full flex items-center justify-center p-3 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -794,18 +816,31 @@ const Layout = ({ children }) => {
               </Tooltip>
             </TooltipProvider>
           ) : (
-            <Button
-              onClick={handleLogout}
-              data-testid="logout-button"
-              variant="outline"
-              className="w-full flex items-center gap-2 justify-center"
-            >
-              <LogOut className="w-4 h-4" strokeWidth={1.5} />
-              Déconnexion
-            </Button>
+            <div className="space-y-2">
+              <Button
+                onClick={() => setShowChangePassword(true)}
+                data-testid="change-password-button"
+                variant="outline"
+                className="w-full flex items-center gap-2 justify-center"
+              >
+                <KeyRound className="w-4 h-4" strokeWidth={1.5} />
+                Changer mot de passe
+              </Button>
+              <Button
+                onClick={handleLogout}
+                data-testid="logout-button"
+                variant="outline"
+                className="w-full flex items-center gap-2 justify-center"
+              >
+                <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                Déconnexion
+              </Button>
+            </div>
           )}
         </div>
       </aside>
+
+      <ChangePasswordDialog open={showChangePassword} onOpenChange={setShowChangePassword} />
 
       {/* Main Content */}
       <main className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col relative ${isMobile ? 'pt-16' : ''}`}>
