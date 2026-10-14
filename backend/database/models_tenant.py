@@ -112,6 +112,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.CASHIER)
     phone = Column(String(50), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    permissions = Column(JSON, nullable=True)  # Liste des pages accessibles (null = défauts du rôle)
     
     # Relations
     shifts = relationship("Shift", back_populates="user", lazy="dynamic")

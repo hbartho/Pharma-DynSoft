@@ -25,8 +25,11 @@ import {
   UserCheck,
   UserX,
   Power,
-  Loader2
+  Loader2,
+  LayoutGrid
 } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { PAGES, getDefaultPermissions } from '../config/pagesAccess';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useToggleUserStatus, useResetUserPassword } from '../hooks';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
@@ -78,7 +81,9 @@ const Users = () => {
     password: '',
     role: 'caissier',
     tenant_id: '',
+    permissions: getDefaultPermissions('caissier'),
   });
+  const [permsTouched, setPermsTouched] = useState(false);
 
   // React Query hooks
   const { data: users = [], isLoading, isError } = useUsers();
@@ -96,11 +101,32 @@ const Users = () => {
   const handleRoleChange = (role) => {
     const existingCodes = users.map(u => u.employee_code);
     const newCode = generateEmployeeCode(role, existingCodes);
-    setFormData({ 
-      ...formData, 
+    setFormData(prev => ({ 
+      ...prev, 
       role,
-      employee_code: editingUser ? formData.employee_code : newCode 
-    });
+      employee_code: editingUser ? prev.employee_code : newCode,
+      permissions: permsTouched ? prev.permissions : getDefaultPermissions(role),
+    }));
+  };
+
+  const togglePermission = (key) => {
+    setPermsTouched(true);
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(key)
+        ? prev.permissions.filter(p => p !== key)
+        : [...prev.permissions, key],
+    }));
+  };
+
+  const applyRoleDefaults = () => {
+    setFormData(prev => ({ ...prev, permissions: getDefaultPermissions(prev.role) }));
+    setPermsTouched(false);
+  };
+
+  const selectAllPermissions = () => {
+    setPermsTouched(true);
+    setFormData(prev => ({ ...prev, permissions: PAGES.map(p => p.key) }));
   };
 
   const handleSubmit = async (e) => {
@@ -112,6 +138,7 @@ const Users = () => {
         last_name: formData.last_name,
         employee_code: formData.employee_code,
         role: formData.role,
+        permissions: formData.permissions,
       };
       updateUser.mutate(
         { userId: editingUser.id, data: updateData },
@@ -131,6 +158,7 @@ const Users = () => {
         password: formData.password,
         role: formData.role,
         tenant_id: user.tenant_id,
+        permissions: formData.permissions,
       };
       createUser.mutate(createData, {
         onSuccess: () => {
@@ -143,6 +171,8 @@ const Users = () => {
 
   const handleEdit = (userToEdit) => {
     setEditingUser(userToEdit);
+    const hasCustom = Array.isArray(userToEdit.permissions) && userToEdit.permissions.length > 0;
+    setPermsTouched(hasCustom);
     setFormData({
       first_name: userToEdit.first_name || '',
       last_name: userToEdit.last_name || '',
@@ -151,6 +181,7 @@ const Users = () => {
       password: '',
       role: userToEdit.role || 'caissier',
       tenant_id: userToEdit.tenant_id,
+      permissions: hasCustom ? [...userToEdit.permissions] : getDefaultPermissions(userToEdit.role || 'caissier'),
     });
     setShowDialog(true);
   };
@@ -219,7 +250,9 @@ const Users = () => {
       password: '',
       role: 'caissier',
       tenant_id: '',
+      permissions: getDefaultPermissions('caissier'),
     });
+    setPermsTouched(false);
     setShowPassword(false);
   };
 
@@ -381,11 +414,17 @@ const Users = () => {
                   </div>
                   
                   {/* Role Badge */}
-                  <div className="mb-4">
+                  <div className="mb-4 flex items-center gap-2 flex-wrap">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${roleInfo.color}`}>
                       <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
                       {roleInfo.label}
                     </span>
+                    {Array.isArray(u.permissions) && u.permissions.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-50 text-violet-700" title={`${u.permissions.length} accès configurés`}>
+                        <LayoutGrid className="w-3 h-3" strokeWidth={1.5} />
+                        {u.permissions.length} accès
+                      </span>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -449,7 +488,7 @@ const Users = () => {
 
       {/* Dialog Créer/Modifier utilisateur */}
       <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               <UserCog className="w-5 h-5 text-teal-600" />
@@ -563,6 +602,46 @@ const Users = () => {
                 <p className="text-xs text-slate-500 mt-1">Minimum 6 caractères</p>
               </div>
             )}
+            
+            {/* Configuration Accès */}
+            <div className="pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="flex items-center gap-2 font-semibold">
+                  <LayoutGrid className="w-4 h-4 text-teal-600" strokeWidth={1.5} />
+                  Configuration Accès
+                </Label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={applyRoleDefaults} className="text-xs text-teal-600 hover:text-teal-800 underline" data-testid="perms-role-defaults">
+                    Défauts du rôle
+                  </button>
+                  <button type="button" onClick={selectAllPermissions} className="text-xs text-slate-500 hover:text-slate-700 underline" data-testid="perms-select-all">
+                    Tout cocher
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mb-3">
+                Opérations accessibles à cet utilisateur ({formData.permissions.length}/{PAGES.length})
+              </p>
+              <div className="border border-slate-200 rounded-lg p-3 max-h-56 overflow-y-auto space-y-3" data-testid="permissions-config">
+                {['Général', 'Opérations', 'Stocks', 'Finances', 'Rabais', 'Administration'].map((group) => (
+                  <div key={group}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{group}</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                      {PAGES.filter(p => p.group === group).map((page) => (
+                        <label key={page.key} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:text-slate-900">
+                          <Checkbox
+                            checked={formData.permissions.includes(page.key)}
+                            onCheckedChange={() => togglePermission(page.key)}
+                            data-testid={`perm-${page.key.replace('/', '')}`}
+                          />
+                          <span className="truncate">{page.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>

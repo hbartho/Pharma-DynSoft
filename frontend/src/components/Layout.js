@@ -5,6 +5,7 @@ import { useOffline } from '../contexts/OfflineContext';
 import { useCurrentShift, useMarkShiftAlert } from '../hooks/useShifts';
 import { useSettingsQuery } from '../hooks/useSettings';
 import { formatTimeInTz, DEFAULT_TZ } from '../utils/timezoneUtils';
+import { hasPageAccess } from '../config/pagesAccess';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { ShiftAlertModal, CloseShiftModal, OpenShiftModal } from './ShiftModals';
 import {
@@ -264,17 +265,15 @@ const Layout = ({ children }) => {
     },
   ];
 
-  // Filtrer le menu selon le rôle de l'utilisateur
+  // Filtrer le menu selon le rôle ET les permissions de l'utilisateur
   const filteredMenu = menuStructure
     .filter(item => item.roles.includes(user?.role || 'caissier'))
     .map(item => {
       if (item.type === 'group') {
-        const filteredItems = item.items.filter(subItem => 
-          subItem.roles.includes(user?.role || 'caissier')
-        );
+        const filteredItems = item.items.filter(subItem => hasPageAccess(user, subItem.path));
         return filteredItems.length > 0 ? { ...item, items: filteredItems } : null;
       }
-      return item;
+      return hasPageAccess(user, item.path) ? item : null;
     })
     .filter(Boolean);
 

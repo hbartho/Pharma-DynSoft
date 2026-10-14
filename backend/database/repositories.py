@@ -31,6 +31,7 @@ def _to_dict_user(user: User) -> Dict[str, Any]:
         "role": user.role.value if user.role else "caissier",
         "phone": user.phone,
         "is_active": user.is_active,
+        "permissions": user.permissions,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
     }
@@ -175,6 +176,7 @@ class UserRepository(BaseRepository):
                 role=UserRole(user_data.get('role', 'caissier')),
                 phone=user_data.get('phone'),
                 is_active=True,
+                permissions=user_data.get('permissions'),
             )
             session.add(user)
             session.flush()

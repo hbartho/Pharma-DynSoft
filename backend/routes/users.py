@@ -110,6 +110,7 @@ if DATABASE_TYPE == "postgresql":
             "role": result['role'],
             "tenant_id": get_current_tenant(),
             "is_active": result.get('is_active', True),
+            "permissions": result.get('permissions'),
             "created_at": result.get('created_at')
         }
     

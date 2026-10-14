@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 import uuid
 
@@ -13,6 +13,7 @@ class User(BaseModel):
     role: str  # admin, pharmacien, caissier
     tenant_id: str
     is_active: bool = True  # Statut actif/inactif
+    permissions: Optional[List[str]] = None  # Pages accessibles (null = défauts du rôle)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     @property
@@ -27,6 +28,7 @@ class UserCreate(BaseModel):
     employee_code: str
     role: str
     tenant_id: str
+    permissions: Optional[List[str]] = None
 
 class UserLogin(BaseModel):
     email: str
@@ -38,6 +40,7 @@ class UserUpdate(BaseModel):
     employee_code: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    permissions: Optional[List[str]] = None
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -49,6 +52,7 @@ class UserResponse(BaseModel):
     role: str
     tenant_id: str
     is_active: bool = True
+    permissions: Optional[List[str]] = None
     created_at: datetime
 
 class Token(BaseModel):

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -34,6 +34,26 @@ import DiscountRules from './pages/DiscountRules';
 import DiscountHistory from './pages/DiscountHistory';
 import PlatformAdmin from './pages/PlatformAdmin';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import { hasPageAccess, firstAccessiblePath } from './config/pagesAccess';
+
+// Garde d'accès par page : respecte les permissions personnalisées de l'utilisateur
+const PermissionGate = ({ children }) => {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user || user.role === 'super_admin') return children;
+  if (hasPageAccess(user, location.pathname)) return children;
+
+  const fallback = firstAccessiblePath(user);
+  if (fallback && fallback !== location.pathname) {
+    return <Navigate to={fallback} replace />;
+  }
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <p className="text-slate-600">Aucun accès configuré pour votre compte. Contactez votre administrateur.</p>
+    </div>
+  );
+};
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -59,7 +79,7 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/platform" />;
   }
 
-  return children;
+  return <PermissionGate>{children}</PermissionGate>;
 };
 
 // Role-based protected route
@@ -85,6 +105,10 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/dashboard" />;
+  }
+
+  if (user?.role !== 'super_admin') {
+    return <PermissionGate>{children}</PermissionGate>;
   }
 
   return children;
