@@ -208,7 +208,6 @@ const Layout = ({ children }) => {
         { path: '/supplies', icon: PackagePlus, label: 'Approvisionnements', roles: ['admin', 'pharmacien', 'caissier'] },
         { path: '/customers', icon: Users, label: 'Clients', roles: ['admin', 'pharmacien', 'caissier'] },
         { path: '/suppliers', icon: Truck, label: 'Fournisseurs', roles: ['admin', 'pharmacien'] },
-        { path: '/prescriptions', icon: FileText, label: 'Ordonnances', roles: ['admin', 'pharmacien'] },
       ],
     },
     {

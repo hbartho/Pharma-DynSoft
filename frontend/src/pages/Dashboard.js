@@ -203,30 +203,6 @@ const Dashboard = () => {
               </div>
 
               <div 
-                className="flex items-center justify-between p-4 bg-teal-50 rounded-lg cursor-pointer hover:bg-teal-100 transition-colors"
-                onClick={() => navigate('/prescriptions')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-teal-100 rounded-lg">
-                    <FileText className="w-5 h-5 text-teal-700" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      Ordonnances en attente
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                      {stats.pending_prescriptions}
-                    </p>
-                  </div>
-                </div>
-                {stats.pending_prescriptions > 0 && (
-                  <span className="text-xs font-medium text-teal-700 bg-teal-200 px-2 py-1 rounded-full">
-                    À traiter
-                  </span>
-                )}
-              </div>
-
-              <div 
                 className="flex items-center justify-between p-4 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors"
                 onClick={() => navigate('/products')}
               >

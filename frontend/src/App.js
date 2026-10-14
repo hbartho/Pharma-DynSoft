@@ -17,7 +17,6 @@ import Sales from './pages/Sales';
 import Customers from './pages/Customers';
 import Suppliers from './pages/Suppliers';
 import Supplies from './pages/Supplies';
-import Prescriptions from './pages/Prescriptions';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
@@ -153,14 +152,6 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/prescriptions"
-        element={
-          <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
-            <Prescriptions />
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
         path="/reports"
         element={
           <RoleProtectedRoute allowedRoles={['admin', 'pharmacien']}>
@@ -281,6 +272,7 @@ const AppRoutes = () => {
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
 };
