@@ -22,11 +22,26 @@ def generate_id():
     return str(uuid.uuid4())
 
 @router.post("/reset-and-seed")
-async def reset_and_seed_database(current_user: dict = Depends(require_role(["admin"]))):
+async def reset_and_seed_database(
+    confirm: str = "",
+    current_user: dict = Depends(require_role(["admin"]))
+):
     """
     Reset all data and seed with coherent test data.
     WARNING: This will delete ALL existing data!
+    Double protection: admin requis + confirmation explicite confirm=RESET-TOUT.
     """
+    import os
+    if os.environ.get("ALLOW_SEED_RESET", "false").lower() != "true":
+        raise HTTPException(
+            status_code=403,
+            detail="Réinitialisation désactivée. Définir ALLOW_SEED_RESET=true dans backend/.env pour l'autoriser."
+        )
+    if confirm != "RESET-TOUT":
+        raise HTTPException(
+            status_code=400,
+            detail="Confirmation requise : appeler avec ?confirm=RESET-TOUT pour détruire toutes les données."
+        )
     try:
         results = {
             "deleted": {},

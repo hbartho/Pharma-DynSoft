@@ -464,6 +464,12 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 15 Juin 2026 - Vérification globale pré-déploiement (✅ GO)
+- ✅ Testing agent complet : 17/17 backend + 100% frontend (auth, platform stats, résumé comptable, exports PDF/Excel, période globale, formulaire 2 étapes, nom pharmacie) — verdict GO
+- ✅ Build de production frontend validé (yarn build OK en 45s, zéro erreur)
+- ✅ Durcissement : endpoint /api/seed/reset-and-seed verrouillé (ALLOW_SEED_RESET env + confirm=RESET-TOUT requis, 403 par défaut) ; import ESLint inutilisé retiré (eslint.config.js)
+- ℹ️ Findings non-bloquants du scanner : Supabase externe = architecture voulue (déjà en prod) ; CORS prod couvert par allow_origin_regex (*.emergent.host + domaines dynsoftgn.com) ; section mongodb du supervisor = env de preview
+
 ### 15 Juin 2026 - Période globale unifiée page Rapports (✅ COMPLÉTÉE)
 - ✅ Fix incohérence : les pastilles (Total ventes / Revenu / Moyenne) et graphiques étaient figés sur 30 jours pendant que le Résumé comptable avait sa propre période
 - ✅ Sélecteur de période unique (Du/Au) en tête de page Rapports pilotant : résumé comptable, pastilles, graphiques CA et ventes quotidiennes — libellés affichent la période
