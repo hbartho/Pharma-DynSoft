@@ -11,13 +11,14 @@ import api from '../services/api';
 // ============================================
 
 /**
- * Récupérer les rapports de ventes
+ * Récupérer les rapports de ventes (période start/end, sinon 30 derniers jours)
  */
-export const useSalesReport = (days = 30, options = {}) => {
+export const useSalesReport = (range = null, options = {}) => {
   return useQuery({
-    queryKey: ['reports', 'sales', days],
+    queryKey: ['reports', 'sales', range?.start, range?.end],
     queryFn: async () => {
-      const response = await api.get(`/reports/sales?days=${days}`);
+      const params = range?.start ? { start_date: range.start, end_date: range.end } : { days: 30 };
+      const response = await api.get('/reports/sales', { params });
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -28,8 +29,8 @@ export const useSalesReport = (days = 30, options = {}) => {
 /**
  * Transformer les données pour les graphiques
  */
-export const useChartData = (days = 30) => {
-  const { data: salesData, isLoading, isError } = useSalesReport(days);
+export const useChartData = (range = null) => {
+  const { data: salesData, isLoading, isError } = useSalesReport(range);
 
   const chartData = salesData
     ? Object.entries(salesData.daily_stats)

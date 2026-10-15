@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useChartData } from '../hooks/useReports';
 import { useSettingsQuery } from '../hooks';
-import { Loader2, Timer } from 'lucide-react';
+import { Loader2, Timer, CalendarRange } from 'lucide-react';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { useAuth } from '../contexts/AuthContext';
 import { useShiftEligibility } from '../hooks/useShiftSchedules';
 import { AccountingSummary } from '../components/AccountingSummary';
+import { todayInTz } from '../utils/timezoneUtils';
+import { getAppTimezone } from '../services/dateService';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -16,8 +20,15 @@ const Reports = () => {
   const { data: shiftEligibility } = useShiftEligibility();
   const isWithinScheduledHours = isAdmin || shiftEligibility?.is_eligible;
 
-  const { salesData, chartData, isLoading } = useChartData(30);
+  const tz = getAppTimezone();
+  const today = todayInTz(tz);
+  const firstOfMonth = `${today.slice(0, 8)}01`;
+  const [range, setRange] = useState({ start: firstOfMonth, end: today });
+
+  const { salesData, chartData, isLoading } = useChartData(range);
   const { data: settings } = useSettingsQuery();
+
+  const periodLabel = `${range.start} → ${range.end}`;
 
   // Fonction de formatage des montants avec 2 décimales max
   const formatAmount = (amount) => {
@@ -35,13 +46,28 @@ const Reports = () => {
   return (
     <Layout>
       <div className="space-y-8" data-testid="reports-page">
-        <div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            Rapports
-          </h1>
-          <p className="text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Statistiques et analyses de votre pharmacie
-          </p>
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Rapports
+            </h1>
+            <p className="text-slate-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+              Statistiques et analyses de votre pharmacie
+            </p>
+          </div>
+          {isWithinScheduledHours && (
+            <div className="flex items-end gap-2 p-3 bg-white rounded-xl border border-slate-200" data-testid="reports-period-selector">
+              <CalendarRange className="w-5 h-5 text-teal-600 mb-2" strokeWidth={1.5} />
+              <div>
+                <Label htmlFor="rp-start" className="text-xs">Du</Label>
+                <Input id="rp-start" type="date" value={range.start} max={today} onChange={(e) => setRange({ ...range, start: e.target.value })} className="h-9" data-testid="reports-start-date" />
+              </div>
+              <div>
+                <Label htmlFor="rp-end" className="text-xs">Au</Label>
+                <Input id="rp-end" type="date" value={range.end} max={today} onChange={(e) => setRange({ ...range, end: e.target.value })} className="h-9" data-testid="reports-end-date" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Message de restriction pour utilisateurs hors horaires */}
@@ -75,12 +101,12 @@ const Reports = () => {
           </div>
         ) : (
           <>
-            {isAdmin && <AccountingSummary formatAmount={formatAmount} />}
+            {isAdmin && <AccountingSummary formatAmount={formatAmount} range={range} />}
             {salesData && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
                   <p className="text-sm text-slate-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    Total des ventes (30j)
+                    Total des ventes <span className="text-xs text-slate-400">({periodLabel})</span>
                   </p>
                   <p className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {salesData.total_sales}
@@ -88,7 +114,7 @@ const Reports = () => {
                 </div>
                 <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
                   <p className="text-sm text-slate-500 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    Revenu total (30j)
+                    Revenu total <span className="text-xs text-slate-400">({periodLabel})</span>
                   </p>
                   <p className="text-3xl font-bold text-teal-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
                     {formatAmount(salesData.total_revenue)}
@@ -107,7 +133,7 @@ const Reports = () => {
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <h3 className="text-xl font-semibold text-slate-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                Chiffre d'affaires sur 30 jours
+                Chiffre d'affaires <span className="text-sm font-normal text-slate-400">({periodLabel})</span>
               </h3>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>
@@ -136,7 +162,7 @@ const Reports = () => {
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <h3 className="text-xl font-semibold text-slate-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                Nombre de ventes quotidiennes
+                Nombre de ventes quotidiennes <span className="text-sm font-normal text-slate-400">({periodLabel})</span>
               </h3>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>

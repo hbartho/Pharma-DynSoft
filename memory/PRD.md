@@ -464,6 +464,12 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 15 Juin 2026 - Période globale unifiée page Rapports (✅ COMPLÉTÉE)
+- ✅ Fix incohérence : les pastilles (Total ventes / Revenu / Moyenne) et graphiques étaient figés sur 30 jours pendant que le Résumé comptable avait sa propre période
+- ✅ Sélecteur de période unique (Du/Au) en tête de page Rapports pilotant : résumé comptable, pastilles, graphiques CA et ventes quotidiennes — libellés affichent la période
+- ✅ Backend : `GET /api/reports/sales` accepte `start_date`/`end_date` (fallback `days=30` conservé)
+- ✅ Testé : curl (10 ventes / 1 310 798 GNF sur période étendue, 288 jours de daily_stats) + vérification visuelle (pastilles = résumé)
+
 ### 15 Juin 2026 - Formulaire utilisateur en 2 étapes (✅ COMPLÉTÉE)
 - ✅ Dialogue Nouvel utilisateur / Modifier divisé en 2 pages : (1) Infos utilisateur, (2) Configuration accès
 - ✅ Boutons Suivant (avec validation des champs requis avant de passer) / Précédent (données conservées), indicateur Étape 1/2

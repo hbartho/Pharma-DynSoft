@@ -228,25 +228,40 @@ if DATABASE_TYPE == "postgresql":
     @router.get("/sales")
     async def get_sales_report(
         days: int = 30,
+        start_date: str = None,
+        end_date: str = None,
         current_user: dict = Depends(get_current_user)
     ):
-        """Get sales report for the last N days - used for charts"""
+        """Get sales report for a period (start/end dates) or the last N days - used for charts"""
         tz = get_pharmacy_tz()
         today_local = now_local(tz).date()
-        start_utc, _ = local_day_bounds(today_local - timedelta(days=days-1), tz)
+        
+        if start_date or end_date:
+            sd = parse_local_date(start_date) or today_local.replace(day=1)
+            ed = parse_local_date(end_date) or today_local
+        else:
+            sd = today_local - timedelta(days=days-1)
+            ed = today_local
+        if sd > ed:
+            sd, ed = ed, sd
+        
+        start_utc, _ = local_day_bounds(sd, tz)
+        _, end_utc = local_day_bounds(ed, tz)
         
         with get_session() as session:
             sales = session.query(Sale).filter(
                 and_(
                     Sale.created_at >= start_utc,
+                    Sale.created_at < end_utc,
                     Sale.status != SaleStatus.CANCELLED
                 )
             ).all()
             
             # Agrégation par jour (fuseau pharmacie)
             daily_stats = {}
-            for i in range(days):
-                day_str = (today_local - timedelta(days=days-1-i)).strftime('%Y-%m-%d')
+            nb_days = (ed - sd).days + 1
+            for i in range(nb_days):
+                day_str = (sd + timedelta(days=i)).strftime('%Y-%m-%d')
                 daily_stats[day_str] = {"count": 0, "revenue": 0}
             
             for sale in sales:
@@ -259,6 +274,8 @@ if DATABASE_TYPE == "postgresql":
             total_revenue = sum(s.total or 0 for s in sales)
             
             return {
+                "start_date": sd.strftime('%Y-%m-%d'),
+                "end_date": ed.strftime('%Y-%m-%d'),
                 "total_sales": len(sales),
                 "total_revenue": round(total_revenue, 2),
                 "daily_stats": daily_stats

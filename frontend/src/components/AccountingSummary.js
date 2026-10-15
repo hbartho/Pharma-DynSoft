@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { toast } from 'sonner';
 import { Calculator, Loader2, RefreshCw, FileDown, FileSpreadsheet } from 'lucide-react';
-import { todayInTz } from '../utils/timezoneUtils';
-import { getAppTimezone } from '../services/dateService';
 
 const Row = ({ label, value, bold, negative, indent, badge }) => (
   <div className={`flex items-center justify-between py-2 ${indent ? 'pl-6' : ''} ${bold ? 'border-t border-slate-200 mt-1 pt-3' : ''}`}>
@@ -26,11 +22,7 @@ const SOURCE_LABELS = {
   product: 'Rabais par produit',
 };
 
-export const AccountingSummary = ({ formatAmount }) => {
-  const tz = getAppTimezone();
-  const today = todayInTz(tz);
-  const firstOfMonth = `${today.slice(0, 8)}01`;
-  const [range, setRange] = useState({ start: firstOfMonth, end: today });
+export const AccountingSummary = ({ formatAmount, range }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(null);
@@ -70,7 +62,7 @@ export const AccountingSummary = ({ formatAmount }) => {
     }
   }, []);
 
-  useEffect(() => { load(firstOfMonth, today); }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(range.start, range.end); }, [load, range.start, range.end]);
 
   return (
     <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm" data-testid="accounting-summary">
@@ -87,14 +79,6 @@ export const AccountingSummary = ({ formatAmount }) => {
           </div>
         </div>
         <div className="flex items-end gap-2">
-          <div>
-            <Label htmlFor="acc-start" className="text-xs">Du</Label>
-            <Input id="acc-start" type="date" value={range.start} max={today} onChange={(e) => setRange({ ...range, start: e.target.value })} className="h-9" data-testid="accounting-start-date" />
-          </div>
-          <div>
-            <Label htmlFor="acc-end" className="text-xs">Au</Label>
-            <Input id="acc-end" type="date" value={range.end} max={today} onChange={(e) => setRange({ ...range, end: e.target.value })} className="h-9" data-testid="accounting-end-date" />
-          </div>
           <Button size="sm" className="bg-teal-600 hover:bg-teal-700 h-9" onClick={() => load(range.start, range.end)} disabled={loading} data-testid="accounting-refresh">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           </Button>
