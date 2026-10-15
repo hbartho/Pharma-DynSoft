@@ -321,3 +321,118 @@ if DATABASE_TYPE == "postgresql":
                 "by_payment_method": by_payment
             }
 
+    @router.get("/accounting-summary")
+    async def get_accounting_summary(
+        start_date: str = None,
+        end_date: str = None,
+        current_user: dict = Depends(require_role(["admin"]))
+    ):
+        """Résumé comptable : CA brut, rabais (par source), retours, CA net, casses valorisées, solde fournisseurs."""
+        from database.models_tenant import (
+            DiscountHistory, SaleReturn, StockMovement as SM,
+            StockMovementType as SMT, Product, SupplierDebt,
+        )
+        
+        tz = get_pharmacy_tz()
+        today_local = now_local(tz).date()
+        
+        sd = parse_local_date(start_date) if start_date else today_local.replace(day=1)
+        ed = parse_local_date(end_date) if end_date else today_local
+        start, _ = local_day_bounds(sd, tz)
+        _, end = local_day_bounds(ed, tz)
+        
+        with get_session() as session:
+            # Ventes de la période (hors annulées)
+            sales = session.query(Sale).filter(
+                Sale.created_at >= start,
+                Sale.created_at < end,
+                Sale.status != SaleStatus.CANCELLED
+            ).all()
+            
+            gross = sum(s.subtotal or 0 for s in sales)
+            discounts_total = sum(s.discount or 0 for s in sales)
+            net_sales = sum(s.total or 0 for s in sales)
+            
+            # Rabais ventilés par source
+            discount_rows = session.query(DiscountHistory).filter(
+                DiscountHistory.created_at >= start,
+                DiscountHistory.created_at < end,
+            ).all()
+            by_source = {}
+            for d in discount_rows:
+                src = d.discount_source.value if hasattr(d.discount_source, 'value') else str(d.discount_source)
+                if src not in by_source:
+                    by_source[src] = {"count": 0, "amount": 0}
+                by_source[src]["count"] += 1
+                by_source[src]["amount"] += d.discount_amount or 0
+            
+            # Retours remboursés
+            returns = session.query(SaleReturn).filter(
+                SaleReturn.created_at >= start,
+                SaleReturn.created_at < end,
+            ).all()
+            returns_total = sum(r.total_refund or 0 for r in returns)
+            
+            # Casses / pertes validées, valorisées au coût d'achat
+            losses = session.query(SM).filter(
+                SM.created_at >= start,
+                SM.created_at < end,
+                SM.movement_type == SMT.LOSS,
+                SM.validation_status == 'validated',
+            ).all()
+            losses_value = 0.0
+            losses_qty = 0
+            for m in losses:
+                product = session.query(Product).filter(Product.id == m.product_id).first()
+                unit_cost = (product.purchase_price if product and product.purchase_price else 0) or 0
+                qty = abs(m.quantity or 0)
+                losses_qty += qty
+                losses_value += qty * unit_cost
+            
+            pending_losses_count = session.query(SM).filter(
+                SM.created_at >= start,
+                SM.created_at < end,
+                SM.movement_type == SMT.LOSS,
+            ).filter((SM.validation_status == 'pending') | (SM.validation_status.is_(None))).count()
+            
+            # Solde fournisseurs (état courant) + avoirs de la période
+            debts = session.query(SupplierDebt).all()
+            outstanding = sum(
+                d.remaining_amount or 0 for d in debts
+                if (d.status.value if hasattr(d.status, 'value') else str(d.status)).lower() not in ('paid', 'cancelled')
+            )
+            avoirs_period = 0.0
+            avoirs_count = 0
+            for d in debts:
+                for p in (d.payments or []):
+                    if p.get("type") == "credit":
+                        p_date = (p.get("date") or "")[:10]
+                        if sd.isoformat() <= p_date <= ed.isoformat():
+                            avoirs_period += p.get("amount") or 0
+                            avoirs_count += 1
+            
+            return {
+                "start_date": sd.isoformat(),
+                "end_date": ed.isoformat(),
+                "sales": {
+                    "count": len(sales),
+                    "gross_revenue": round(gross, 2),
+                    "total_discounts": round(discounts_total, 2),
+                    "net_revenue": round(net_sales, 2),
+                },
+                "discounts_by_source": by_source,
+                "returns": {"count": len(returns), "total_refunded": round(returns_total, 2)},
+                "net_collected": round(net_sales - returns_total, 2),
+                "losses": {
+                    "validated_count": len(losses),
+                    "validated_quantity": losses_qty,
+                    "validated_value": round(losses_value, 2),
+                    "pending_count": pending_losses_count,
+                },
+                "suppliers": {
+                    "outstanding_debts": round(outstanding, 2),
+                    "credits_period": round(avoirs_period, 2),
+                    "credits_count": avoirs_count,
+                },
+            }
+

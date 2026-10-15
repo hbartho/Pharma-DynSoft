@@ -179,6 +179,12 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 
 ## Dernière mise à jour : 2026-02-15
 
+### 📊 RÉSUMÉ COMPTABLE (Oct 2026) - ✅ TERMINÉ & TESTÉ (UI + curl)
+- Endpoint admin GET /api/reports/accounting-summary?start_date&end_date (fuseau pharmacie) : CA brut, rabais totaux + ventilation par source (manuel/promo/automatique/produit), retours remboursés, CA net encaissé, casses validées valorisées au coût d'achat (+ alerte pertes en attente), avoirs fournisseurs de la période, dettes fournisseurs en cours
+- Composant frontend/src/components/AccountingSummary.js en tête de la page Rapports (admin uniquement) avec sélecteur de période
+- ✔ Clôt la tâche en attente « Dettes/Avoirs fournisseurs dans les rapports »
+- Vérifié : rabais/casses/codes promo sont tous tracés individuellement (DiscountHistory, mouvements LOSS avec motif+validation, retours liés aux ventes) — aucune perte injustifiée
+
 #### Changement de mot de passe employés (Oct 2026) - ✅ TESTÉ
 - Bouton « Changer mot de passe » dans la barre latérale (desktop réduit/étendu + mobile) pour TOUS les employés → dialogue (actuel + nouveau + confirmation) via PUT /auth/change-password (tenant-aware)
 - Composant : frontend/src/components/ChangePasswordDialog.js

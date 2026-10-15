@@ -6,6 +6,7 @@ import { useSettingsQuery } from '../hooks';
 import { Loader2, Timer } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useShiftEligibility } from '../hooks/useShiftSchedules';
+import { AccountingSummary } from '../components/AccountingSummary';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -74,6 +75,7 @@ const Reports = () => {
           </div>
         ) : (
           <>
+            {isAdmin && <AccountingSummary formatAmount={formatAmount} />}
             {salesData && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
