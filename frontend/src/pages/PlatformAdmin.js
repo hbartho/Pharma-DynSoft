@@ -286,7 +286,7 @@ export default function PlatformAdmin() {
 
       {/* Dialog création */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nouvelle pharmacie</DialogTitle>
             <DialogDescription>
