@@ -345,7 +345,7 @@ export default function PlatformAdmin() {
                 <span className="text-sm">
                   <span className="font-medium text-slate-800">Importer le catalogue produits</span>
                   <span className="block text-xs text-slate-500 mt-0.5">
-                    Copie les fiches produits, catégories et unités (avec les prix) — <strong>stock à zéro</strong>. Ventes, stocks et autres données démarrent vides.
+                    Copie les fiches produits, catégories et unités (avec les prix) — <strong>stock à zéro</strong> — ainsi que les règles de rabais et codes promo, <strong>importés désactivés</strong>. Ventes, stocks et autres données démarrent vides.
                   </span>
                 </span>
               </label>

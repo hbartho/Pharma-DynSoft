@@ -166,9 +166,9 @@ async def pharmacies_stats(current_user: dict = Depends(require_super_admin)):
 
 
 def _copy_catalog(source_slug: str, target_slug: str) -> dict:
-    """Copie le catalogue (catégories, unités, produits) d'une pharmacie vers une autre.
-    Stock remis à zéro — seules les fiches produits et les prix sont importés."""
-    from database.models_tenant import Product, Category, Unit
+    """Copie le catalogue (catégories, unités, produits) + règles de rabais et codes promo
+    (désactivés) d'une pharmacie vers une autre. Stock remis à zéro."""
+    from database.models_tenant import Product, Category, Unit, DiscountRule, PromoCode, PromoCodeStatus
     
     with db_manager.get_tenant_session(source_slug) as src:
         categories = [
@@ -186,6 +186,23 @@ def _copy_catalog(source_slug: str, target_slug: str) -> dict:
              "min_stock": p.min_stock, "is_active": p.is_active,
              "category_id": p.category_id, "unit_id": p.unit_id}
             for p in src.query(Product).filter(Product.is_active == True).all()
+        ]
+        discount_rules = [
+            {"name": r.name, "description": r.description, "rule_type": r.rule_type,
+             "discount_type": r.discount_type, "discount_value": r.discount_value,
+             "max_discount_amount": r.max_discount_amount, "conditions": r.conditions,
+             "priority": r.priority, "is_cumulative": r.is_cumulative,
+             "start_date": r.start_date, "end_date": r.end_date}
+            for r in src.query(DiscountRule).all()
+        ]
+        promo_codes = [
+            {"code": pc.code, "name": pc.name, "description": pc.description,
+             "discount_type": pc.discount_type, "discount_value": pc.discount_value,
+             "min_purchase_amount": pc.min_purchase_amount, "max_discount_amount": pc.max_discount_amount,
+             "start_date": pc.start_date, "end_date": pc.end_date,
+             "max_uses": pc.max_uses, "max_uses_per_customer": pc.max_uses_per_customer,
+             "first_purchase_only": pc.first_purchase_only}
+            for pc in src.query(PromoCode).all()
         ]
     
     cat_map, unit_map = {}, {}
@@ -207,9 +224,26 @@ def _copy_catalog(source_slug: str, target_slug: str) -> dict:
                 unit_id=unit_map.get(p.pop("unit_id")),
                 **p,
             ))
+        for r in discount_rules:
+            conditions = r.pop("conditions")
+            if isinstance(conditions, dict) and isinstance(conditions.get("category_ids"), list):
+                str_cat_map = {str(k): v for k, v in cat_map.items()}
+                conditions = {**conditions, "category_ids": [
+                    str(str_cat_map[str(old)]) for old in conditions["category_ids"] if str(old) in str_cat_map
+                ]}
+            dst.add(DiscountRule(id=uuid.uuid4(), is_active=False, conditions=conditions, created_by=None, **r))
+        for pc in promo_codes:
+            dst.add(PromoCode(
+                id=uuid.uuid4(), status=PromoCodeStatus.INACTIVE, current_uses=0,
+                applicable_categories=None, applicable_products=None, customer_types=None,
+                created_by=None, **pc,
+            ))
         dst.commit()
     
-    return {"categories": len(categories), "units": len(units), "products": len(products)}
+    return {
+        "categories": len(categories), "units": len(units), "products": len(products),
+        "discount_rules": len(discount_rules), "promo_codes": len(promo_codes),
+    }
 
 
 @router.post("/pharmacies")
@@ -285,7 +319,8 @@ async def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(
     
     message = f"Pharmacie '{payload.name}' créée avec succès"
     if imported:
-        message += f" — catalogue importé : {imported['products']} produits, {imported['categories']} catégories"
+        message += (f" — catalogue importé : {imported['products']} produits, {imported['categories']} catégories, "
+                    f"{imported['discount_rules']} règles et {imported['promo_codes']} codes promo (désactivés)")
     
     return {
         "message": message,
