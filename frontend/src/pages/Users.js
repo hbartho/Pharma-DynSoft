@@ -498,7 +498,7 @@ const Users = () => {
 
       {/* Dialog Créer/Modifier utilisateur */}
       <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`${formStep === 2 ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
               {formStep === 1 ? <UserCog className="w-5 h-5 text-teal-600" /> : <LayoutGrid className="w-5 h-5 text-teal-600" />}
@@ -637,11 +637,11 @@ const Users = () => {
                   </button>
                 </div>
               </div>
-              <div className="border border-slate-200 rounded-lg p-3 max-h-80 overflow-y-auto space-y-3" data-testid="permissions-config">
+              <div className="border border-slate-200 rounded-lg p-4 space-y-4" data-testid="permissions-config">
                 {['Général', 'Opérations', 'Stocks', 'Finances', 'Rabais', 'Administration'].map((group) => (
                   <div key={group}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{group}</p>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
                       {PAGES.filter(p => p.group === group).map((page) => (
                         <label key={page.key} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 hover:text-slate-900">
                           <Checkbox
