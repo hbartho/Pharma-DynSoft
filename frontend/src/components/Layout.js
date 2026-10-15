@@ -68,6 +68,7 @@ const Layout = ({ children }) => {
   const { data: currentShift, isLoading: shiftLoading, refetch: refetchShift } = useCurrentShift();
   const { data: layoutSettings } = useSettingsQuery();
   const pharmacyTz = layoutSettings?.timezone || DEFAULT_TZ;
+  const pharmacyName = (layoutSettings?.pharmacy_name || '').trim();
   
   // État pour la modal de blocage de déconnexion
   const [showLogoutBlockedModal, setShowLogoutBlockedModal] = useState(false);
@@ -332,8 +333,11 @@ const Layout = ({ children }) => {
           <Menu className="w-6 h-6" />
         </button>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <img src={logoSidebar} alt="Logo" className="h-8 w-auto" />
+          {pharmacyName && (
+            <span className="text-sm font-semibold text-slate-800 truncate" data-testid="pharmacy-name-mobile">{pharmacyName}</span>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
@@ -377,6 +381,9 @@ const Layout = ({ children }) => {
             </div>
           </div>
           <div className="mt-3">
+            {pharmacyName && (
+              <p className="text-sm font-semibold text-teal-700 truncate" data-testid="pharmacy-name-mobile-drawer">{pharmacyName}</p>
+            )}
             <p className="text-sm text-slate-500 truncate">{user?.name}</p>
             <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${getRoleColor(user?.role)}`}>
               {getRoleLabel(user?.role)}
@@ -481,6 +488,9 @@ const Layout = ({ children }) => {
                     className="w-full h-auto object-contain max-w-[130px]"
                   />
                 </div>
+                {pharmacyName && (
+                  <p className="text-sm font-semibold text-teal-700 truncate" data-testid="pharmacy-name-desktop">{pharmacyName}</p>
+                )}
                 <p className="text-sm text-slate-500 truncate">{user?.name}</p>
                 <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${getRoleColor(user?.role)}`}>
                   {getRoleLabel(user?.role)}

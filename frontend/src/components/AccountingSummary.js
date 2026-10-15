@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
-import { Calculator, Loader2, RefreshCw } from 'lucide-react';
+import { Calculator, Loader2, RefreshCw, FileDown, FileSpreadsheet } from 'lucide-react';
 import { todayInTz } from '../utils/timezoneUtils';
 import { getAppTimezone } from '../services/dateService';
 
@@ -33,6 +33,30 @@ export const AccountingSummary = ({ formatAmount }) => {
   const [range, setRange] = useState({ start: firstOfMonth, end: today });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(null);
+
+  const handleExport = async (format) => {
+    setExporting(format);
+    try {
+      const res = await api.get('/reports/accounting-summary/export', {
+        params: { format, start_date: range.start, end_date: range.end },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `resume_comptable_${range.start}_${range.end}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(format === 'excel' ? 'Export Excel téléchargé' : 'Export PDF téléchargé');
+    } catch (e) {
+      toast.error("Erreur lors de l'export");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const load = useCallback(async (start, end) => {
     setLoading(true);
@@ -73,6 +97,14 @@ export const AccountingSummary = ({ formatAmount }) => {
           </div>
           <Button size="sm" className="bg-teal-600 hover:bg-teal-700 h-9" onClick={() => load(range.start, range.end)} disabled={loading} data-testid="accounting-refresh">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          </Button>
+          <Button size="sm" variant="outline" className="h-9" onClick={() => handleExport('pdf')} disabled={!!exporting} data-testid="accounting-export-pdf">
+            {exporting === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FileDown className="w-4 h-4 mr-1" strokeWidth={1.5} />}
+            PDF
+          </Button>
+          <Button size="sm" variant="outline" className="h-9" onClick={() => handleExport('excel')} disabled={!!exporting} data-testid="accounting-export-excel">
+            {exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <FileSpreadsheet className="w-4 h-4 mr-1" strokeWidth={1.5} />}
+            Excel
           </Button>
         </div>
       </div>

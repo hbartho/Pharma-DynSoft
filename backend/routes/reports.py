@@ -321,12 +321,7 @@ if DATABASE_TYPE == "postgresql":
                 "by_payment_method": by_payment
             }
 
-    @router.get("/accounting-summary")
-    async def get_accounting_summary(
-        start_date: str = None,
-        end_date: str = None,
-        current_user: dict = Depends(require_role(["admin"]))
-    ):
+    def _accounting_data(start_date: str = None, end_date: str = None) -> dict:
         """Résumé comptable : CA brut, rabais (par source), retours, CA net, casses valorisées, solde fournisseurs."""
         from database.models_tenant import (
             DiscountHistory, SaleReturn, StockMovement as SM,
@@ -435,4 +430,163 @@ if DATABASE_TYPE == "postgresql":
                     "credits_count": avoirs_count,
                 },
             }
+
+    @router.get("/accounting-summary")
+    async def get_accounting_summary(
+        start_date: str = None,
+        end_date: str = None,
+        current_user: dict = Depends(require_role(["admin"]))
+    ):
+        return _accounting_data(start_date, end_date)
+
+    SOURCE_LABELS = {
+        "manual": "Rabais manuels",
+        "promo_code": "Codes promo",
+        "automatic": "Rabais automatiques",
+        "product": "Rabais par produit",
+    }
+
+    def _accounting_rows(data: dict, fmt) -> list:
+        """Lignes (section, libellé, valeur) communes aux exports PDF et Excel."""
+        rows = [("EXERCICE VENTES", f"{data['sales']['count']} vente(s)", "")]
+        rows.append(("", "Chiffre d'affaires brut", fmt(data['sales']['gross_revenue'])))
+        total_rabais_count = sum(v['count'] for v in data['discounts_by_source'].values())
+        rows.append(("", f"Rabais accordés ({total_rabais_count})", f"- {fmt(data['sales']['total_discounts'])}"))
+        for src, v in data['discounts_by_source'].items():
+            rows.append(("", f"    {SOURCE_LABELS.get(src, src)} ({v['count']})", f"- {fmt(v['amount'])}"))
+        rows.append(("", f"Retours remboursés ({data['returns']['count']})", f"- {fmt(data['returns']['total_refunded'])}"))
+        rows.append(("", "CA NET ENCAISSÉ", fmt(data['net_collected'])))
+        rows.append(("JUSTIFICATIFS & ENGAGEMENTS", "", ""))
+        rows.append(("", f"Casses/pertes validées ({data['losses']['validated_quantity']} unité(s), coût d'achat)", fmt(data['losses']['validated_value'])))
+        if data['losses']['pending_count'] > 0:
+            rows.append(("", "Pertes en attente de validation", str(data['losses']['pending_count'])))
+        rows.append(("", f"Avoirs fournisseurs sur la période ({data['suppliers']['credits_count']})", fmt(data['suppliers']['credits_period'])))
+        rows.append(("", "Dettes fournisseurs en cours", fmt(data['suppliers']['outstanding_debts'])))
+        return rows
+
+    @router.get("/accounting-summary/export")
+    async def export_accounting_summary(
+        format: str = "pdf",
+        start_date: str = None,
+        end_date: str = None,
+        current_user: dict = Depends(require_role(["admin"]))
+    ):
+        """Export PDF ou Excel du résumé comptable (admin uniquement)."""
+        import io
+        from fastapi.responses import StreamingResponse
+        from database.repositories import SettingsRepository
+
+        data = _accounting_data(start_date, end_date)
+        settings = SettingsRepository().get_all()
+        pharmacy_name = (settings.get("pharmacy_name") or "").strip() or "DynSoft Pharma"
+        currency = settings.get("currency", "GNF")
+
+        def fmt(v):
+            return f"{round(v or 0):,}".replace(",", " ") + f" {currency}"
+
+        periode = f"{data['start_date']} au {data['end_date']}"
+        filename = f"resume_comptable_{data['start_date']}_{data['end_date']}"
+        rows = _accounting_rows(data, fmt)
+
+        if format == "excel":
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Résumé comptable"
+            ws.column_dimensions['A'].width = 55
+            ws.column_dimensions['B'].width = 22
+
+            ws.append([pharmacy_name])
+            ws['A1'].font = Font(bold=True, size=14)
+            ws.append([f"Résumé comptable — Période : {periode}"])
+            ws['A2'].font = Font(size=11, italic=True)
+            ws.append([])
+
+            section_fill = PatternFill(start_color="0F766E", end_color="0F766E", fill_type="solid")
+            for section, label, value in rows:
+                if section:
+                    ws.append([f"{section}  {label}".strip()])
+                    c = ws.cell(row=ws.max_row, column=1)
+                    c.font = Font(bold=True, color="FFFFFF")
+                    c.fill = section_fill
+                    ws.cell(row=ws.max_row, column=2).fill = section_fill
+                else:
+                    ws.append([label, value])
+                    if label.startswith("CA NET") or label.startswith("Dettes"):
+                        ws.cell(row=ws.max_row, column=1).font = Font(bold=True)
+                        ws.cell(row=ws.max_row, column=2).font = Font(bold=True)
+                    ws.cell(row=ws.max_row, column=2).alignment = Alignment(horizontal="right")
+
+            ws.append([])
+            ws.append([f"Généré le {now_local().strftime('%d/%m/%Y à %H:%M')} — chaque rabais, retour et casse est tracé individuellement."])
+            ws.cell(row=ws.max_row, column=1).font = Font(size=9, italic=True, color="888888")
+
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            return StreamingResponse(
+                buf,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f'attachment; filename="{filename}.xlsx"'},
+            )
+
+        # PDF (reportlab)
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('T', parent=styles['Title'], fontSize=16, spaceAfter=2, textColor=colors.HexColor('#0f172a'))
+        sub_style = ParagraphStyle('S', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#64748b'), spaceAfter=14)
+        foot_style = ParagraphStyle('F', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#94a3b8'))
+
+        elements = [
+            Paragraph(pharmacy_name, title_style),
+            Paragraph(f"Résumé comptable — Période : {periode}", sub_style),
+        ]
+
+        table_data = []
+        style_cmds = [
+            ('FONTSIZE', (0, 0), (-1, -1), 9.5),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.4, colors.HexColor('#e2e8f0')),
+        ]
+        for section, label, value in rows:
+            idx = len(table_data)
+            if section:
+                table_data.append([f"{section}  {label}".strip(), ""])
+                style_cmds += [
+                    ('BACKGROUND', (0, idx), (-1, idx), colors.HexColor('#0f766e')),
+                    ('TEXTCOLOR', (0, idx), (-1, idx), colors.white),
+                    ('FONTNAME', (0, idx), (-1, idx), 'Helvetica-Bold'),
+                ]
+            else:
+                table_data.append([label, value])
+                if label.startswith("CA NET") or label.startswith("Dettes"):
+                    style_cmds.append(('FONTNAME', (0, idx), (-1, idx), 'Helvetica-Bold'))
+
+        table = Table(table_data, colWidths=[12.2*cm, 4.8*cm])
+        table.setStyle(TableStyle(style_cmds))
+        elements.append(table)
+        elements.append(Spacer(1, 14))
+        elements.append(Paragraph(
+            f"Généré le {now_local().strftime('%d/%m/%Y à %H:%M')} — chaque rabais, retour et casse est tracé individuellement "
+            "(historique des rabais, retours, mouvements de stock). Document à remettre au comptable.",
+            foot_style,
+        ))
+        doc.build(elements)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'},
+        )
 
