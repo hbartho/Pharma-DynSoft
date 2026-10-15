@@ -13,8 +13,10 @@ import {
 } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store,
+  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp,
 } from 'lucide-react';
+
+const fmtGNF = (n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`;
 
 const emptyForm = {
   name: '', slug: '', address: '', phone: '', email: '',
@@ -36,6 +38,16 @@ export default function PlatformAdmin() {
   const [resetForm, setResetForm] = useState({ email: '', new_password: '' });
   const [showOwnPassword, setShowOwnPassword] = useState(false);
   const [ownPwForm, setOwnPwForm] = useState({ current_password: '', new_password: '' });
+  const [stats, setStats] = useState(null);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await api.get('/platform/pharmacies/stats');
+      setStats(res.data.stats || {});
+    } catch (e) {
+      // stats non bloquantes
+    }
+  }, []);
 
   const loadPharmacies = useCallback(async () => {
     try {
@@ -48,7 +60,7 @@ export default function PlatformAdmin() {
     }
   }, []);
 
-  useEffect(() => { loadPharmacies(); }, [loadPharmacies]);
+  useEffect(() => { loadPharmacies(); loadStats(); }, [loadPharmacies, loadStats]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -152,7 +164,7 @@ export default function PlatformAdmin() {
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <div className="flex items-center gap-3">
               <Store className="w-5 h-5 text-teal-600" strokeWidth={1.5} />
@@ -177,6 +189,17 @@ export default function PlatformAdmin() {
               <div>
                 <p className="text-2xl font-bold text-slate-900">{pharmacies.reduce((s, p) => s + (p.users_count || 0), 0)}</p>
                 <p className="text-sm text-slate-500">Comptes utilisateurs</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-5 h-5 text-amber-600" strokeWidth={1.5} />
+              <div className="min-w-0">
+                <p className="text-xl font-bold text-slate-900 truncate" data-testid="total-ca-month">
+                  {stats ? fmtGNF(Object.values(stats).reduce((s, v) => s + (v.ca_month || 0), 0)) : '—'}
+                </p>
+                <p className="text-sm text-slate-500">CA du mois (toutes)</p>
               </div>
             </div>
           </div>
@@ -223,6 +246,22 @@ export default function PlatformAdmin() {
                     <p className="text-xs text-slate-400 mt-0.5">
                       {p.users_count || 0} compte(s) · créée le {p.created_at ? new Date(p.created_at).toLocaleDateString('fr-FR') : '—'}
                     </p>
+                    {stats?.[p.slug] && !stats[p.slug].error && (
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-xs" data-testid={`pharmacy-stats-${p.slug}`}>
+                        <span className="text-slate-600">
+                          Aujourd'hui : <strong className="text-slate-900">{fmtGNF(stats[p.slug].ca_today)}</strong>
+                          <span className="text-slate-400"> ({stats[p.slug].sales_today} vente{stats[p.slug].sales_today > 1 ? 's' : ''})</span>
+                        </span>
+                        <span className="text-slate-600">
+                          Ce mois : <strong className="text-teal-700">{fmtGNF(stats[p.slug].ca_month)}</strong>
+                          <span className="text-slate-400"> ({stats[p.slug].sales_month})</span>
+                        </span>
+                        <span className="text-slate-600">
+                          Total : <strong className="text-slate-900">{fmtGNF(stats[p.slug].ca_total)}</strong>
+                          <span className="text-slate-400"> ({stats[p.slug].sales_total})</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">

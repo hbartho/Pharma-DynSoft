@@ -464,6 +464,15 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 15 Juin 2026 - Statistiques CA par pharmacie (Super Admin) (✅ COMPLÉTÉE)
+- ✅ Endpoint `GET /api/platform/pharmacies/stats` (super admin uniquement) : CA aujourd'hui / mois en cours / total + nombre de ventes par pharmacie, calculé dans le fuseau horaire de chaque pharmacie, ventes annulées exclues
+- ✅ Page `/platform` : carte "CA du mois (toutes)" + ligne de stats sous chaque pharmacie (Aujourd'hui / Ce mois / Total)
+- ✅ Testé : backend curl (1 310 798 GNF total, 10 ventes) + vérification visuelle /platform
+
+### 14 Juin 2026 - Résumé comptable consolidé (✅ COMPLÉTÉE)
+- ✅ Endpoint résumé comptable dans `backend/routes/reports.py` + composant `AccountingSummary.js` dans la page Rapports (admins)
+- ✅ CA brut → rabais ventilés → retours → CA net ; casses/pertes validées, avoirs et dettes fournisseurs
+
 ### 4 Février 2026 - Correction Mobile Money (✅ COMPLÉTÉE)
 - ✅ **Bug fix: Champs Mobile Money manquants**
   - Les champs "N° Destinataire" et "Réf. Paiement Marchand" apparaissent maintenant

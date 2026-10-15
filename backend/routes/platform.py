@@ -121,6 +121,50 @@ async def list_pharmacies(current_user: dict = Depends(require_super_admin)):
     return result
 
 
+@router.get("/pharmacies/stats")
+async def pharmacies_stats(current_user: dict = Depends(require_super_admin)):
+    """Chiffre d'affaires par pharmacie (jour, mois en cours, total) pour le super admin."""
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+    from database.models_tenant import Sale, SaleStatus
+    from database.repositories import SettingsRepository
+    from services.tz_service import local_day_bounds, now_local, DEFAULT_TIMEZONE
+
+    with db_manager.get_master_session() as session:
+        tenants = [(t.slug, t.is_active) for t in session.query(Tenant).order_by(Tenant.created_at).all()]
+
+    stats = {}
+    for slug, is_active in tenants:
+        entry = {"ca_today": 0, "ca_month": 0, "ca_total": 0, "sales_today": 0, "sales_month": 0, "sales_total": 0, "error": None}
+        try:
+            try:
+                tz = ZoneInfo(SettingsRepository(slug).get("timezone", DEFAULT_TIMEZONE))
+            except Exception:
+                tz = ZoneInfo(DEFAULT_TIMEZONE)
+            today_local = now_local(tz).date()
+            day_start, day_end = local_day_bounds(today_local, tz)
+            month_start, _ = local_day_bounds(today_local.replace(day=1), tz)
+
+            with db_manager.get_tenant_session(slug) as s:
+                base = s.query(func.coalesce(func.sum(Sale.total), 0), func.count(Sale.id)).filter(
+                    Sale.status != SaleStatus.CANCELLED
+                )
+                ca_total, n_total = base.first()
+                ca_month, n_month = base.filter(Sale.created_at >= month_start).first()
+                ca_today, n_today = base.filter(Sale.created_at >= day_start, Sale.created_at < day_end).first()
+
+            entry.update({
+                "ca_today": float(ca_today or 0), "sales_today": int(n_today or 0),
+                "ca_month": float(ca_month or 0), "sales_month": int(n_month or 0),
+                "ca_total": float(ca_total or 0), "sales_total": int(n_total or 0),
+            })
+        except Exception:
+            entry["error"] = "Données indisponibles"
+        stats[slug] = entry
+
+    return {"stats": stats, "month": now_local().strftime("%Y-%m")}
+
+
 def _copy_catalog(source_slug: str, target_slug: str) -> dict:
     """Copie le catalogue (catégories, unités, produits) d'une pharmacie vers une autre.
     Stock remis à zéro — seules les fiches produits et les prix sont importés."""
