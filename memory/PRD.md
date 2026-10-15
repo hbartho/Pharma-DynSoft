@@ -464,6 +464,11 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 15 Juin 2026 - Formulaire utilisateur en 2 étapes (✅ COMPLÉTÉE)
+- ✅ Dialogue Nouvel utilisateur / Modifier divisé en 2 pages : (1) Infos utilisateur, (2) Configuration accès
+- ✅ Boutons Suivant (avec validation des champs requis avant de passer) / Précédent (données conservées), indicateur Étape 1/2
+- ✅ Testé via screenshot_tool : validation champs vides bloque, navigation avant/arrière OK, données conservées
+
 ### 15 Juin 2026 - Nom de pharmacie affiché + Export comptable PDF/Excel (✅ COMPLÉTÉE)
 - ✅ Nom de la pharmacie (settings `pharmacy_name`) affiché pour chaque utilisateur connecté : sidebar desktop, barre mobile et drawer mobile (Layout.js)
 - ✅ Export du résumé comptable en **PDF** (reportlab) et **Excel** (openpyxl) : `GET /api/reports/accounting-summary/export?format=pdf|excel` — admin uniquement (403 sinon)

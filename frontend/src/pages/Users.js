@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -26,7 +26,9 @@ import {
   UserX,
   Power,
   Loader2,
-  LayoutGrid
+  LayoutGrid,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { Checkbox } from '../components/ui/checkbox';
 import { PAGES, getDefaultPermissions } from '../config/pagesAccess';
@@ -84,6 +86,12 @@ const Users = () => {
     permissions: getDefaultPermissions('caissier'),
   });
   const [permsTouched, setPermsTouched] = useState(false);
+  const [formStep, setFormStep] = useState(1);
+  const formRef = useRef(null);
+
+  const goToStep2 = () => {
+    if (formRef.current?.reportValidity()) setFormStep(2);
+  };
 
   // React Query hooks
   const { data: users = [], isLoading, isError } = useUsers();
@@ -183,6 +191,7 @@ const Users = () => {
       tenant_id: userToEdit.tenant_id,
       permissions: hasCustom ? [...userToEdit.permissions] : getDefaultPermissions(userToEdit.role || 'caissier'),
     });
+    setFormStep(1);
     setShowDialog(true);
   };
 
@@ -254,6 +263,7 @@ const Users = () => {
     });
     setPermsTouched(false);
     setShowPassword(false);
+    setFormStep(1);
   };
 
   const openNewUserDialog = () => {
@@ -491,11 +501,19 @@ const Users = () => {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              <UserCog className="w-5 h-5 text-teal-600" />
-              {editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
+              {formStep === 1 ? <UserCog className="w-5 h-5 text-teal-600" /> : <LayoutGrid className="w-5 h-5 text-teal-600" />}
+              {formStep === 1
+                ? (editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur')
+                : 'Configuration accès'}
             </DialogTitle>
+            <div className="flex items-center gap-2 pt-1" data-testid="user-form-steps">
+              <span className={`h-1.5 flex-1 rounded-full ${formStep === 1 ? 'bg-teal-600' : 'bg-teal-200'}`} />
+              <span className={`h-1.5 flex-1 rounded-full ${formStep === 2 ? 'bg-teal-600' : 'bg-slate-200'}`} />
+              <span className="text-xs text-slate-400 ml-1">Étape {formStep}/2</span>
+            </div>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4" data-testid="user-form">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" data-testid="user-form">
+            {formStep === 1 && (<>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="first_name">Prénom *</Label>
@@ -602,14 +620,14 @@ const Users = () => {
                 <p className="text-xs text-slate-500 mt-1">Minimum 6 caractères</p>
               </div>
             )}
-            
-            {/* Configuration Accès */}
-            <div className="pt-3 border-t border-slate-100">
+            </>)}
+
+            {formStep === 2 && (
+            <div className="pt-1">
               <div className="flex items-center justify-between mb-2">
-                <Label className="flex items-center gap-2 font-semibold">
-                  <LayoutGrid className="w-4 h-4 text-teal-600" strokeWidth={1.5} />
-                  Configuration Accès
-                </Label>
+                <p className="text-xs text-slate-500">
+                  Opérations accessibles à cet utilisateur ({formData.permissions.length}/{PAGES.length})
+                </p>
                 <div className="flex gap-2">
                   <button type="button" onClick={applyRoleDefaults} className="text-xs text-teal-600 hover:text-teal-800 underline" data-testid="perms-role-defaults">
                     Défauts du rôle
@@ -619,10 +637,7 @@ const Users = () => {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mb-3">
-                Opérations accessibles à cet utilisateur ({formData.permissions.length}/{PAGES.length})
-              </p>
-              <div className="border border-slate-200 rounded-lg p-3 max-h-56 overflow-y-auto space-y-3" data-testid="permissions-config">
+              <div className="border border-slate-200 rounded-lg p-3 max-h-80 overflow-y-auto space-y-3" data-testid="permissions-config">
                 {['Général', 'Opérations', 'Stocks', 'Finances', 'Rabais', 'Administration'].map((group) => (
                   <div key={group}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{group}</p>
@@ -642,20 +657,34 @@ const Users = () => {
                 ))}
               </div>
             </div>
+            )}
             
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                 Annuler
               </Button>
-              <Button 
-                type="submit" 
-                data-testid="user-submit-button" 
-                className="bg-teal-700 hover:bg-teal-800"
-                disabled={isSubmitting}
-              >
-                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingUser ? 'Mettre à jour' : 'Créer'}
-              </Button>
+              {formStep === 1 ? (
+                <Button type="button" className="bg-teal-700 hover:bg-teal-800" onClick={goToStep2} data-testid="user-form-next">
+                  Suivant
+                  <ChevronRight className="w-4 h-4 ml-1" strokeWidth={1.5} />
+                </Button>
+              ) : (
+                <>
+                  <Button type="button" variant="outline" onClick={() => setFormStep(1)} data-testid="user-form-previous">
+                    <ChevronLeft className="w-4 h-4 mr-1" strokeWidth={1.5} />
+                    Précédent
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    data-testid="user-submit-button" 
+                    className="bg-teal-700 hover:bg-teal-800"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {editingUser ? 'Mettre à jour' : 'Créer'}
+                  </Button>
+                </>
+              )}
             </div>
           </form>
         </DialogContent>
