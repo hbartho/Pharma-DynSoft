@@ -7,6 +7,7 @@ from typing import Optional, List
 from datetime import datetime, date, timezone, timedelta
 from database.config import db_manager
 from database.models_tenant import SupplierDebt, Supplier, Supply, DebtStatus
+from database.tenant_context import get_current_tenant
 from auth import get_current_user, require_admin, require_role
 import uuid
 
@@ -109,7 +110,7 @@ async def get_supplier_debts(
     Liste toutes les dettes fournisseurs.
     Admin uniquement.
     """
-    with db_manager.get_tenant_session('default') as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         query = session.query(SupplierDebt)
         
         # Filtres
@@ -171,7 +172,7 @@ async def get_supplier_debt(
     current_user: dict = Depends(require_admin)
 ):
     """Récupère une dette fournisseur par ID."""
-    with db_manager.get_tenant_session('default') as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
@@ -188,7 +189,7 @@ async def record_payment(
     Enregistre un paiement sur une dette fournisseur.
     Admin uniquement.
     """
-    with db_manager.get_tenant_session('default') as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
@@ -244,7 +245,7 @@ async def write_off_debt(
     Abandonne une dette fournisseur.
     Admin uniquement.
     """
-    with db_manager.get_tenant_session('default') as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
@@ -290,7 +291,7 @@ async def create_credit(
     Utilisé quand le fournisseur nous doit de l'argent (ex: produits manquants).
     Admin uniquement.
     """
-    with db_manager.get_tenant_session('default') as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
@@ -357,7 +358,7 @@ async def get_debts_by_supplier(
     current_user: dict = Depends(require_admin)
 ):
     """Récupère toutes les dettes d'un fournisseur."""
-    with db_manager.get_tenant_session('default') as session:
+    with db_manager.get_tenant_session(get_current_tenant()) as session:
         supplier = session.query(Supplier).filter(Supplier.id == uuid.UUID(supplier_id)).first()
         if not supplier:
             raise HTTPException(status_code=404, detail="Fournisseur non trouvé")

@@ -464,6 +464,12 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 15 Juin 2026 - FIX CRITIQUE : fuite inter-pharmacies sur Solde Fournisseurs (✅ CORRIGÉE)
+- 🐛 routes/supplier_debts.py utilisait `get_tenant_session('default')` en dur (6 occurrences) → toutes les pharmacies voyaient (et pouvaient modifier) les dettes fournisseurs de pharmacie_centrale
+- ✅ Remplacé par `get_tenant_session(get_current_tenant())` ; audit : aucune autre route avec tenant en dur
+- ✅ Testé : pharmacie test → 0 dette ; centrale → 6 dettes / 13 082 605 GNF intactes
+- ⚠️ NÉCESSITE UN REDÉPLOIEMENT pour corriger la prod (pharmacie noormin)
+
 ### 15 Juin 2026 - Import règles & promos à la création de pharmacie (✅ COMPLÉTÉE)
 - ✅ _copy_catalog (routes/platform.py) copie désormais aussi les règles de rabais (is_active=False) et codes promo (status=inactive, current_uses=0) lors de la création d'une pharmacie avec import catalogue ; category_ids des conditions remappés vers les nouvelles catégories
 - ✅ Message de création et description de la case « Importer le catalogue » mis à jour
