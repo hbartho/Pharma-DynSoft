@@ -464,6 +464,11 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 16 Juin 2026 - Toggle activer/désactiver codes promo (✅ COMPLÉTÉE)
+- ✅ Bouton Power/PowerOff sur chaque carte code promo (PromoCodes.js), même pattern que les règles de rabais ; masqué pour les codes expirés
+- ✅ Utilise PUT /discounts/promo-codes/{id} avec status active/inactive (endpoint existant)
+- ✅ Testé visuellement : désactivation puis réactivation de PHARMA2026 avec toasts et badge mis à jour
+
 ### 15 Juin 2026 - FIX CRITIQUE : fuite inter-pharmacies sur Solde Fournisseurs (✅ CORRIGÉE)
 - 🐛 routes/supplier_debts.py utilisait `get_tenant_session('default')` en dur (6 occurrences) → toutes les pharmacies voyaient (et pouvaient modifier) les dettes fournisseurs de pharmacie_centrale
 - ✅ Remplacé par `get_tenant_session(get_current_tenant())` ; audit : aucune autre route avec tenant en dur

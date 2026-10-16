@@ -5,7 +5,7 @@ import { formatDateTz } from '../services/dateService';
 import { fr } from 'date-fns/locale';
 import { 
   Plus, Search, Trash2, Edit2, Tag, Percent, DollarSign, 
-  Calendar, Users, CheckCircle, XCircle, Copy, Gift
+  Calendar, Users, CheckCircle, XCircle, Copy, Gift, Power, PowerOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../services/api';
@@ -102,6 +102,18 @@ const PromoCodes = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.detail || 'Erreur lors de la mise à jour');
+    }
+  });
+
+  // Toggle statut (actif/inactif)
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, status }) => api.put(`/discounts/promo-codes/${id}`, { status }),
+    onSuccess: (_, { status }) => {
+      toast.success(status === 'active' ? 'Code promo activé' : 'Code promo désactivé');
+      queryClient.invalidateQueries(['promo-codes']);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.detail || 'Erreur lors du changement de statut');
     }
   });
 
@@ -356,6 +368,25 @@ const PromoCodes = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {code.status !== 'expired' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleStatusMutation.mutate({ id: code.id, status: code.status === 'active' ? 'inactive' : 'active' })}
+                          className={code.status === 'active'
+                            ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
+                            : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                          }
+                          title={code.status === 'active' ? 'Désactiver le code' : 'Activer le code'}
+                          data-testid={`promo-toggle-${code.code}`}
+                        >
+                          {code.status === 'active' ? (
+                            <PowerOff className="w-4 h-4" strokeWidth={1.5} />
+                          ) : (
+                            <Power className="w-4 h-4" strokeWidth={1.5} />
+                          )}
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(code)}>
                         <Edit2 className="w-4 h-4" />
                       </Button>
