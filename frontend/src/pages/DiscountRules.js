@@ -82,7 +82,7 @@ const DiscountRules = () => {
     mutationFn: (data) => api.post('/discounts/rules', data),
     onSuccess: () => {
       toast.success('Règle créée avec succès');
-      queryClient.invalidateQueries(['discount-rules']);
+      queryClient.invalidateQueries({ queryKey: ['discount-rules'] });
       resetForm();
     },
     onError: (error) => {
@@ -95,7 +95,7 @@ const DiscountRules = () => {
     mutationFn: ({ id, data }) => api.put(`/discounts/rules/${id}`, data),
     onSuccess: () => {
       toast.success('Règle mise à jour');
-      queryClient.invalidateQueries(['discount-rules']);
+      queryClient.invalidateQueries({ queryKey: ['discount-rules'] });
       resetForm();
     },
     onError: (error) => {
@@ -108,7 +108,7 @@ const DiscountRules = () => {
     mutationFn: (id) => api.delete(`/discounts/rules/${id}`),
     onSuccess: () => {
       toast.success('Règle supprimée');
-      queryClient.invalidateQueries(['discount-rules']);
+      queryClient.invalidateQueries({ queryKey: ['discount-rules'] });
       setDeleteTarget(null);
     }
   });
@@ -117,7 +117,7 @@ const DiscountRules = () => {
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, is_active }) => api.put(`/discounts/rules/${id}`, { is_active }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['discount-rules']);
+      queryClient.invalidateQueries({ queryKey: ['discount-rules'] });
     }
   });
 

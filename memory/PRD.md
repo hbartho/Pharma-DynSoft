@@ -464,6 +464,11 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 16 Juin 2026 - FIX toggle promo agissant sur le mauvais code (✅ CORRIGÉE)
+- 🐛 Cause : syntaxe React Query v4 `invalidateQueries(['key'])` inopérante en v5 → liste périmée après toggle, le 2e clic agissait sur un état faux
+- ✅ Corrigé en `invalidateQueries({ queryKey: ['key'] })` — 17 occurrences dans PromoCodes.js, DiscountRules.js, Inventory.js, SupplierDebts.js (bug latent partout)
+- ✅ Testé UI : 2 clics successifs sur PHARMA2026 → Inactif puis Actif, BIENVENUE10 jamais impacté
+
 ### 16 Juin 2026 - Toggle activer/désactiver codes promo (✅ COMPLÉTÉE)
 - ✅ Bouton Power/PowerOff sur chaque carte code promo (PromoCodes.js), même pattern que les règles de rabais ; masqué pour les codes expirés
 - ✅ Utilise PUT /discounts/promo-codes/{id} avec status active/inactive (endpoint existant)

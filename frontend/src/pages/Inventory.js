@@ -64,7 +64,7 @@ const useCreateInventory = () => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       toast.success('Session d\'inventaire créée');
     },
     onError: (error) => {
@@ -81,7 +81,7 @@ const useUpdateInventoryItem = () => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.detail || 'Erreur lors de la mise à jour');
@@ -97,8 +97,8 @@ const useValidateInventory = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success(`Inventaire validé - ${data.adjustments_count} ajustement(s) appliqué(s)`);
     },
     onError: (error) => {
@@ -115,7 +115,7 @@ const useCancelInventory = () => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       toast.success('Session d\'inventaire annulée');
     },
     onError: (error) => {
@@ -132,7 +132,7 @@ const useRefreshTheoretical = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       if (data.updates_count > 0) {
         toast.success(`${data.updates_count} produit(s) mis à jour avec le stock actuel`);
       } else {

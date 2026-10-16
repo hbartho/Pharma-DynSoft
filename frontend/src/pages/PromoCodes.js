@@ -84,7 +84,7 @@ const PromoCodes = () => {
     mutationFn: (data) => api.post('/discounts/promo-codes', data),
     onSuccess: () => {
       toast.success('Code promo créé avec succès');
-      queryClient.invalidateQueries(['promo-codes']);
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
       resetForm();
     },
     onError: (error) => {
@@ -97,7 +97,7 @@ const PromoCodes = () => {
     mutationFn: ({ id, data }) => api.put(`/discounts/promo-codes/${id}`, data),
     onSuccess: () => {
       toast.success('Code promo mis à jour');
-      queryClient.invalidateQueries(['promo-codes']);
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
       resetForm();
     },
     onError: (error) => {
@@ -110,7 +110,7 @@ const PromoCodes = () => {
     mutationFn: ({ id, status }) => api.put(`/discounts/promo-codes/${id}`, { status }),
     onSuccess: (_, { status }) => {
       toast.success(status === 'active' ? 'Code promo activé' : 'Code promo désactivé');
-      queryClient.invalidateQueries(['promo-codes']);
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
     },
     onError: (error) => {
       toast.error(error.response?.data?.detail || 'Erreur lors du changement de statut');
@@ -122,7 +122,7 @@ const PromoCodes = () => {
     mutationFn: (id) => api.delete(`/discounts/promo-codes/${id}`),
     onSuccess: () => {
       toast.success('Code promo supprimé');
-      queryClient.invalidateQueries(['promo-codes']);
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] });
       setDeleteTarget(null);
     },
     onError: (error) => {
