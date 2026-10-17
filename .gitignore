@@ -289,4 +289,3 @@ credentials.json
 # Installation locale (secrets et sauvegardes)
 deploy/local/.env
 deploy/local/backups/
-!deploy/local/.env.example

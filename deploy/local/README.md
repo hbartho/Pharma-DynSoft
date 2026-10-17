@@ -5,7 +5,7 @@ Tout est dans ce dossier. Lire **GUIDE_INSTALLATION_LOCALE.pdf** (ou .md).
 | Fichier | Rôle |
 |---|---|
 | `install.bat` / `install.sh` | Première installation et mises à jour (`docker compose up -d --build`) |
-| `.env.example` | Modèle de configuration → copié en `.env` à la première exécution |
+| `env.example.txt` | Exemple de configuration (le `.env` réel est généré par `install`) |
 | `docker-compose.yml` | PostgreSQL 17 + backend FastAPI + frontend (nginx, port 80) |
 | `backup.bat` / `backup.sh` | Sauvegarde `pg_dump` dans `backups/` |
 | `restore.bat` / `restore.sh` | Restauration d'une sauvegarde |

@@ -9,9 +9,18 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if [ ! -f .env ]; then
-  cp .env.example .env
-  echo "Fichier .env créé à partir de .env.example."
-  echo ">>> Ouvrez deploy/local/.env, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez ./install.sh"
+  cat > .env <<'EOF'
+POSTGRES_USER=dynpharma
+POSTGRES_PASSWORD=CHANGEZ_MOI_mot_de_passe_base
+POSTGRES_DB=dynpharma
+JWT_SECRET_KEY=CHANGEZ_MOI_cle_secrete_longue_et_aleatoire
+SUPERADMIN_EMAIL=admin@dynsoft.local
+SUPERADMIN_PASSWORD=CHANGEZ_MOI_8_caracteres_min
+APP_PORT=80
+UVICORN_WORKERS=2
+EOF
+  echo "Fichier de configuration .env créé dans $(pwd)."
+  echo ">>> Ouvrez-le, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez ./install.sh"
   exit 0
 fi
 

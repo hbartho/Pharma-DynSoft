@@ -10,9 +10,21 @@ if errorlevel 1 (
 )
 
 if not exist .env (
-  copy .env.example .env >nul
-  echo Fichier .env cree a partir de .env.example.
-  echo ^>^>^> Ouvrez deploy\local\.env avec le Bloc-notes, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez install.bat
+  (
+    echo POSTGRES_USER=dynpharma
+    echo POSTGRES_PASSWORD=CHANGEZ_MOI_mot_de_passe_base
+    echo POSTGRES_DB=dynpharma
+    echo JWT_SECRET_KEY=CHANGEZ_MOI_cle_secrete_longue_et_aleatoire
+    echo SUPERADMIN_EMAIL=admin@dynsoft.local
+    echo SUPERADMIN_PASSWORD=CHANGEZ_MOI_8_caracteres_min
+    echo APP_PORT=80
+    echo UVICORN_WORKERS=2
+  ) > .env
+  echo Fichier de configuration .env cree dans %CD%
+  echo ^>^>^> Ouvrez-le avec le Bloc-notes, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez install.bat
+  echo.
+  echo Ouverture du Bloc-notes...
+  start notepad .env
   pause
   exit /b 0
 )

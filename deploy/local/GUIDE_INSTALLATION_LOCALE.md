@@ -55,7 +55,7 @@ sudo usermod -aG docker $USER   # puis se déconnecter / reconnecter
 
 1. Ouvrir le dossier `deploy/local`.
 2. Lancer `install.bat` (Windows) ou `./install.sh` (Linux). À la première exécution,
-   un fichier `.env` est créé puis le script s'arrête.
+   un fichier `.env` est créé (et ouvert dans le Bloc-notes sous Windows) puis le script s'arrête.
 3. Ouvrir `.env` avec le Bloc-notes et remplacer **toutes** les valeurs `CHANGEZ_MOI` :
 
    | Variable | Rôle |
