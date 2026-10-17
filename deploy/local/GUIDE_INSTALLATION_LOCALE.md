@@ -139,6 +139,7 @@ reconstruire les conteneurs ne les efface pas. **Ne jamais** exécuter `docker c
 | Symptôme | Cause probable / solution |
 |---|---|
 | `install` échoue immédiatement | Docker Desktop n'est pas lancé |
+| Backend : `exec ./docker-entrypoint.sh: no such file or directory` | Fins de ligne Windows dans le script : relancer `install` avec la version à jour du code (le Dockerfile corrige le fichier au build) |
 | Page blanche ou « Network Error » | Backend pas encore prêt : attendre 1 min, `docker compose logs backend` |
 | Accès impossible depuis une caisse | Mauvaise IP, Wi-Fi différent, ou pare-feu Windows (port 80) |
 | « Mot de passe incorrect » après migration | Vérifier que l'import s'est terminé (`docker compose logs backend`) |
