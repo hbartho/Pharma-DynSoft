@@ -2,14 +2,17 @@
 """
 Script pour mettre tous les stocks de produits à 0
 """
+import os
 import psycopg2
-from urllib.parse import unquote
+from dotenv import load_dotenv
 
-# Configuration Supabase
-SUPABASE_URL = "postgresql://postgres.vwpakvjgnuwyynsixrab:DynSoftPharma1%23@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("DATABASE_URL")
 
 def reset_all_stock():
-    connection_string = unquote(SUPABASE_URL)
+    if not SUPABASE_URL:
+        raise SystemExit("SUPABASE_URL ou DATABASE_URL manquant dans .env")
+    connection_string = SUPABASE_URL
     
     try:
         conn = psycopg2.connect(connection_string)

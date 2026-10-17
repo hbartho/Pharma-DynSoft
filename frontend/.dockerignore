@@ -1,0 +1,8 @@
+node_modules
+build
+.env
+.env.*
+*.bat
+*.md
+*.txt
+plugins

@@ -464,6 +464,17 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Pack d'installation locale / hors-ligne (Docker) (✅ COMPLÉTÉE)
+- Contexte : connexion Internet instable en Guinée → l'app doit tourner sur un PC serveur dans la pharmacie (Wi-Fi local)
+- ✅ `backend/database/config.py` : support `DATABASE_URL` (PostgreSQL local) = même mode "base unique + schéma t_<slug> par pharmacie" que Supabase (`USE_SUPABASE = bool(SUPABASE_URL or DATABASE_URL)`). Prod Supabase inchangée.
+- ✅ `backend/scripts/init_local_db.py` : crée les tables public (master + tenant) et le super admin depuis `SUPERADMIN_EMAIL/PASSWORD` si aucun n'existe (idempotent) ; lancé par `backend/docker-entrypoint.sh` (construit DATABASE_URL avec quote_plus → mots de passe avec # @ ok)
+- ✅ `backend/Dockerfile` (python 3.11-slim, uvicorn 8001), `frontend/Dockerfile` (build CRA avec REACT_APP_BACKEND_URL="" → API relative `/api`, servi par nginx + proxy `/api` → backend:8001, `frontend/nginx.conf`), `.dockerignore` (exclut .env)
+- ✅ `deploy/local/` : docker-compose.yml (postgres:17 + backend + frontend port 80), .env.example, install/backup/restore/migrer-depuis-supabase (.sh + .bat), GUIDE_INSTALLATION_LOCALE.md + .pdf (build_guide_pdf.py), README
+- ✅ Testé sur PostgreSQL 15 local (Docker indisponible dans le pod) : init idempotent, login super admin, création pharmacie → schéma t_test_locale, login admin local, catégorie créée isolée, dettes vides ; pg_dump `--schema=public --schema=t_*` + pg_restore `--clean --if-exists` : 0 erreur ; build frontend OK sans URL emergent
+- 🔒 Sécurité : mot de passe Supabase codé en dur retiré de `scripts/reset_stock.py` et `scripts/update_category_coefficients.py` (→ env). ⚠️ Recommander la rotation du mot de passe BD Supabase (présent dans l'historique git)
+- ⚠️ Non testé : `docker compose up` réel (à faire par l'utilisateur sur son PC) ; mode hybride local↔cloud non inclus (backlog)
+
+
 ### 16 Juin 2026 - FIX toggle promo agissant sur le mauvais code (✅ CORRIGÉE)
 - 🐛 Cause : syntaxe React Query v4 `invalidateQueries(['key'])` inopérante en v5 → liste périmée après toggle, le 2e clic agissait sur un état faux
 - ✅ Corrigé en `invalidateQueries({ queryKey: ['key'] })` — 17 occurrences dans PromoCodes.js, DiscountRules.js, Inventory.js, SupplierDebts.js (bug latent partout)

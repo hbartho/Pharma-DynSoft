@@ -21,15 +21,16 @@ from database.tenant_context import tenant_schema_name
 
 logger = logging.getLogger(__name__)
 
-# Configuration PostgreSQL - Support Supabase et local
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+# Configuration PostgreSQL - Supabase (cloud) ou PostgreSQL local via DATABASE_URL
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "") or DATABASE_URL
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "pharmaflow_admin")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "PharmaFlow2024!Secure")
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
 
-# Déterminer si on utilise Supabase
-USE_SUPABASE = bool(SUPABASE_URL and "supabase" in SUPABASE_URL)
+# Mode "base unique + un schéma par pharmacie" (Supabase ou PostgreSQL local avec DATABASE_URL)
+USE_SUPABASE = bool(SUPABASE_URL)
 
 # Base de données master pour la gestion des tenants
 MASTER_DB_NAME = "pharmaflow_master"

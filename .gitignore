@@ -285,3 +285,8 @@ frontend/node_modules/.cache/default-development/2.pack_
 credentials.json
 *.key
 .credentials
+
+# Installation locale (secrets et sauvegardes)
+deploy/local/.env
+deploy/local/backups/
+!deploy/local/.env.example
