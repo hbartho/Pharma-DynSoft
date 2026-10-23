@@ -45,6 +45,15 @@ def main():
     Base.metadata.create_all(engine, checkfirst=True)
     print("Tables du schéma public OK")
 
+    # Nouvelles tables éventuelles dans les schémas des pharmacies existantes
+    from database.models_master import Tenant
+    with db_manager.get_master_session() as session:
+        schemas = [t.database_name for t in session.query(Tenant).all() if t.database_name and t.database_name != "public"]
+    for schema in schemas:
+        db_manager.create_schema_tables(schema)
+    if schemas:
+        print(f"Schémas pharmacies vérifiés : {', '.join(schemas)}")
+
     if FORCED_SCHEMA and FORCED_SCHEMA != "public":
         with engine.connect() as conn:
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{FORCED_SCHEMA}"'))

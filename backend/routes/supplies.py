@@ -21,6 +21,7 @@ if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import Supply as SupplyModel, SupplyItem as SupplyItemModel, Product, Category, Supplier
     ProductModel = Product
+    from services.price_history import record_price_change
     from database.repositories import ProductRepository, CategoryRepository, SupplierRepository
     from sqlalchemy import desc, or_, func
     
@@ -476,6 +477,16 @@ if DATABASE_TYPE == "postgresql":
             
             # Stocks et prix mis à jour dans la même transaction (incrément SQL atomique)
             for item in supply.items:
+                if (item.purchase_price and item.purchase_price > 0) or (item.selling_price and item.selling_price > 0):
+                    prod = session.query(ProductModel).filter(ProductModel.id == item.product_id).first()
+                    if prod:
+                        record_price_change(
+                            session, prod,
+                            item.purchase_price if item.purchase_price and item.purchase_price > 0 else None,
+                            item.selling_price if item.selling_price and item.selling_price > 0 else None,
+                            "supply", employee_code, reference_type="supply", reference_id=supply.id,
+                            notes=f"Approvisionnement {supply.supply_number or ''}".strip(),
+                        )
                 update_data = {ProductModel.stock: func.coalesce(ProductModel.stock, 0) + int(item.quantity)}
                 if item.purchase_price and item.purchase_price > 0:
                     update_data[ProductModel.purchase_price] = item.purchase_price

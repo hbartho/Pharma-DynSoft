@@ -895,3 +895,25 @@ class PromoCodeUsage(Base, UUIDMixin, TimestampMixin):
         Index("idx_promo_usage_code", "promo_code_id"),
         Index("idx_promo_usage_customer", "customer_id"),
     )
+
+
+class PriceHistory(Base, UUIDMixin, TimestampMixin):
+    """Historique des changements de prix d'un produit (manuel, approvisionnement, gestion des prix)."""
+    
+    __tablename__ = "price_history"
+    
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False, index=True)
+    product_name = Column(String(255), nullable=True)
+    product_reference = Column(String(100), nullable=True)
+    prix_appro = Column(Float, nullable=False, default=0)
+    prix_vente_prod = Column(Float, nullable=False, default=0)
+    prix_appro_avant = Column(Float, nullable=True)
+    prix_vente_avant = Column(Float, nullable=True)
+    change_type = Column(String(30), nullable=False, default="manual")
+    reference_type = Column(String(50), nullable=True)
+    reference_id = Column(UUID(as_uuid=True), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_by = Column(String(50), nullable=True)
+    
+    def __repr__(self):
+        return f"<PriceHistory(product='{self.product_name}', vente={self.prix_vente_prod})>"

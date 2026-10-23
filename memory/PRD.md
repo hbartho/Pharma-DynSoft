@@ -464,6 +464,12 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Audit « données non répercutées » + historique des prix persistant (✅ COMPLÉTÉE, testée preview)
+- Audit : propagation prix OK désormais (lots → produit, appro → produit) ; stocks/dettes/retours cohérents ; mutations front invalident bien ['products'] ; corps non typés : seul /stock-lots/bulk-update (corrigé) ; pending-sales → vente réelle via /sales (OK)
+- 🐛 Trouvé : `_price_history` en mémoire (prices.py) → graphique « Historique des prix » du tableau de bord vide après redémarrage, jamais alimenté par Gestion des prix ni par les appros
+- ✅ Nouvelle table tenant `price_history` (models_tenant.PriceHistory) créée sur Supabase (public + t_noormin) ; `services/price_history.py` (`record_price_change` dans la transaction appelante, n'écrit que si un prix change) appelé par PUT /stock-lots/{id}, /bulk-update, validation d'appro et POST /prices/update ; endpoints /prices/history(/paginated, /{id}, summary) lisent la table
+- ✅ init_local_db crée les tables manquantes dans tous les schémas de pharmacies existants (mises à jour futures)
+
 ### 17 Juin 2026 - FIX Gestion des prix → prix de vente non répercuté (✅ CORRIGÉE, testée preview)
 - 🐛 Gestion des prix modifiait seulement le lot (supply_items.selling_price) ; Product.price (utilisé par le POS) restait inchangé. De plus bulk-update lisait `id` alors que le front envoie `lot_id` et ignorait les prix → « Enregistrer tout » ne sauvegardait rien
 - ✅ stock_lots.py : `_apply_lot_prices_to_product` (prix lot → Product.price / purchase_price, verrou produit) sur PUT /stock-lots/{id} et /bulk-update (accepte id|lot_id, gère selling/purchase_price, renvoie updated_count) ; front : invalidation ['products'] après sauvegarde → POS rafraîchi

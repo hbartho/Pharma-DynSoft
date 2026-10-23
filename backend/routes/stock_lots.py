@@ -41,6 +41,7 @@ from database.tenant_context import get_current_tenant
 if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import SupplyItem, Supply, Product
+    from services.price_history import record_price_change
     from sqlalchemy import desc
     
     def get_session():
@@ -117,17 +118,21 @@ if DATABASE_TYPE == "postgresql":
             
             return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
 
-    def _apply_lot_prices_to_product(session, item, selling_price, purchase_price):
+    def _apply_lot_prices_to_product(session, item, selling_price, purchase_price, employee_code=None):
         """Le prix saisi dans Gestion des prix devient le prix courant du produit (utilisé par les ventes)."""
         if selling_price is None and purchase_price is None:
             return
         product = session.query(Product).filter(Product.id == item.product_id).with_for_update().first()
         if not product:
             return
-        if selling_price is not None and float(selling_price) > 0:
-            product.price = float(selling_price)
-        if purchase_price is not None and float(purchase_price) > 0:
-            product.purchase_price = float(purchase_price)
+        new_price = float(selling_price) if selling_price is not None and float(selling_price) > 0 else None
+        new_purchase = float(purchase_price) if purchase_price is not None and float(purchase_price) > 0 else None
+        record_price_change(session, product, new_purchase, new_price, "manual", employee_code,
+                            reference_type="stock_lot", reference_id=item.id, notes=f"Gestion des prix - lot {item.lot_number or ''}".strip())
+        if new_price is not None:
+            product.price = new_price
+        if new_purchase is not None:
+            product.purchase_price = new_purchase
 
     @router.put("/bulk-update", response_model=dict)
     def bulk_update_lots(
@@ -165,7 +170,7 @@ if DATABASE_TYPE == "postgresql":
                         item.selling_price = float(update_data["selling_price"])
                     if update_data.get("purchase_price") is not None:
                         item.purchase_price = float(update_data["purchase_price"])
-                    _apply_lot_prices_to_product(session, item, update_data.get("selling_price"), update_data.get("purchase_price"))
+                    _apply_lot_prices_to_product(session, item, update_data.get("selling_price"), update_data.get("purchase_price"), current_user.get("employee_code"))
                     
                     updated.append(str(lot_id))
                 except Exception as e:
@@ -218,7 +223,7 @@ if DATABASE_TYPE == "postgresql":
                 item.selling_price = update_data.selling_price
             if update_data.purchase_price is not None:
                 item.purchase_price = update_data.purchase_price
-            _apply_lot_prices_to_product(session, item, update_data.selling_price, update_data.purchase_price)
+            _apply_lot_prices_to_product(session, item, update_data.selling_price, update_data.purchase_price, current_user.get("employee_code"))
             
             session.commit()
             session.refresh(item)

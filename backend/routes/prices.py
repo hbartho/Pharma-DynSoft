@@ -30,8 +30,10 @@ if DATABASE_TYPE == "postgresql":
     
     # Stockage en mémoire de l'historique des prix (simplifié)
     # Dans une vraie implémentation, créer une table price_history
-    _price_history = []
-    
+    from database.models_tenant import PriceHistory as PriceHistoryModel
+    from services.price_history import record_price_change, price_history_to_dict
+    from sqlalchemy import func as sa_func
+
     def create_price_history(
         product_id: str,
         prix_appro: float,
@@ -44,49 +46,40 @@ if DATABASE_TYPE == "postgresql":
         reference_id: str = None,
         notes: str = None
     ) -> dict:
-        """Créer une entrée d'historique de prix"""
+        """Met à jour les prix du produit et enregistre l'historique (même transaction)."""
         with get_session() as session:
             try:
-                product = session.query(Product).filter(Product.id == uuid.UUID(product_id)).first()
+                product = session.query(Product).filter(Product.id == uuid.UUID(product_id)).with_for_update().first()
             except ValueError:
                 raise HTTPException(status_code=404, detail="Produit non trouvé")
-            
             if not product:
                 raise HTTPException(status_code=404, detail="Produit non trouvé")
             
-            prix_appro_avant = product.purchase_price or 0
-            prix_vente_avant = product.price or 0
-            
-            # Créer l'entrée d'historique
-            entry = {
-                "id": str(uuid.uuid4()),
-                "product_id": product_id,
-                "product_name": product.name,
-                "product_reference": product.internal_reference,
-                "prix_appro": prix_appro,
-                "prix_vente_prod": prix_vente_prod,
-                "prix_appro_avant": prix_appro_avant,
-                "prix_vente_avant": prix_vente_avant,
-                "date_maj_prix": datetime.now(timezone.utc).isoformat(),
-                "date_appro": date_appro.isoformat() if date_appro else None,
-                "date_peremption": date_peremption.isoformat() if date_peremption else None,
-                "change_type": change_type.value,
-                "reference_type": reference_type,
-                "reference_id": reference_id,
-                "notes": notes,
-                "created_by": employee_code,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            
-            _price_history.insert(0, entry)
-            
-            # Mettre à jour le produit
+            entry = record_price_change(
+                session, product, prix_appro, prix_vente_prod,
+                change_type.value if hasattr(change_type, "value") else str(change_type),
+                employee_code, reference_type=reference_type, reference_id=reference_id, notes=notes,
+            )
             product.purchase_price = prix_appro
             product.price = prix_vente_prod
-            session.commit()
-            
-            return entry
-    
+            session.flush()
+            if entry is None:
+                return {"message": "Aucun changement de prix", "product_id": product_id}
+            return price_history_to_dict(entry)
+
+    def _history_query(session, product_id=None, change_type=None, search=None):
+        q = session.query(PriceHistoryModel)
+        if product_id:
+            try:
+                q = q.filter(PriceHistoryModel.product_id == uuid.UUID(product_id))
+            except ValueError:
+                pass
+        if change_type and change_type != 'all':
+            q = q.filter(PriceHistoryModel.change_type == change_type)
+        if search:
+            q = q.filter(PriceHistoryModel.product_name.ilike(f"%{search}%"))
+        return q
+
     @router.get("/history/paginated")
     def get_price_history_paginated(
         page: int = Query(default=1, ge=1),
@@ -97,33 +90,16 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer l'historique des prix avec pagination pour infinite scroll"""
-        result = _price_history.copy()
-        
-        if product_id:
-            result = [h for h in result if h.get("product_id") == product_id]
-        
-        if change_type and change_type != 'all':
-            result = [h for h in result if h.get("change_type") == change_type]
-        
-        if search:
-            search_lower = search.lower()
-            result = [h for h in result if search_lower in (h.get("product_name", "") or "").lower()]
-        
-        total = len(result)
-        pages = (total + limit - 1) // limit if total > 0 else 1
-        
-        offset = (page - 1) * limit
-        items = result[offset:offset + limit]
-        
-        return {
-            "items": items,
-            "total": total,
-            "page": page,
-            "limit": limit,
-            "pages": pages,
-            "has_next": page < pages,
-            "has_prev": page > 1
-        }
+        with get_session() as session:
+            q = _history_query(session, product_id, change_type, search)
+            total = q.count()
+            pages = (total + limit - 1) // limit if total > 0 else 1
+            items = q.order_by(desc(PriceHistoryModel.created_at)).offset((page - 1) * limit).limit(limit).all()
+            return {
+                "items": [price_history_to_dict(h) for h in items],
+                "total": total, "page": page, "limit": limit, "pages": pages,
+                "has_next": page < pages, "has_prev": page > 1,
+            }
     
     @router.get("/history", response_model=List[dict])
     def get_price_history(
@@ -133,15 +109,9 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer l'historique des prix"""
-        result = _price_history.copy()
-        
-        if product_id:
-            result = [h for h in result if h.get("product_id") == product_id]
-        
-        if change_type:
-            result = [h for h in result if h.get("change_type") == change_type]
-        
-        return result[:limit]
+        with get_session() as session:
+            items = _history_query(session, product_id, change_type).order_by(desc(PriceHistoryModel.created_at)).limit(limit).all()
+            return [price_history_to_dict(h) for h in items]
     
     @router.get("/history/{history_id}", response_model=dict)
     def get_price_history_entry(
@@ -149,11 +119,14 @@ if DATABASE_TYPE == "postgresql":
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer une entrée d'historique par ID"""
-        for entry in _price_history:
-            if entry.get("id") == history_id:
-                return entry
-        
-        raise HTTPException(status_code=404, detail="Entrée non trouvée")
+        with get_session() as session:
+            try:
+                h = session.query(PriceHistoryModel).filter(PriceHistoryModel.id == uuid.UUID(history_id)).first()
+            except ValueError:
+                h = None
+            if not h:
+                raise HTTPException(status_code=404, detail="Entrée non trouvée")
+            return price_history_to_dict(h)
     
     @router.post("/update", response_model=dict)
     def update_product_prices(
@@ -208,6 +181,6 @@ if DATABASE_TYPE == "postgresql":
                 "total_products": total_products,
                 "total_stock_value": total_stock_value,
                 "average_margin_percent": round(avg_margin, 2),
-                "price_updates_today": len([h for h in _price_history if h.get("created_at", "")[:10] == datetime.now().strftime("%Y-%m-%d")])
+                "price_updates_today": session.query(sa_func.count(PriceHistoryModel.id)).filter(sa_func.date(PriceHistoryModel.created_at) == datetime.now(timezone.utc).date()).scalar() or 0
             }
 
