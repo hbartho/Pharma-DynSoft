@@ -85,6 +85,7 @@ def create_access_token(data: dict, session_id: str = None) -> str:
 from fastapi import Request
 from database.repositories import UserRepository
 from database.tenant_context import set_current_tenant, DEFAULT_TENANT
+from database.directory import is_mirror_tenant
 
 async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get the current authenticated user from JWT token"""
@@ -116,6 +117,14 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
         
         # Positionner le tenant courant pour toute la requête
         set_current_tenant(tenant_id)
+        
+        # Copie cloud alimentée par le serveur local de la pharmacie : consultation seule
+        if request is not None and request.method in ("POST", "PUT", "PATCH", "DELETE") \
+                and not request.url.path.startswith("/api/auth/") and is_mirror_tenant(tenant_id):
+            raise HTTPException(
+                status_code=423,
+                detail="MIRROR_READONLY: cette pharmacie est synchronisée depuis son serveur local. La version cloud est en consultation seule."
+            )
         
         # Vérifier que l'utilisateur existe
         repo = UserRepository(tenant_id)

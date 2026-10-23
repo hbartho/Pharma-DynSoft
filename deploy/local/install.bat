@@ -20,6 +20,10 @@ if not exist .env (
     echo APP_PORT=80
     echo UVICORN_WORKERS=2
     echo TENANT_SCHEMA=
+    echo CLOUD_SYNC_URL=
+    echo CLOUD_SYNC_SLUG=
+    echo CLOUD_SYNC_TOKEN=
+    echo CLOUD_SYNC_HOUR=2
   ) > .env
   echo Fichier de configuration .env cree dans %CD%
   echo ^>^>^> Ouvrez-le avec le Bloc-notes, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez install.bat

@@ -14,6 +14,7 @@ import { getStoreCounts, clearLocalChanges } from '../services/indexedDB';
 import { toast } from 'sonner';
 import OfflineIndicator from '../components/OfflineIndicator';
 import SyncQueuePanel from '../components/SyncQueuePanel';
+import { CloudSyncCard } from '../components/CloudSyncCard';
 
 const Settings = () => {
   const { refreshSettings } = useSettings();
@@ -242,6 +243,8 @@ const Settings = () => {
             </Button>
           </a>
         </div>
+
+        <CloudSyncCard />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Paramètres généraux */}

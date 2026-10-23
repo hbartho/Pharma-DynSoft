@@ -464,6 +464,13 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Synchronisation cloud local → DynSoft (schéma entier) (✅ COMPLÉTÉE, testée E2E)
+- Choix utilisateur : local → cloud uniquement ; une fois par nuit (CLOUD_SYNC_HOUR, défaut 2h) dès qu'Internet revient (retry 15 min) ; incrémental (updated_at > cursor − 5 min, enfants sans timestamp via parent) + complète toutes les 7 jours ; copie cloud en consultation seule (423 MIRROR_READONLY sur POST/PUT/PATCH/DELETE hors /api/auth, toast frontend)
+- Archi : `services/cloud_sync.py` (sérialisation JSON pur Python, pas de pg_dump ; complète = schéma staging `t_x__staging` puis DROP+RENAME atomique ; incrémentale = upsert ON CONFLICT id), `routes/cloud_sync.py` (cloud : GET state / POST begin,push,finish authentifiés par `X-Sync-Token` ; local : /cloud-sync/local/status, /run), table `public.sync_state` (créée sur Supabase), `Tenant.settings` {sync_mode:'mirror', sync_token_hash}, scheduler thread au startup si CLOUD_SYNC_URL/SLUG/TOKEN
+- /platform : bouton nuage par pharmacie → génère/régénère/désactive le jeton (affiché une fois avec le bloc .env à coller), badge dernière réception ; Paramètres (admin, serveur local) : carte CloudSyncCard (statut + Synchroniser maintenant / Complète)
+- Test E2E : local PG (slug sync_test) → preview/prod Supabase : complète 16 lignes OK, login cloud avec le mdp local, POST cloud 423, incrémentale OK ; tenant de test supprimé ensuite
+- Guide §13 + compose/.env (CLOUD_SYNC_*). Public jamais synchronisé → les comptes de la pharmacie doivent exister dans l'annuaire cloud (créés par le super admin) pour se connecter au cloud
+
 ### 17 Juin 2026 - Mouvement de stock par vente (✅ COMPLÉTÉE, testée preview)
 - ✅ Chaque vente crée, dans la même transaction, un StockMovement type OUT par produit (quantité négative, stock_after, reference_type="sale", reference_id=sale.id, reason "VNT-xxx - client", validation_status validated) → visible dans Stocks > Mouvements comme « Sortie / Vente: VNT-... »
 - ℹ️ Les validations d'approvisionnement ne créent toujours pas de mouvement IN (backlog)

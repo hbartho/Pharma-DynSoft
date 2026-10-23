@@ -13,7 +13,7 @@ import {
 } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp,
+  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy,
 } from 'lucide-react';
 
 const fmtGNF = (n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`;
@@ -39,6 +39,33 @@ export default function PlatformAdmin() {
   const [showOwnPassword, setShowOwnPassword] = useState(false);
   const [ownPwForm, setOwnPwForm] = useState({ current_password: '', new_password: '' });
   const [stats, setStats] = useState(null);
+  const [syncTarget, setSyncTarget] = useState(null);
+  const [syncToken, setSyncToken] = useState('');
+  const [syncBusy, setSyncBusy] = useState(false);
+
+  const generateSyncToken = async () => {
+    setSyncBusy(true);
+    try {
+      const res = await api.post(`/platform/pharmacies/${syncTarget.slug}/sync-token`);
+      setSyncToken(res.data.token);
+      toast.success('Jeton généré — la copie cloud passe en consultation seule');
+      loadPharmacies();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Erreur');
+    } finally { setSyncBusy(false); }
+  };
+
+  const revokeSyncToken = async () => {
+    setSyncBusy(true);
+    try {
+      await api.delete(`/platform/pharmacies/${syncTarget.slug}/sync-token`);
+      toast.success('Synchronisation désactivée');
+      setSyncTarget(null); setSyncToken('');
+      loadPharmacies();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Erreur');
+    } finally { setSyncBusy(false); }
+  };
 
   const loadStats = useCallback(async () => {
     try {
@@ -246,6 +273,16 @@ export default function PlatformAdmin() {
                     <p className="text-xs text-slate-400 mt-0.5">
                       {p.users_count || 0} compte(s) · créée le {p.created_at ? new Date(p.created_at).toLocaleDateString('fr-FR') : '—'}
                     </p>
+                    {p.sync?.mode === 'mirror' && (
+                      <p className="text-xs mt-1 flex items-center gap-1.5" data-testid={`sync-status-${p.slug}`}>
+                        <CloudUpload className="w-3.5 h-3.5 text-sky-600" strokeWidth={1.5} />
+                        <span className="text-sky-700 font-medium">Synchro locale → cloud</span>
+                        <span className="text-slate-400">
+                          · {p.sync.last_success_at ? `dernière réception ${new Date(p.sync.last_success_at).toLocaleString('fr-FR')}${p.sync.rows != null ? ` (${p.sync.rows} lignes)` : ''}` : 'en attente de la première synchronisation'}
+                        </span>
+                        {p.sync.last_error && <span className="text-red-600">· erreur : {p.sync.last_error.slice(0, 60)}</span>}
+                      </p>
+                    )}
                     {stats?.[p.slug] && !stats[p.slug].error && (
                       <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-xs" data-testid={`pharmacy-stats-${p.slug}`}>
                         <span className="text-slate-600">
@@ -268,6 +305,11 @@ export default function PlatformAdmin() {
                       <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} data-testid={`toggle-active-${p.slug}`} />
                       <span className="text-xs text-slate-500">Active</span>
                     </div>
+                    {p.slug !== 'pharmacie_centrale' && (
+                      <Button variant="outline" size="sm" className={p.sync?.mode === 'mirror' ? 'text-sky-700 border-sky-200 bg-sky-50 hover:bg-sky-100' : ''} onClick={() => { setSyncTarget(p); setSyncToken(''); }} title="Synchronisation serveur local" data-testid={`sync-token-${p.slug}`}>
+                        <CloudUpload className="w-4 h-4" strokeWidth={1.5} />
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => { setResetTarget(p); setResetForm({ email: '', new_password: '' }); }} data-testid={`reset-password-${p.slug}`}>
                       <KeyRound className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
@@ -283,6 +325,53 @@ export default function PlatformAdmin() {
           )}
         </div>
       </main>
+
+      {/* Dialog synchronisation locale → cloud */}
+      <Dialog open={!!syncTarget} onOpenChange={(o) => { if (!o) { setSyncTarget(null); setSyncToken(''); } }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CloudUpload className="w-5 h-5 text-sky-600" strokeWidth={1.5} /> Synchronisation — {syncTarget?.name}</DialogTitle>
+            <DialogDescription>
+              Le serveur local de la pharmacie remonte chaque nuit son schéma <code className="font-mono">{syncTarget?.schema}</code> vers le cloud.
+              Tant que la synchronisation est active, la version cloud est en consultation seule.
+            </DialogDescription>
+          </DialogHeader>
+          {syncToken ? (
+            <div className="space-y-3" data-testid="sync-token-result">
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">Copiez ce jeton maintenant : il ne sera plus affiché.</p>
+              <div className="flex gap-2">
+                <Input readOnly value={syncToken} className="font-mono text-xs" data-testid="sync-token-value" />
+                <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(syncToken); toast.success('Jeton copié'); }} data-testid="copy-sync-token"><Copy className="w-4 h-4" /></Button>
+              </div>
+              <div className="text-xs text-slate-600 bg-slate-50 rounded-md p-3 font-mono whitespace-pre-wrap">{`# À coller dans deploy/local/.env du serveur de la pharmacie
+CLOUD_SYNC_URL=${window.location.origin}
+CLOUD_SYNC_SLUG=${syncTarget?.slug}
+CLOUD_SYNC_TOKEN=${syncToken}
+CLOUD_SYNC_HOUR=2`}</div>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-600 space-y-2">
+              {syncTarget?.sync?.mode === 'mirror' ? (
+                <p>Synchronisation <strong className="text-sky-700">active</strong>. {syncTarget?.sync?.last_success_at ? `Dernière réception : ${new Date(syncTarget.sync.last_success_at).toLocaleString('fr-FR')}.` : 'Aucune réception pour le moment.'} Vous pouvez régénérer le jeton (l'ancien cessera de fonctionner) ou désactiver la synchronisation.</p>
+              ) : (
+                <p>Générez un jeton, puis collez-le dans le fichier <code className="font-mono">.env</code> du serveur local (voir guide §9). Les ventes, stocks et toutes les données de la pharmacie remonteront automatiquement chaque nuit dès qu'Internet est disponible.</p>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            {syncTarget?.sync?.mode === 'mirror' && !syncToken && (
+              <Button variant="outline" className="text-red-600" onClick={revokeSyncToken} disabled={syncBusy} data-testid="revoke-sync-token">Désactiver la synchro</Button>
+            )}
+            {!syncToken && (
+              <Button onClick={generateSyncToken} disabled={syncBusy} className="bg-sky-600 hover:bg-sky-700" data-testid="generate-sync-token">
+                {syncBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" strokeWidth={1.5} />}
+                {syncTarget?.sync?.mode === 'mirror' ? 'Régénérer le jeton' : 'Générer le jeton'}
+              </Button>
+            )}
+            {syncToken && <Button onClick={() => { setSyncTarget(null); setSyncToken(''); }} data-testid="close-sync-dialog">Fermer</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog création */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>

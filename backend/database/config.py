@@ -239,17 +239,27 @@ class DatabaseManager:
         schema = tenant_schema_name(tenant_slug)
         if schema == "public":
             raise ValueError("Slug réservé")
+        self.create_schema_tables(schema)
+        logger.info(f"Schéma tenant créé: {schema}")
+        return schema
+
+    def create_schema_tables(self, schema: str):
+        """Crée un schéma (si absent) et toutes les tables tenant dedans."""
+        from database.base import Base
+        import database.models_tenant  # noqa: F401
         
         base_engine = self._engines["supabase"] if USE_SUPABASE else self._engines["master"]
         with base_engine.connect() as conn:
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
             conn.commit()
-        
         tenant_tables = [t for t in Base.metadata.sorted_tables if t.schema is None]
         translated = base_engine.execution_options(schema_translate_map={None: schema})
         Base.metadata.create_all(translated, tables=tenant_tables, checkfirst=True)
-        logger.info(f"Schéma tenant créé: {schema}")
-        return schema
+
+    def schema_engine(self, schema: str):
+        """Engine lié à un schéma (schema_translate_map)."""
+        base_engine = self._engines["supabase"] if USE_SUPABASE else self._engines["master"]
+        return base_engine.execution_options(schema_translate_map={None: schema})
 
     def drop_tenant_schema(self, tenant_slug: str) -> bool:
         """Supprime définitivement le schéma d'une pharmacie."""

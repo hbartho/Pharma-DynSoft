@@ -4,6 +4,9 @@ Routes Plateforme (Super Admin DynSoft) - Gestion des pharmacies (tenants).
 import re
 import uuid
 import unicodedata
+import hashlib
+import secrets
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -11,12 +14,13 @@ from typing import Optional
 
 from auth import get_current_user, hash_password
 from database.config import db_manager
-from database.models_master import Tenant, UserDirectory
+from database.models_master import Tenant, UserDirectory, SyncState
 from database.tenant_context import tenant_schema_name, is_valid_slug, DEFAULT_TENANT, FORCED_SCHEMA
 from database.directory import (
     get_directory_entry,
     upsert_directory_entry,
     remove_directory_entries_for_tenant,
+    invalidate_sync_info,
 )
 
 router = APIRouter(prefix="/platform", tags=["Platform"])
@@ -116,9 +120,53 @@ def list_pharmacies(current_user: dict = Depends(require_super_admin)):
             .group_by(UserDirectory.tenant_slug)
             .all()
         )
+        sync_states = {st.slug: st for st in session.query(SyncState).all()}
+        for r in result:
+            st = sync_states.get(r["slug"])
+            r["sync"] = {
+                "mode": (next((t for t in tenants if t.slug == r["slug"]), None).settings or {}).get("sync_mode"),
+                "last_success_at": st.last_success_at.isoformat() if st and st.last_success_at else None,
+                "last_error": st.last_error if st else None,
+                "rows": (st.last_stats or {}).get("rows") if st else None,
+            }
     for r in result:
         r["users_count"] = counts.get(r["slug"], 0)
     return result
+
+
+@router.post("/pharmacies/{slug}/sync-token")
+def create_sync_token(slug: str, current_user: dict = Depends(require_super_admin)):
+    """Génère (ou régénère) le jeton de synchronisation du serveur local de la pharmacie.
+    Le jeton n'est affiché qu'une fois ; la copie cloud passe en consultation seule."""
+    token = secrets.token_urlsafe(36)
+    with db_manager.get_master_session() as session:
+        tenant = session.query(Tenant).filter(Tenant.slug == slug).first()
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Pharmacie introuvable")
+        settings = dict(tenant.settings or {})
+        settings.update({
+            "sync_mode": "mirror",
+            "sync_token_hash": hashlib.sha256(token.encode()).hexdigest(),
+            "sync_token_created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        tenant.settings = settings
+        session.commit()
+    invalidate_sync_info(slug)
+    return {"slug": slug, "token": token, "cloud_url_hint": "URL publique de DynSoft Pharma (ex. https://votre-domaine)"}
+
+
+@router.delete("/pharmacies/{slug}/sync-token")
+def revoke_sync_token(slug: str, current_user: dict = Depends(require_super_admin)):
+    """Désactive la synchronisation : la copie cloud redevient modifiable."""
+    with db_manager.get_master_session() as session:
+        tenant = session.query(Tenant).filter(Tenant.slug == slug).first()
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Pharmacie introuvable")
+        settings = {k: v for k, v in (tenant.settings or {}).items() if not k.startswith("sync_")}
+        tenant.settings = settings
+        session.commit()
+    invalidate_sync_info(slug)
+    return {"slug": slug, "sync_mode": None}
 
 
 @router.get("/pharmacies/stats")

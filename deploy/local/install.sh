@@ -19,6 +19,10 @@ SUPERADMIN_PASSWORD=CHANGEZ_MOI_8_caracteres_min
 APP_PORT=80
 UVICORN_WORKERS=2
 TENANT_SCHEMA=
+CLOUD_SYNC_URL=
+CLOUD_SYNC_SLUG=
+CLOUD_SYNC_TOKEN=
+CLOUD_SYNC_HOUR=2
 EOF
   echo "Fichier de configuration .env créé dans $(pwd)."
   echo ">>> Ouvrez-le, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez ./install.sh"

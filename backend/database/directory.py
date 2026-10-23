@@ -1,10 +1,12 @@
 """Annuaire global des utilisateurs (email -> pharmacie) stocké dans le schéma public."""
+import os
 import uuid
 import logging
 from sqlalchemy import func
 
 from database.config import db_manager
 from database.models_master import UserDirectory, Tenant
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -102,3 +104,37 @@ def is_tenant_active(tenant_slug: str) -> bool:
     except Exception as e:
         logger.warning(f"tenant active check failed: {e}")
         return True
+
+
+# ==================== Synchronisation cloud : mode miroir ====================
+_sync_info_cache: dict = {}
+_SYNC_CACHE_TTL = 60
+
+
+def get_tenant_sync_info(tenant_slug: str) -> dict:
+    """Retourne settings de synchro d'une pharmacie (mis en cache 60 s) : {sync_mode, sync_token_hash}."""
+    now = time.time()
+    cached = _sync_info_cache.get(tenant_slug)
+    if cached and now - cached[0] < _SYNC_CACHE_TTL:
+        return cached[1]
+    info = {}
+    try:
+        with db_manager.get_master_session() as session:
+            tenant = session.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+            if tenant and tenant.settings:
+                info = {k: v for k, v in tenant.settings.items() if k.startswith("sync_")}
+    except Exception as e:
+        logger.warning(f"sync info lookup failed: {e}")
+    _sync_info_cache[tenant_slug] = (now, info)
+    return info
+
+
+def invalidate_sync_info(tenant_slug: str):
+    _sync_info_cache.pop(tenant_slug, None)
+
+
+def is_mirror_tenant(tenant_slug: str) -> bool:
+    """Vrai si la pharmacie est une copie miroir alimentée par son serveur local (consultation seule)."""
+    if os.environ.get("CLOUD_SYNC_TOKEN"):
+        return False  # ce serveur est l'émetteur local : jamais en lecture seule
+    return get_tenant_sync_info(tenant_slug).get("sync_mode") == "mirror"

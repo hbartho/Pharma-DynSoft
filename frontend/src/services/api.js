@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getUserData, clearUserData } from './indexedDB';
+import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,6 +32,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (error.response?.status === 423) {
+      toast.warning('Consultation seule', {
+        id: 'mirror-readonly',
+        description: 'Cette pharmacie est synchronisée depuis son serveur local : les modifications se font sur place.',
+      });
+    }
     if (error.response?.status === 401) {
       const errorDetail = error.response?.data?.detail || '';
       

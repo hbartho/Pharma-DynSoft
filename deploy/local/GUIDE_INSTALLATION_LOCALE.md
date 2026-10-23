@@ -169,9 +169,30 @@ reconstruire les conteneurs ne les efface pas. **Ne jamais** exécuter `docker c
 | Disque plein | Supprimer les anciens fichiers dans `backups/` |
 | Port 80 déjà utilisé | Changer `APP_PORT=8080` dans `.env` puis relancer `install` ; accès via `http://IP:8080` |
 
-## 13. Vers le mode hybride (plus tard)
+## 13. Synchronisation automatique vers le cloud DynSoft
 
-Chaque pharmacie fonctionne en autonomie. Une synchronisation vers le cloud (reporting
-consolidé pour DynSoft quand Internet revient) peut être ajoutée dans une étape ultérieure :
-elle nécessite une file de changements locale et une gestion des conflits, non incluse dans
-ce pack.
+Chaque pharmacie peut remonter **tout son schéma** (`t_<slug>` : ventes, stocks, clients,
+dettes…) vers le cloud DynSoft, **chaque nuit, dès qu'Internet est disponible**. Le schéma
+`public` du cloud (pharmacies, comptes) n'est jamais modifié.
+
+Principe : local → cloud uniquement. Le serveur de la pharmacie fait foi ; la copie cloud
+sert à DynSoft (statistiques, consultation) et passe en **consultation seule**.
+
+1. Sur le cloud, le super-admin ouvre `/platform`, clique sur l'icône nuage de la pharmacie
+   puis **Générer le jeton** : un bloc de 4 lignes s'affiche (à copier immédiatement).
+2. Sur le serveur local, coller ces lignes dans `deploy/local/.env` :
+   ```
+   CLOUD_SYNC_URL=https://adresse-du-cloud
+   CLOUD_SYNC_SLUG=noormin
+   CLOUD_SYNC_TOKEN=le-jeton
+   CLOUD_SYNC_HOUR=2
+   ```
+3. Relancer : `docker compose up -d`.
+4. Vérifier dans **Paramètres** (admin) : la carte « Synchronisation vers DynSoft cloud »
+   affiche la dernière réussite ; le bouton **Synchroniser maintenant** force un envoi.
+
+Fonctionnement : première synchronisation complète, puis chaque nuit seulement ce qui a
+changé ; une copie complète est refaite toutes les semaines (rattrapage des suppressions).
+Si Internet est absent à l'heure prévue, une nouvelle tentative a lieu toutes les 15 minutes.
+Le super-admin voit sur `/platform` la date de dernière réception de chaque pharmacie.
+Pour revenir à un fonctionnement 100 % cloud : `/platform` → nuage → **Désactiver la synchro**.

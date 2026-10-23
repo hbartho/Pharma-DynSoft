@@ -38,6 +38,8 @@ from routes.seed import router as seed_router
 from routes.discounts import router as discounts_router
 from routes.manual import router as manual_router
 from routes.platform import router as platform_router
+from routes.cloud_sync import router as cloud_sync_router
+from services.cloud_sync import start_scheduler as start_cloud_sync_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -106,6 +108,12 @@ app.include_router(seed_router, prefix="/api")
 app.include_router(discounts_router, prefix="/api")
 app.include_router(manual_router, prefix="/api")
 app.include_router(platform_router, prefix="/api")
+app.include_router(cloud_sync_router, prefix="/api")
+
+
+@app.on_event("startup")
+async def startup_event():
+    start_cloud_sync_scheduler()
 
 @app.on_event("shutdown")
 async def shutdown_event():
