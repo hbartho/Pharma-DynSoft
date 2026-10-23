@@ -464,6 +464,11 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - FIX Gestion des prix → prix de vente non répercuté (✅ CORRIGÉE, testée preview)
+- 🐛 Gestion des prix modifiait seulement le lot (supply_items.selling_price) ; Product.price (utilisé par le POS) restait inchangé. De plus bulk-update lisait `id` alors que le front envoie `lot_id` et ignorait les prix → « Enregistrer tout » ne sauvegardait rien
+- ✅ stock_lots.py : `_apply_lot_prices_to_product` (prix lot → Product.price / purchase_price, verrou produit) sur PUT /stock-lots/{id} et /bulk-update (accepte id|lot_id, gère selling/purchase_price, renvoie updated_count) ; front : invalidation ['products'] après sauvegarde → POS rafraîchi
+- ℹ️ Backlog : `_price_history` (prices.py) est en mémoire (perdu au redémarrage, non multi-tenant)
+
 ### 17 Juin 2026 - Synchronisation cloud local → DynSoft (schéma entier) (✅ COMPLÉTÉE, testée E2E)
 - Choix utilisateur : local → cloud uniquement ; une fois par nuit (CLOUD_SYNC_HOUR, défaut 2h) dès qu'Internet revient (retry 15 min) ; incrémental (updated_at > cursor − 5 min, enfants sans timestamp via parent) + complète toutes les 7 jours ; copie cloud en consultation seule (423 MIRROR_READONLY sur POST/PUT/PATCH/DELETE hors /api/auth, toast frontend)
 - Archi : `services/cloud_sync.py` (sérialisation JSON pur Python, pas de pg_dump ; complète = schéma staging `t_x__staging` puis DROP+RENAME atomique ; incrémentale = upsert ON CONFLICT id), `routes/cloud_sync.py` (cloud : GET state / POST begin,push,finish authentifiés par `X-Sync-Token` ; local : /cloud-sync/local/status, /run), table `public.sync_state` (créée sur Supabase), `Tenant.settings` {sync_mode:'mirror', sync_token_hash}, scheduler thread au startup si CLOUD_SYNC_URL/SLUG/TOKEN

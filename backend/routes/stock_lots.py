@@ -117,6 +117,18 @@ if DATABASE_TYPE == "postgresql":
             
             return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
 
+    def _apply_lot_prices_to_product(session, item, selling_price, purchase_price):
+        """Le prix saisi dans Gestion des prix devient le prix courant du produit (utilisé par les ventes)."""
+        if selling_price is None and purchase_price is None:
+            return
+        product = session.query(Product).filter(Product.id == item.product_id).with_for_update().first()
+        if not product:
+            return
+        if selling_price is not None and float(selling_price) > 0:
+            product.price = float(selling_price)
+        if purchase_price is not None and float(purchase_price) > 0:
+            product.purchase_price = float(purchase_price)
+
     @router.put("/bulk-update", response_model=dict)
     def bulk_update_lots(
         updates: List[dict],
@@ -129,7 +141,7 @@ if DATABASE_TYPE == "postgresql":
         with get_session() as session:
             for idx, update_data in enumerate(updates):
                 try:
-                    lot_id = update_data.get("id")
+                    lot_id = update_data.get("id") or update_data.get("lot_id")
                     if not lot_id:
                         errors.append({"index": idx, "error": "ID manquant"})
                         continue
@@ -149,6 +161,11 @@ if DATABASE_TYPE == "postgresql":
                         item.expiration_date = update_data["expiration_date"]
                     if "quantity" in update_data:
                         item.quantity = update_data["quantity"]
+                    if update_data.get("selling_price") is not None:
+                        item.selling_price = float(update_data["selling_price"])
+                    if update_data.get("purchase_price") is not None:
+                        item.purchase_price = float(update_data["purchase_price"])
+                    _apply_lot_prices_to_product(session, item, update_data.get("selling_price"), update_data.get("purchase_price"))
                     
                     updated.append(str(lot_id))
                 except Exception as e:
@@ -159,6 +176,7 @@ if DATABASE_TYPE == "postgresql":
         return {
             "message": f"{len(updated)} lot(s) mis à jour",
             "updated": updated,
+            "updated_count": len(updated),
             "errors": errors
         }
 
@@ -200,6 +218,7 @@ if DATABASE_TYPE == "postgresql":
                 item.selling_price = update_data.selling_price
             if update_data.purchase_price is not None:
                 item.purchase_price = update_data.purchase_price
+            _apply_lot_prices_to_product(session, item, update_data.selling_price, update_data.purchase_price)
             
             session.commit()
             session.refresh(item)

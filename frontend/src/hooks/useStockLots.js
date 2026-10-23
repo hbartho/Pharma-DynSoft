@@ -62,6 +62,7 @@ export const useUpdateStockLot = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stockLotKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Prix du lot mis à jour');
     },
     onError: (error) => {
@@ -87,6 +88,7 @@ export const useBulkUpdateStockLots = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: stockLotKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success(`${data.updated_count} lot(s) mis à jour`);
     },
     onError: (error) => {
