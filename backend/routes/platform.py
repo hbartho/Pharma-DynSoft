@@ -12,7 +12,7 @@ from typing import Optional
 from auth import get_current_user, hash_password
 from database.config import db_manager
 from database.models_master import Tenant, UserDirectory
-from database.tenant_context import tenant_schema_name, is_valid_slug, DEFAULT_TENANT
+from database.tenant_context import tenant_schema_name, is_valid_slug, DEFAULT_TENANT, FORCED_SCHEMA
 from database.directory import (
     get_directory_entry,
     upsert_directory_entry,
@@ -249,6 +249,8 @@ def _copy_catalog(source_slug: str, target_slug: str) -> dict:
 @router.post("/pharmacies")
 def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(require_super_admin)):
     """Crée une pharmacie : schéma dédié + tables + compte admin + annuaire."""
+    if FORCED_SCHEMA:
+        raise HTTPException(status_code=400, detail=f"Ce serveur est dédié à une seule pharmacie (TENANT_SCHEMA={FORCED_SCHEMA}) : création impossible")
     slug = (payload.slug or slugify(payload.name)).lower().strip()
     if not is_valid_slug(slug):
         raise HTTPException(status_code=400, detail="Slug invalide (lettres minuscules, chiffres, _ ; 2-50 caractères)")
@@ -357,6 +359,8 @@ def delete_pharmacy(
     current_user: dict = Depends(require_super_admin),
 ):
     """Supprime DÉFINITIVEMENT une pharmacie (schéma + données + comptes)."""
+    if FORCED_SCHEMA:
+        raise HTTPException(status_code=400, detail=f"Ce serveur est dédié à une seule pharmacie (TENANT_SCHEMA={FORCED_SCHEMA}) : suppression impossible")
     if slug in RESERVED_SLUGS:
         raise HTTPException(status_code=400, detail="Cette pharmacie ne peut pas être supprimée")
     if confirm != slug:

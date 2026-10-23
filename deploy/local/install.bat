@@ -19,6 +19,7 @@ if not exist .env (
     echo SUPERADMIN_PASSWORD=CHANGEZ_MOI_8_caracteres_min
     echo APP_PORT=80
     echo UVICORN_WORKERS=2
+    echo TENANT_SCHEMA=
   ) > .env
   echo Fichier de configuration .env cree dans %CD%
   echo ^>^>^> Ouvrez-le avec le Bloc-notes, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez install.bat

@@ -37,10 +37,22 @@ def main():
     if not USE_SUPABASE:
         raise SystemExit("DATABASE_URL manquant : le mode local requiert une URL PostgreSQL unique")
 
+    from database.tenant_context import FORCED_SCHEMA
+    from sqlalchemy import text
+
     engine = db_manager._engines["supabase"]
     wait_for_db(engine)
     Base.metadata.create_all(engine, checkfirst=True)
     print("Tables du schéma public OK")
+
+    if FORCED_SCHEMA and FORCED_SCHEMA != "public":
+        with engine.connect() as conn:
+            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{FORCED_SCHEMA}"'))
+            conn.commit()
+        tenant_tables = [t for t in Base.metadata.sorted_tables if t.schema is None]
+        Base.metadata.create_all(engine.execution_options(schema_translate_map={None: FORCED_SCHEMA}),
+                                 tables=tenant_tables, checkfirst=True)
+        print(f"Serveur dédié : schéma {FORCED_SCHEMA} OK")
 
     with db_manager.get_master_session() as session:
         has_super_admin = session.query(UserDirectory).filter(

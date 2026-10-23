@@ -464,6 +464,17 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Accès concurrents multi-utilisateurs (transactions / verrous) (✅ COMPLÉTÉE, testée)
+- ✅ 206 handlers `async def` → `def` (threadpool FastAPI) : les requêtes BD synchrones ne bloquent plus l'event loop (8 rapports lourds en parallèle : 1,2 s). Script `scripts/audit_async_handlers.py`. `get_current_user`/`require_open_shift` : DB via run_in_threadpool.
+- ✅ POST /sales = UNE transaction : `SELECT FOR UPDATE` clients + produits (ordre stable anti-deadlock, quantités agrégées), stock insuffisant → 409, rollback total si erreur, création de la **dette client** (table debts — n'était jamais créée avant !), contrôle de crédit sur la somme réelle des dettes, incrément `promo_codes.current_uses`, historique rabais et `shift_id` dans la même transaction
+- ✅ Appro validate : verrou + `stock = stock + q` SQL (double validation impossible) ; retours : verrou vente + cumul des retours précédents + verrou produit ; pertes (validate/reject) et inventaire : verrous + UPDATE atomiques ; pool 10+20 (DB_POOL_SIZE/DB_MAX_OVERFLOW)
+- 🐛 Bugs annexes corrigés : `max_debt_limit` ignoré à la création client ; POST /stock/movement cassé (champs quantity/reason inexistants)
+- ✅ Tests : `tests/concurrency_sales_test.py` sur PG local (20 ventes simultanées stock 10 → 10 OK/10×409, rollback, crédit, 5 validations appro, 2 retours) + testing agent iteration_45 : 34/34 backend + frontend OK (données TEST-REGRESSION créées dans Pharmacie Centrale)
+
+### 17 Juin 2026 - TENANT_SCHEMA : serveur local dédié à une pharmacie (✅ COMPLÉTÉE, testée local)
+- ✅ `.env` local `TENANT_SCHEMA=t_<slug>` (ou public) → `tenant_schema_name()` retourne toujours ce schéma ; création/suppression de pharmacies bloquées sur /platform ; schéma créé au démarrage si absent (init_local_db) ; vide = comportement cloud inchangé
+- ✅ Guide §9 + compose + templates .env ; install.bat génère désormais le .env lui-même (le .env.example était ignoré par git) ; Dockerfile backend normalise les fins de ligne CRLF (bug Windows « no such file or directory »)
+
 ### 17 Juin 2026 - Pack d'installation locale / hors-ligne (Docker) (✅ COMPLÉTÉE)
 - Contexte : connexion Internet instable en Guinée → l'app doit tourner sur un PC serveur dans la pharmacie (Wi-Fi local)
 - ✅ `backend/database/config.py` : support `DATABASE_URL` (PostgreSQL local) = même mode "base unique + schéma t_<slug> par pharmacie" que Supabase (`USE_SUPABASE = bool(SUPABASE_URL or DATABASE_URL)`). Prod Supabase inchangée.

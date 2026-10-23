@@ -109,7 +109,30 @@ Des messages d'avertissement `pg_restore` sur des objets déjà existants sont n
 Pour ne garder qu'une seule pharmacie en local, le super admin peut supprimer les autres
 depuis `/platform` après la migration.
 
-## 9. Sauvegardes (indispensable)
+## 9. Dédier le serveur à une seule pharmacie (`TENANT_SCHEMA`)
+
+Par défaut, le serveur local se comporte comme le cloud : chaque utilisateur est routé vers
+sa pharmacie (`public` pour la pharmacie historique, `t_<slug>` pour les autres).
+
+Si ce PC ne sert **qu'une seule pharmacie**, indiquez son schéma dans `.env` :
+
+```
+TENANT_SCHEMA=t_noormin
+```
+
+Effets :
+- toutes les connexions et toutes les opérations utilisent ce schéma, quel que soit le compte ;
+- les comptes d'autres pharmacies présents dans une sauvegarde importée ne peuvent plus se connecter ;
+- la création / suppression de pharmacies depuis `/platform` est bloquée sur ce serveur ;
+- si le schéma n'existe pas encore, il est créé (vide) au démarrage.
+
+Trouver le nom du schéma : `/platform` (colonne « Schéma ») ou `t_` + slug de la pharmacie ;
+`public` pour la pharmacie historique. Après modification de `.env` : `docker compose up -d`.
+
+Pour un **nouveau** serveur sans migration : laissez `TENANT_SCHEMA` vide, créez la pharmacie
+depuis `/platform`, puis renseignez `TENANT_SCHEMA=t_<slug>` et relancez.
+
+## 10. Sauvegardes (indispensable)
 
 - `backup.bat` / `./backup.sh` crée `backups/dynpharma_AAAAMMJJ_HHMM.dump` (les 30 dernières
   sont conservées sous Linux).
@@ -120,7 +143,7 @@ Automatiser (Windows) : Planificateur de tâches → tâche quotidienne 20h → 
 `C:\DynPharma\deploy\local\backup.bat`.
 Automatiser (Linux) : `crontab -e` puis `0 20 * * * /opt/dynpharma/deploy/local/backup.sh`.
 
-## 10. Exploitation quotidienne
+## 11. Exploitation quotidienne
 
 | Action | Commande (dans `deploy/local`) |
 |---|---|
@@ -134,7 +157,7 @@ Les données sont conservées dans le volume Docker `dynpharma_pgdata` : arrête
 reconstruire les conteneurs ne les efface pas. **Ne jamais** exécuter `docker compose down -v`
 (le `-v` supprime les données).
 
-## 11. Dépannage
+## 12. Dépannage
 
 | Symptôme | Cause probable / solution |
 |---|---|
@@ -146,7 +169,7 @@ reconstruire les conteneurs ne les efface pas. **Ne jamais** exécuter `docker c
 | Disque plein | Supprimer les anciens fichiers dans `backups/` |
 | Port 80 déjà utilisé | Changer `APP_PORT=8080` dans `.env` puis relancer `install` ; accès via `http://IP:8080` |
 
-## 12. Vers le mode hybride (plus tard)
+## 13. Vers le mode hybride (plus tard)
 
 Chaque pharmacie fonctionne en autonomie. Une synchronisation vers le cloud (reporting
 consolidé pour DynSoft quand Internet revient) peut être ajoutée dans une étape ultérieure :
