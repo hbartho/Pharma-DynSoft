@@ -22,7 +22,13 @@ TEMPLATE_COLUMNS = [
     ("quantity", "Quantité"), ("unit_price", "Prix cession HT"), ("selling_price", "Prix public"),
     ("expiration", "Date péremption"), ("lot", "N° lot"), ("tva", "TVA %"),
 ]
-TEMPLATE_EXAMPLE = ["", "", "Paracétamol 500mg", 20, 1000, 1500, "2027-12-31", "", 0]
+TEMPLATE_EXAMPLES = [
+    ["", "", "Paracétamol 500mg", 20, 1000, 1500, "2027-12-31", "LOT-PAR-2411", 0],
+    ["", "6181234567890", "", 10, 2500, 3500, "31/08/2027", "", 0],
+    ["REF-AMOX1G", "", "", 30, 1800, "", "2028-03-15", "AMX-0325", 0],
+    ["", "", "Ibuprofène 400mg", 12, 900, 1300, "30/06/2027", "", 0],
+    ["", "", "Ibuprofène 400mg", 8, 900, 1300, "2027-11-30", "IBU-B2", 0],
+]
 
 # Alias de colonnes acceptés (comparés après normalisation : minuscules, sans accents, sans espaces)
 ALIASES = {
@@ -115,7 +121,7 @@ def download_template(format: str = Query(default="xlsx"), current_user: dict = 
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";")
         w.writerow(headers)
-        w.writerow(TEMPLATE_EXAMPLE)
+        w.writerows(TEMPLATE_EXAMPLES)
         data = ("\ufeff" + buf.getvalue()).encode("utf-8")
         return StreamingResponse(io.BytesIO(data), media_type="text/csv; charset=utf-8",
                                  headers={"Content-Disposition": 'attachment; filename="modele_approvisionnement.csv"'})
@@ -125,7 +131,8 @@ def download_template(format: str = Query(default="xlsx"), current_user: dict = 
     ws = wb.active
     ws.title = "Approvisionnement"
     ws.append(headers)
-    ws.append(TEMPLATE_EXAMPLE)
+    for row in TEMPLATE_EXAMPLES:
+        ws.append(row)
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="0F766E")
@@ -136,6 +143,8 @@ def download_template(format: str = Query(default="xlsx"), current_user: dict = 
         "Une ligne par produit. Colonnes obligatoires : Produit (ou Référence / Code-barres), Quantité, Prix cession HT, Date péremption.",
         "Le produit est reconnu par Référence, puis Code-barres, puis Nom exact. Les produits inconnus sont signalés et ignorés.",
         "Prix public vide = inchangé. N° lot vide = repère automatique. Dates : AAAA-MM-JJ ou JJ/MM/AAAA.",
+        "Même produit avec plusieurs dates de péremption = une ligne par lot (voir Ibuprofène dans l'exemple).",
+        "Les lignes d'exemple sont à remplacer par vos produits : elles ne correspondent pas forcément à votre catalogue.",
     ]:
         notes.append([line])
     notes.column_dimensions["A"].width = 120
