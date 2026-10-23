@@ -26,6 +26,7 @@ from routes.users import router as users_router
 from routes.returns import router as returns_router
 from routes.units import router as units_router
 from routes.supplies import router as supplies_router
+from routes.supplies_import import router as supplies_import_router
 from routes.prices import router as prices_router
 from routes.payment_methods import router as payment_methods_router, payments_router
 from routes.debts import router as debts_router
@@ -94,6 +95,7 @@ app.include_router(sync_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(returns_router, prefix="/api")
 app.include_router(units_router, prefix="/api")
+app.include_router(supplies_import_router, prefix="/api")
 app.include_router(supplies_router, prefix="/api")
 app.include_router(prices_router, prefix="/api")
 app.include_router(payment_methods_router, prefix="/api")

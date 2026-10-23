@@ -464,6 +464,12 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Import d'approvisionnement CSV/Excel (✅ COMPLÉTÉE, testée E2E preview)
+- Choix utilisateur : produit reconnu par Référence → Code-barres → Nom (insensible casse/accents) ; produit inconnu = ligne signalée et ignorée
+- ✅ `routes/supplies_import.py` : GET /supplies/import/template?format=xlsx|csv (modèle + feuille Aide), POST /supplies/import/preview (multipart ; CSV ; , tab | autodétecté, utf-8/cp1252 ; xlsx via openpyxl ; alias de colonnes FR/EN ; dates AAAA-MM-JJ, JJ/MM/AAAA… ; validations qté/prix/péremption) → lignes ok/error + résumé. Router inclus AVANT supplies_router (évite /supplies/{id})
+- ✅ `components/SupplyImportDialog.js` + bouton « Importer CSV / Excel » (Supplies.js) : modèle, dépôt de fichier, aperçu tableau (statut, reconnu par…), fournisseur/BL/facture, création via POST /supplies existant (appro En attente, lots auto)
+- Test : CSV 3 lignes → 2 OK (nom + code-barres) / 1 ignorée, appro créée 4 600 GNF puis supprimée
+
 ### 17 Juin 2026 - Numéro de lot optionnel à l'approvisionnement (✅ COMPLÉTÉE, testée API)
 - Choix utilisateur : repère automatique si vide (`<N° appro>-<n° ligne>`, ex. APP-438D7758-1) ; date de péremption reste obligatoire
 - ✅ supplies.py (création + modification) : `lot_number` vide/espaces → repère auto ; Supplies.js : champ « N° Lot (optionnel) », bouton Ajouter n'exige plus le lot. lot_number n'intervient dans aucun calcul (FEFO/alertes = date de péremption)

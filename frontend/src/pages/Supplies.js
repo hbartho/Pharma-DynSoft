@@ -31,6 +31,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import BarcodeScanner from '../components/BarcodeScanner';
+import { SupplyImportDialog } from '../components/SupplyImportDialog';
+import { FileSpreadsheet } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSupplies, useCreateSupply, useUpdateSupply, useDeleteSupply, useValidateSupply } from '../hooks/useSupplies';
 import api from '../services/api';
@@ -130,6 +132,15 @@ const Supplies = () => {
   
   // Mutations
   const createSupply = useCreateSupply();
+  const [showImport, setShowImport] = useState(false);
+  const handleImportCreate = (payload, onDone) => {
+    createSupply.mutate(payload, {
+      onSuccess: () => {
+        toast.success(`Approvisionnement importé : ${payload.items.length} ligne(s), en attente de validation`);
+        onDone?.();
+      },
+    });
+  };
   const updateSupply = useUpdateSupply();
   const deleteSupply = useDeleteSupply();
   const validateSupply = useValidateSupply();
@@ -810,6 +821,21 @@ const Supplies = () => {
               Gestion des entrées de stock • {supplies.length} appro{supplies.length > 1 ? 's' : ''}
             </p>
           </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-teal-200 text-teal-800 hover:bg-teal-50 w-full sm:w-auto"
+            disabled={!canOperate}
+            title={!canOperate ? shiftBlockReason : "Importer un fichier CSV ou Excel"}
+            onClick={() => setShowImport(true)}
+            data-testid="import-supply-button"
+          >
+            <FileSpreadsheet className="w-4 h-4 sm:mr-2" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Importer CSV / Excel</span>
+            <span className="sm:hidden">Importer</span>
+          </Button>
+          <SupplyImportDialog open={showImport} onOpenChange={setShowImport} suppliers={suppliers} onCreate={handleImportCreate} creating={createSupply.isPending} />
           <Dialog open={showDialog} onOpenChange={(open) => { 
             setShowDialog(open); 
             if (!open) resetForm();
@@ -1332,6 +1358,7 @@ const Supplies = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Stats */}
