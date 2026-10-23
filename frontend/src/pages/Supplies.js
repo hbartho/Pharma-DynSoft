@@ -1018,13 +1018,14 @@ const Supplies = () => {
                         />
                       </div>
                       <div>
-                        <Label className="text-sm">N° Lot <span className="text-red-500">*</span></Label>
+                        <Label className="text-sm">N° Lot <span className="text-slate-400 font-normal">(optionnel)</span></Label>
                         <Input
                           type="text"
                           value={itemForm.lot_number}
                           onChange={(e) => setItemForm({ ...itemForm, lot_number: e.target.value })}
-                          placeholder="LOT-XXXX"
+                          placeholder="Vide = repère automatique (N° appro-ligne)"
                           className="mt-1"
+                          data-testid="supply-item-lot-number"
                         />
                       </div>
                       <div>
@@ -1202,7 +1203,7 @@ const Supplies = () => {
                         type="button"
                         onClick={handleAddItem}
                         size="sm"
-                        disabled={!itemForm.product_id || !itemForm.quantity || !itemForm.unit_price || !itemForm.lot_number || !itemForm.date_peremption}
+                        disabled={!itemForm.product_id || !itemForm.quantity || !itemForm.unit_price || !itemForm.date_peremption}
                         className={editingItemId 
                           ? "bg-blue-600 hover:bg-blue-700 text-white" 
                           : "bg-teal-700 hover:bg-teal-800 text-white disabled:bg-gray-300 disabled:text-gray-500"

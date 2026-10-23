@@ -464,6 +464,10 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Numéro de lot optionnel à l'approvisionnement (✅ COMPLÉTÉE, testée API)
+- Choix utilisateur : repère automatique si vide (`<N° appro>-<n° ligne>`, ex. APP-438D7758-1) ; date de péremption reste obligatoire
+- ✅ supplies.py (création + modification) : `lot_number` vide/espaces → repère auto ; Supplies.js : champ « N° Lot (optionnel) », bouton Ajouter n'exige plus le lot. lot_number n'intervient dans aucun calcul (FEFO/alertes = date de péremption)
+
 ### 17 Juin 2026 - Audit « données non répercutées » + historique des prix persistant (✅ COMPLÉTÉE, testée preview)
 - Audit : propagation prix OK désormais (lots → produit, appro → produit) ; stocks/dettes/retours cohérents ; mutations front invalident bien ['products'] ; corps non typés : seul /stock-lots/bulk-update (corrigé) ; pending-sales → vente réelle via /sales (OK)
 - 🐛 Trouvé : `_price_history` en mémoire (prices.py) → graphique « Historique des prix » du tableau de bord vide après redémarrage, jamais alimenté par Gestion des prix ni par les appros

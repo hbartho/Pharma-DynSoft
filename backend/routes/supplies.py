@@ -242,8 +242,8 @@ if DATABASE_TYPE == "postgresql":
             session.add(supply)
             session.flush()
             
-            # Ajouter les items
-            for item_data in items_data:
+            # Ajouter les items (repère automatique si pas de numéro de lot)
+            for idx, item_data in enumerate(items_data, start=1):
                 # Gérer selling_price avec fallback sur prix_public_modifie
                 selling_price = item_data.get("selling_price") or item_data.get("prix_public_modifie") or 0
                 
@@ -262,7 +262,7 @@ if DATABASE_TYPE == "postgresql":
                     purchase_price=item_data.get("unit_price", item_data.get("purchase_price", 0)),
                     selling_price=selling_price,
                     subtotal=item_data["quantity"] * item_data.get("unit_price", item_data.get("purchase_price", 0)),
-                    lot_number=item_data.get("lot_number"),
+                    lot_number=(item_data.get("lot_number") or "").strip() or f"{supply_number}-{idx}",
                     expiration_date=item_data.get("date_peremption") or item_data.get("expiration_date") or item_data.get("expiry_date"),
                     shelf_location=shelf_location,
                     tax_rate=tax_rate
@@ -405,7 +405,7 @@ if DATABASE_TYPE == "postgresql":
                 
                 # Créer les nouveaux items
                 total_amount = 0
-                for item_data in supply_data["items"]:
+                for idx, item_data in enumerate(supply_data["items"], start=1):
                     subtotal = item_data["quantity"] * item_data.get("unit_price", item_data.get("purchase_price", 0))
                     total_amount += subtotal
                     
@@ -434,7 +434,7 @@ if DATABASE_TYPE == "postgresql":
                         purchase_price=item_data.get("unit_price", item_data.get("purchase_price", 0)),
                         selling_price=selling_price,
                         subtotal=subtotal,
-                        lot_number=item_data.get("lot_number"),
+                        lot_number=(item_data.get("lot_number") or "").strip() or f"{supply.supply_number}-{idx}",
                         expiration_date=item_data.get("date_peremption") or item_data.get("expiration_date"),
                         shelf_location=shelf_location,
                         tax_rate=tax_rate
