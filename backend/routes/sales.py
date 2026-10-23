@@ -3,7 +3,7 @@ Routes - PostgreSQL Implementation
 """
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 import os
 
@@ -14,7 +14,7 @@ DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
-async def generate_sale_number(tenant_id: str = None) -> str:
+def generate_sale_number(tenant_id: str = None) -> str:
     """Générer un numéro de vente unique et lisible (ex: VNT-966AAFB0)
     Utilise les 8 premiers caractères de l'UUID pour garantir l'unicité
     """
@@ -27,12 +27,13 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import ProductRepository, CustomerRepository, SettingsRepository, UserRepository
     from database.config import db_manager
     from database.tenant_context import get_current_tenant
-    from database.models_tenant import DiscountHistory, DiscountSource
+    from database.models_tenant import DiscountHistory, DiscountSource, Product, Customer, Debt, DebtStatus, PromoCode
+    from sqlalchemy import func
     
-    def record_discount_history(sale_id, sale_number, sale_data, customer, employee_code, user_name):
-        """Enregistre tous les rabais d'une vente dans l'historique."""
-        try:
-            with db_manager.get_tenant_session(get_current_tenant()) as session:
+    def record_discount_history(session, sale_id, sale_number, sale_data, customer, employee_code, user_name):
+        """Ajoute les rabais d'une vente à l'historique (dans la transaction de la vente)."""
+        if True:
+            if True:
                 # 1. Rabais par produit (items)
                 if hasattr(sale_data, 'items') and sale_data.items:
                     for item in sale_data.items:
@@ -45,7 +46,7 @@ if DATABASE_TYPE == "postgresql":
                                 product_id=item.get('product_id') if isinstance(item, dict) else item.product_id,
                                 product_name=item.get('product_name') if isinstance(item, dict) else getattr(item, 'product_name', None),
                                 customer_id=sale_data.customer_id if sale_data.customer_id else None,
-                                customer_name=customer.get('name') if customer else None,
+                                customer_name=customer.name if customer else None,
                                 discount_type=item.get('discount_type', 'amount') if isinstance(item, dict) else getattr(item, 'discount_type', 'amount'),
                                 discount_value=item.get('discount_value', 0) if isinstance(item, dict) else getattr(item, 'discount_value', 0),
                                 discount_amount=item_discount,
@@ -64,7 +65,7 @@ if DATABASE_TYPE == "postgresql":
                         discount_source=DiscountSource.PROMO_CODE,
                         promo_code=getattr(sale_data, 'promo_code', None),
                         customer_id=sale_data.customer_id if sale_data.customer_id else None,
-                        customer_name=customer.get('name') if customer else None,
+                        customer_name=customer.name if customer else None,
                         discount_type='amount',
                         discount_value=promo_discount,
                         discount_amount=promo_discount,
@@ -85,7 +86,7 @@ if DATABASE_TYPE == "postgresql":
                             discount_rule_id=auto.get('rule_id') if isinstance(auto, dict) else None,
                             rule_name=auto.get('rule_name') if isinstance(auto, dict) else None,
                             customer_id=sale_data.customer_id if sale_data.customer_id else None,
-                            customer_name=customer.get('name') if customer else None,
+                            customer_name=customer.name if customer else None,
                             discount_type='amount',
                             discount_value=auto_amount,
                             discount_amount=auto_amount,
@@ -108,7 +109,7 @@ if DATABASE_TYPE == "postgresql":
                         sale_number=sale_number,
                         discount_source=DiscountSource.MANUAL,
                         customer_id=sale_data.customer_id if sale_data.customer_id else None,
-                        customer_name=customer.get('name') if customer else None,
+                        customer_name=customer.name if customer else None,
                         discount_type=sale_data.discount_type,
                         discount_value=sale_data.discount_value or 0,
                         discount_amount=pure_manual,
@@ -116,13 +117,9 @@ if DATABASE_TYPE == "postgresql":
                         agent_name=user_name
                     )
                     session.add(history)
-                
-                session.commit()
-        except Exception as e:
-            print(f"Error recording discount history: {e}")
     
     @router.post("")
-    async def create_sale(sale_data: SaleCreate, current_user: dict = Depends(require_open_shift)):
+    def create_sale(sale_data: SaleCreate, current_user: dict = Depends(require_open_shift)):
         """
         Create a new sale (PostgreSQL version - simplified without lot management).
         REQUIRES: An open shift for the current user (admin exempt).
@@ -131,10 +128,7 @@ if DATABASE_TYPE == "postgresql":
         employee_code = current_user.get('employee_code', 'N/A')
         user_role = current_user.get('role', 'caissier')
         
-        # Repositories
         sale_repo = SaleRepository()
-        product_repo = ProductRepository()
-        customer_repo = CustomerRepository()
         settings_repo = SettingsRepository()
         
         # Variables pour la gestion de la dette
@@ -182,158 +176,152 @@ if DATABASE_TYPE == "postgresql":
                 amount_paid = 0
             has_debt = True
         
-        # === VALIDATION CLIENT POUR DETTE ===
-        if has_debt:
-            if not sale_data.customer_id:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="Un client doit être sélectionné pour une vente à crédit"
-                )
-            
-            customer = customer_repo.get_by_id_str(sale_data.customer_id)
-            if not customer:
-                raise HTTPException(status_code=404, detail="Client non trouvé")
-            
-            customer_name = customer.get("name")
-            max_limit = customer.get("max_debt_limit", 0)
-            current_debt = customer.get("current_debt", 0)
-            
-            if max_limit <= 0:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Le client {customer_name} n'est pas autorisé à acheter à crédit (seuil: 0)"
-                )
-            
-            if current_debt + debt_amount > max_limit:
-                available_credit = max(0, max_limit - current_debt)
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Crédit insuffisant pour {customer_name}. Disponible: {available_credit:,.0f}, Demandé: {debt_amount:,.0f}"
-                )
-        
-        # Récupérer les infos du client si sélectionné (même sans dette)
-        if sale_data.customer_id and not customer:
-            customer = customer_repo.get_by_id_str(sale_data.customer_id)
-            if customer:
-                customer_name = customer.get("name")
-        
-        # Générer le numéro de vente
-        sale_number = await generate_sale_number()
-        
-        # Préparer les items enrichis
-        enriched_items = []
-        sale_tva_total = 0
-        
-        for item in sale_data.items:
-            product = product_repo.get_by_id_str(item['product_id'])
-            if not product:
-                raise HTTPException(status_code=404, detail=f"Produit {item['product_id']} non trouvé")
-            
-            # Vérifier le stock disponible
-            available_stock = product.get('stock', 0)
-            if available_stock < item['quantity']:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Stock insuffisant pour {product['name']} (disponible: {available_stock}, demandé: {item['quantity']})"
-                )
-            
-            # Déduire le stock du produit
-            new_stock = available_stock - item['quantity']
-            product_repo.update_by_id_str(item['product_id'], {'stock': new_stock})
-            
-            # Calculer le prix et sous-total
-            unit_price = item.get('unit_price', product.get('price', 0))
-            subtotal = item['quantity'] * unit_price
-            
-            enriched_item = {
-                "product_id": item['product_id'],
-                "product_name": product.get('name', 'Produit inconnu'),
-                "quantity": item['quantity'],
-                "unit_price": unit_price,
-                "subtotal": round(subtotal, 2),
-                "tva_amount": 0,  # TVA non gérée dans cette version simplifiée
-            }
-            enriched_items.append(enriched_item)
-        
-        # Calculer le sous-total
-        calculated_subtotal = sum(item['subtotal'] for item in enriched_items)
-        
-        # Calculer le rabais TOTAL (incluant tous les types de rabais)
-        # Le frontend envoie:
-        # - discount_amount: rabais manuel seulement
-        # - promo_discount_amount: rabais code promo
-        # - automatic_discount_amount: rabais automatiques
-        # - total_discount_amount: somme de tous les rabais
-        # - items avec discount_amount: rabais par produit
-        manual_discount = float(sale_data.discount_amount or 0)
-        promo_discount = float(getattr(sale_data, 'promo_discount_amount', 0) or 0)
-        auto_discount = float(getattr(sale_data, 'automatic_discount_amount', 0) or 0)
-        
-        # Calculer les rabais produit depuis les items
-        product_discounts = 0
-        if hasattr(sale_data, 'items') and sale_data.items:
+        tenant = get_current_tenant()
+        sale_number = generate_sale_number()
+        shift_id = current_user.get('shift_id')
+        user_name = current_user.get('name', employee_code)
+
+        # Une seule transaction : verrous lignes (clients, produits), stock, vente, dette, rabais.
+        # Toute erreur => rollback complet (aucun stock déduit sans vente enregistrée).
+        with db_manager.get_tenant_session(tenant) as session:
+            # --- Client (verrouillé pour sérialiser le contrôle de crédit) ---
+            if sale_data.customer_id:
+                try:
+                    customer_uuid = uuid.UUID(sale_data.customer_id)
+                except ValueError:
+                    raise HTTPException(status_code=404, detail="Client non trouvé")
+                customer = session.query(Customer).filter(Customer.id == customer_uuid).with_for_update().first()
+                if not customer:
+                    raise HTTPException(status_code=404, detail="Client non trouvé")
+                customer_name = customer.name
+
+            if has_debt:
+                if not customer:
+                    raise HTTPException(status_code=400, detail="Un client doit être sélectionné pour une vente à crédit")
+                max_limit = float(customer.max_debt_limit or 0)
+                current_debt = float(session.query(func.coalesce(func.sum(Debt.remaining_amount), 0.0)).filter(
+                    Debt.customer_id == customer.id,
+                    Debt.status.in_([DebtStatus.PENDING, DebtStatus.PARTIAL])
+                ).scalar() or 0)
+                if max_limit <= 0:
+                    raise HTTPException(status_code=400, detail=f"Le client {customer_name} n'est pas autorisé à acheter à crédit (seuil: 0)")
+                if current_debt + debt_amount > max_limit:
+                    available_credit = max(0, max_limit - current_debt)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Crédit insuffisant pour {customer_name}. Disponible: {available_credit:,.0f}, Demandé: {debt_amount:,.0f}"
+                    )
+
+            # --- Produits : verrouillés dans un ordre stable (anti-interblocage), quantités agrégées ---
+            needed = {}
+            for item in sale_data.items:
+                try:
+                    pid = uuid.UUID(item['product_id'])
+                except (ValueError, TypeError):
+                    raise HTTPException(status_code=404, detail=f"Produit {item['product_id']} non trouvé")
+                needed[pid] = needed.get(pid, 0) + int(item['quantity'])
+            product_ids = sorted(needed.keys())
+            products = {}
+            if product_ids:
+                rows = session.query(Product).filter(Product.id.in_(product_ids)).order_by(Product.id).with_for_update().all()
+                products = {p.id: p for p in rows}
+            for pid in product_ids:
+                product = products.get(pid)
+                if not product:
+                    raise HTTPException(status_code=404, detail=f"Produit {pid} non trouvé")
+                available_stock = product.stock or 0
+                if available_stock < needed[pid]:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Stock insuffisant pour {product.name} (disponible: {available_stock}, demandé: {needed[pid]})"
+                    )
+            for pid in product_ids:
+                products[pid].stock = (products[pid].stock or 0) - needed[pid]
+
+            enriched_items = []
+            sale_tva_total = 0
+            for item in sale_data.items:
+                product = products[uuid.UUID(item['product_id'])]
+                unit_price = item.get('unit_price', product.price or 0)
+                subtotal = item['quantity'] * unit_price
+                enriched_items.append({
+                    "product_id": item['product_id'],
+                    "product_name": product.name or 'Produit inconnu',
+                    "quantity": item['quantity'],
+                    "unit_price": unit_price,
+                    "subtotal": round(subtotal, 2),
+                    "tva_amount": 0,
+                })
+
+            calculated_subtotal = sum(i['subtotal'] for i in enriched_items)
+            manual_discount = float(sale_data.discount_amount or 0)
+            promo_discount = float(getattr(sale_data, 'promo_discount_amount', 0) or 0)
+            auto_discount = float(getattr(sale_data, 'automatic_discount_amount', 0) or 0)
+            product_discounts = 0.0
             for item in sale_data.items:
                 item_discount = item.get('discount_amount', 0) if isinstance(item, dict) else getattr(item, 'discount_amount', 0)
                 product_discounts += float(item_discount or 0)
-        
-        # Total de tous les rabais
-        total_discount_amount = manual_discount + promo_discount + auto_discount + product_discounts
-        
-        # Le total final = sous-total - tous les rabais
-        final_total = round(calculated_subtotal - total_discount_amount, 2)
-        
-        # Préparer les données de vente
-        sale_dict = {
-            'sale_number': sale_number,
-            'customer_id': sale_data.customer_id,
-            'customer_name': customer_name,
-            'items': enriched_items,
-            'subtotal': calculated_subtotal,
-            'discount_type': sale_data.discount_type,
-            'discount_value': sale_data.discount_value or 0,
-            'discount_amount': total_discount_amount,  # Total de tous les rabais
-            'total': final_total,
-            'total_ht': round(final_total - sale_tva_total, 2),
-            'tva_total': round(sale_tva_total, 2),
-            'payment_method': sale_data.payment_method,
-            'is_split_payment': sale_data.is_split_payment,
-            'split_payments': sale_data.split_payments,
-            'amount_paid': amount_paid,
-            'debt_amount': debt_amount if has_debt else 0,
-            'has_debt': has_debt,
-            'employee_code': employee_code,
-            'user_name': current_user.get('name', employee_code),
-        }
-        
-        # Créer la vente via repository
-        result = sale_repo.create(sale_dict, enriched_items)
-        
-        # Enregistrer les rabais dans l'historique
-        if total_discount_amount > 0 or sale_data.promo_code or hasattr(sale_data, 'automatic_discounts'):
-            try:
-                sale_id_str = result.get('id')
-                if sale_id_str:
-                    from uuid import UUID
-                    sale_uuid = UUID(sale_id_str) if isinstance(sale_id_str, str) else sale_id_str
-                    record_discount_history(
-                        sale_id=sale_uuid,
-                        sale_number=sale_number,
-                        sale_data=sale_data,
-                        customer=customer,
-                        employee_code=employee_code,
-                        user_name=current_user.get('name', employee_code)
-                    )
-            except Exception as e:
-                print(f"Warning: Could not record discount history: {e}")
-        
-        # Ajouter les champs supplémentaires pour la réponse
+            total_discount_amount = manual_discount + promo_discount + auto_discount + product_discounts
+            final_total = round(calculated_subtotal - total_discount_amount, 2)
+
+            sale_dict = {
+                'sale_number': sale_number,
+                'customer_id': sale_data.customer_id,
+                'customer_name': customer_name,
+                'subtotal': calculated_subtotal,
+                'discount_type': sale_data.discount_type,
+                'discount_value': sale_data.discount_value or 0,
+                'discount_amount': total_discount_amount,
+                'total': final_total,
+                'tva_total': round(sale_tva_total, 2),
+                'payment_method': sale_data.payment_method,
+                'is_split_payment': sale_data.is_split_payment,
+                'split_payments': sale_data.split_payments,
+                'amount_paid': amount_paid,
+                'debt_amount': debt_amount if has_debt else 0,
+                'has_debt': has_debt,
+                'employee_code': employee_code,
+                'user_name': user_name,
+                'shift_id': shift_id,
+            }
+            sale = sale_repo.build(sale_dict, enriched_items)
+            session.add(sale)
+            session.flush()
+
+            # --- Dette client liée à la vente ---
+            if has_debt and debt_amount > 0:
+                overdue_days = int(settings_repo.get('debt_overdue_days', 90) or 90)
+                session.add(Debt(
+                    id=uuid.uuid4(),
+                    customer_id=customer.id,
+                    sale_id=sale.id,
+                    original_amount=float(debt_amount),
+                    remaining_amount=float(debt_amount),
+                    status=DebtStatus.PENDING,
+                    due_date=(datetime.now(timezone.utc) + timedelta(days=overdue_days)).date(),
+                    notes=f"Dette créée depuis la vente {sale_number}",
+                    payments=[],
+                ))
+
+            # --- Compteur d'utilisation du code promo (incrément atomique) ---
+            promo_code = getattr(sale_data, 'promo_code', None)
+            if promo_code and promo_discount > 0:
+                session.query(PromoCode).filter(PromoCode.code == promo_code).update(
+                    {PromoCode.current_uses: func.coalesce(PromoCode.current_uses, 0) + 1}, synchronize_session=False
+                )
+
+            if total_discount_amount > 0 or promo_code or getattr(sale_data, 'automatic_discounts', None):
+                record_discount_history(session, sale.id, sale_number, sale_data, customer, employee_code, user_name)
+
+            session.flush()
+            result = sale_repo.to_dict(sale, include_items=True)
+
         result['customer_name'] = customer_name
         result['valuation_method'] = settings_repo.get('stock_valuation_method', 'fefo')
-        
         return result
     
     @router.get("")
-    async def get_sales(
+    def get_sales(
         page: int = 1,
         limit: int = 20,
         search: str = None,
@@ -443,7 +431,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/{sale_id}")
-    async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
+    def get_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
         """Get a specific sale"""
         sale_repo = SaleRepository()
         sale = sale_repo.get_by_id_str(sale_id)
@@ -458,7 +446,7 @@ if DATABASE_TYPE == "postgresql":
         return sale
     
     @router.delete("/{sale_id}")
-    async def delete_sale(sale_id: str, current_user: dict = Depends(require_role(["admin"]))):
+    def delete_sale(sale_id: str, current_user: dict = Depends(require_role(["admin"]))):
         """
         Suppression de vente désactivée pour des raisons d'historique et de prévention de fraude.
         Les ventes ne peuvent pas être supprimées une fois enregistrées.

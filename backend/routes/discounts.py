@@ -108,7 +108,7 @@ class CalculateDiscountsRequest(BaseModel):
 # ===================== PROMO CODES =====================
 
 @router.get("/promo-codes")
-async def list_promo_codes(
+def list_promo_codes(
     status: Optional[str] = None,
     search: Optional[str] = None,
     skip: int = 0,
@@ -140,7 +140,7 @@ async def list_promo_codes(
 
 
 @router.post("/promo-codes")
-async def create_promo_code(
+def create_promo_code(
     data: PromoCodeCreate,
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -177,7 +177,7 @@ async def create_promo_code(
 
 
 @router.get("/promo-codes/{promo_id}")
-async def get_promo_code(
+def get_promo_code(
     promo_id: str,
     current_user: dict = Depends(get_current_user)
 ):
@@ -190,7 +190,7 @@ async def get_promo_code(
 
 
 @router.put("/promo-codes/{promo_id}")
-async def update_promo_code(
+def update_promo_code(
     promo_id: str,
     data: PromoCodeUpdate,
     current_user: dict = Depends(require_role(["admin"]))
@@ -213,7 +213,7 @@ async def update_promo_code(
 
 
 @router.delete("/promo-codes/{promo_id}")
-async def delete_promo_code(
+def delete_promo_code(
     promo_id: str,
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -228,7 +228,7 @@ async def delete_promo_code(
 
 
 @router.post("/promo-codes/validate")
-async def validate_promo_code(
+def validate_promo_code(
     data: ValidatePromoCodeRequest,
     current_user: dict = Depends(get_current_user)
 ):
@@ -297,7 +297,7 @@ async def validate_promo_code(
 # ===================== DISCOUNT RULES =====================
 
 @router.get("/rules")
-async def list_discount_rules(
+def list_discount_rules(
     rule_type: Optional[str] = None,
     is_active: Optional[bool] = None,
     current_user: dict = Depends(get_current_user)
@@ -321,7 +321,7 @@ async def list_discount_rules(
 
 
 @router.post("/rules")
-async def create_discount_rule(
+def create_discount_rule(
     data: DiscountRuleCreate,
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -348,7 +348,7 @@ async def create_discount_rule(
 
 
 @router.get("/rules/{rule_id}")
-async def get_discount_rule(
+def get_discount_rule(
     rule_id: str,
     current_user: dict = Depends(get_current_user)
 ):
@@ -361,7 +361,7 @@ async def get_discount_rule(
 
 
 @router.put("/rules/{rule_id}")
-async def update_discount_rule(
+def update_discount_rule(
     rule_id: str,
     data: DiscountRuleUpdate,
     current_user: dict = Depends(require_role(["admin"]))
@@ -381,7 +381,7 @@ async def update_discount_rule(
 
 
 @router.delete("/rules/{rule_id}")
-async def delete_discount_rule(
+def delete_discount_rule(
     rule_id: str,
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -398,7 +398,7 @@ async def delete_discount_rule(
 # ===================== CALCULATE APPLICABLE DISCOUNTS =====================
 
 @router.post("/calculate")
-async def calculate_applicable_discounts(
+def calculate_applicable_discounts(
     data: CalculateDiscountsRequest,
     current_user: dict = Depends(get_current_user)
 ):
@@ -433,7 +433,7 @@ async def calculate_applicable_discounts(
         # 2. Vérifier le code promo
         if data.promo_code:
             try:
-                promo_result = await validate_promo_code(
+                promo_result = validate_promo_code(
                     ValidatePromoCodeRequest(
                         code=data.promo_code,
                         cart_subtotal=data.cart_subtotal,
@@ -557,7 +557,7 @@ def _calculate_discount(rule: DiscountRule, subtotal: float) -> float:
 # ===================== DISCOUNT HISTORY =====================
 
 @router.get("/history")
-async def get_discount_history(
+def get_discount_history(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     source: Optional[str] = None,
@@ -592,7 +592,7 @@ async def get_discount_history(
 
 
 @router.get("/history/stats")
-async def get_discount_stats(
+def get_discount_stats(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     current_user: dict = Depends(get_current_user)

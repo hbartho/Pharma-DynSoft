@@ -71,7 +71,7 @@ if DATABASE_TYPE == "postgresql":
     # ============== ROUTES ==============
     
     @router.get("", response_model=List[dict])
-    async def get_payment_methods(
+    def get_payment_methods(
         active_only: bool = False,
         current_user: dict = Depends(get_current_user)
     ):
@@ -96,7 +96,7 @@ if DATABASE_TYPE == "postgresql":
         return normalized_methods
 
     @router.get("/{method_id}", response_model=dict)
-    async def get_payment_method(
+    def get_payment_method(
         method_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -110,7 +110,7 @@ if DATABASE_TYPE == "postgresql":
         raise HTTPException(status_code=404, detail="Mode de paiement non trouvé")
 
     @router.post("", response_model=dict)
-    async def create_payment_method(
+    def create_payment_method(
         method_data: PaymentMethodCreate,
         current_user: dict = Depends(get_current_user)
     ):
@@ -143,7 +143,7 @@ if DATABASE_TYPE == "postgresql":
         return new_method
 
     @router.put("/{method_id}", response_model=dict)
-    async def update_payment_method(
+    def update_payment_method(
         method_id: str,
         method_data: PaymentMethodUpdate,
         current_user: dict = Depends(get_current_user)
@@ -170,7 +170,7 @@ if DATABASE_TYPE == "postgresql":
         raise HTTPException(status_code=404, detail="Mode de paiement non trouvé")
 
     @router.delete("/{method_id}")
-    async def delete_payment_method(
+    def delete_payment_method(
         method_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -194,7 +194,7 @@ if DATABASE_TYPE == "postgresql":
     # ============== PAIEMENTS DE VENTE ==============
     
     @router.get("/sale/{sale_id}/payments", response_model=List[dict])
-    async def get_sale_payments(
+    def get_sale_payments(
         sale_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -218,7 +218,7 @@ if DATABASE_TYPE == "postgresql":
         }]
 
     @router.post("/sale/payment", response_model=dict)
-    async def create_sale_payment(
+    def create_sale_payment(
         payment_data: SalePaymentCreate,
         current_user: dict = Depends(get_current_user)
     ):
@@ -259,7 +259,7 @@ if DATABASE_TYPE == "postgresql":
 payments_router = APIRouter(prefix="/payments", tags=["payments"])
 
 @payments_router.post("/verify-otp")
-async def verify_otp(
+def verify_otp(
     otp_data: dict,
     current_user: dict = Depends(get_current_user)
 ):

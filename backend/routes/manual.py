@@ -8,7 +8,7 @@ PDF_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "m
 
 
 @router.get("/download")
-async def download_manual():
+def download_manual():
     if not os.path.exists(PDF_PATH):
         raise HTTPException(status_code=404, detail="Manuel non disponible")
     return FileResponse(

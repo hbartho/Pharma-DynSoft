@@ -440,75 +440,69 @@ class SaleRepository(BaseRepository):
         unique_id = str(uuid.uuid4()).replace('-', '')[:8].upper()
         return f"VNT-{unique_id}"
     
+    def build(self, data: Dict[str, Any], items: List[Dict[str, Any]]) -> Sale:
+        """Construit l'objet Sale (+ lignes) sans l'attacher à une session."""
+        payment_str = data.get('payment_method', 'cash').lower()
+        payment_map = {
+            'cash': PaymentMethod.CASH,
+            'card': PaymentMethod.CARD,
+            'orange_money': PaymentMethod.ORANGE_MONEY,
+            'mtn_money': PaymentMethod.MTN_MONEY,
+            'check': PaymentMethod.CHECK,
+            'credit': PaymentMethod.CREDIT,
+            'mixed': PaymentMethod.MIXED,
+            'debt': PaymentMethod.CREDIT,  # debt est mappé sur credit
+        }
+        payment_method = payment_map.get(payment_str, PaymentMethod.CASH)
+        
+        has_debt = data.get('has_debt', False)
+        debt_amount = data.get('debt_amount', 0)
+        amount_paid = data.get('amount_paid', data.get('total', 0))
+        
+        if has_debt and debt_amount >= data.get('total', 0):
+            status = SaleStatus.CREDIT
+        elif has_debt:
+            status = SaleStatus.PARTIAL
+        else:
+            status = SaleStatus.COMPLETED
+        
+        sale = Sale(
+            id=uuid.uuid4(),
+            sale_number=data.get('sale_number') or self.generate_sale_number(),
+            subtotal=float(data.get('subtotal', data.get('total', 0))),
+            discount=float(data.get('discount_amount', 0)),
+            discount_type=data.get('discount_type'),
+            discount_value=float(data.get('discount_value', 0)) if data.get('discount_value') else None,
+            tax_amount=float(data.get('tva_total', 0)),
+            total=float(data.get('total', 0)),
+            amount_paid=float(amount_paid),
+            payment_method=payment_method,
+            status=status,
+            shift_id=uuid.UUID(data['shift_id']) if data.get('shift_id') else None,
+            customer_id=uuid.UUID(data['customer_id']) if data.get('customer_id') else None,
+            agent_code=data.get('employee_code'),
+            agent_name=data.get('user_name'),
+            notes=data.get('notes'),
+            is_split_payment=data.get('is_split_payment', False),
+            split_payments=data.get('split_payments'),
+        )
+        for item_data in items:
+            sale.items.append(SaleItem(
+                id=uuid.uuid4(),
+                product_id=uuid.UUID(item_data['product_id']) if isinstance(item_data['product_id'], str) else item_data['product_id'],
+                product_name=item_data.get('product_name', 'Produit inconnu'),
+                unit_price=float(item_data.get('unit_price', 0)),
+                quantity=int(item_data.get('quantity', 0)),
+                subtotal=float(item_data.get('subtotal', 0)),
+            ))
+        return sale
+
     def create(self, data: Dict[str, Any], items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Crée une nouvelle vente avec ses lignes."""
         with self.get_session() as session:
-            # Mapper le mode de paiement
-            payment_str = data.get('payment_method', 'cash').lower()
-            payment_map = {
-                'cash': PaymentMethod.CASH,
-                'card': PaymentMethod.CARD,
-                'orange_money': PaymentMethod.ORANGE_MONEY,
-                'mtn_money': PaymentMethod.MTN_MONEY,
-                'check': PaymentMethod.CHECK,
-                'credit': PaymentMethod.CREDIT,
-                'mixed': PaymentMethod.MIXED,
-                'debt': PaymentMethod.CREDIT,  # debt est mappé sur credit
-            }
-            payment_method = payment_map.get(payment_str, PaymentMethod.CASH)
-            
-            # Mapper le statut
-            has_debt = data.get('has_debt', False)
-            debt_amount = data.get('debt_amount', 0)
-            amount_paid = data.get('amount_paid', data.get('total', 0))
-            
-            if has_debt and debt_amount >= data.get('total', 0):
-                status = SaleStatus.CREDIT
-            elif has_debt:
-                status = SaleStatus.PARTIAL
-            else:
-                status = SaleStatus.COMPLETED
-            
-            sale = Sale(
-                id=uuid.uuid4(),
-                sale_number=data.get('sale_number') or self.generate_sale_number(),
-                subtotal=float(data.get('subtotal', data.get('total', 0))),
-                discount=float(data.get('discount_amount', 0)),
-                discount_type=data.get('discount_type'),
-                discount_value=float(data.get('discount_value', 0)) if data.get('discount_value') else None,
-                tax_amount=float(data.get('tva_total', 0)),
-                total=float(data.get('total', 0)),
-                amount_paid=float(amount_paid),
-                payment_method=payment_method,
-                status=status,
-                shift_id=uuid.UUID(data['shift_id']) if data.get('shift_id') else None,
-                customer_id=uuid.UUID(data['customer_id']) if data.get('customer_id') else None,
-                agent_code=data.get('employee_code'),
-                agent_name=data.get('user_name'),
-                notes=data.get('notes'),
-                # Paiements mixtes (split payments)
-                is_split_payment=data.get('is_split_payment', False),
-                split_payments=data.get('split_payments'),
-            )
+            sale = self.build(data, items)
             session.add(sale)
-            session.flush()  # Pour obtenir l'ID
-            
-            # Ajouter les lignes de vente
-            for item_data in items:
-                sale_item = SaleItem(
-                    id=uuid.uuid4(),
-                    sale_id=sale.id,
-                    product_id=uuid.UUID(item_data['product_id']) if isinstance(item_data['product_id'], str) else item_data['product_id'],
-                    product_name=item_data.get('product_name', 'Produit inconnu'),
-                    unit_price=float(item_data.get('unit_price', 0)),
-                    quantity=int(item_data.get('quantity', 0)),
-                    subtotal=float(item_data.get('subtotal', 0)),
-                )
-                session.add(sale_item)
-            
             session.commit()
-            
-            # Recharger avec items
             session.refresh(sale)
             return self.to_dict(sale, include_items=True)
     

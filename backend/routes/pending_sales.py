@@ -62,7 +62,7 @@ if DATABASE_TYPE == "postgresql":
             "tenant_id": get_current_tenant(),
         }
     
-    async def cleanup_expired_pending_sales():
+    def cleanup_expired_pending_sales():
         """Supprimer les ventes en attente expirées"""
         now = datetime.now(timezone.utc)
         with get_session() as session:
@@ -72,12 +72,12 @@ if DATABASE_TYPE == "postgresql":
             session.commit()
     
     @router.get("")
-    async def get_pending_sales(
+    def get_pending_sales(
         status: Optional[str] = "pending",
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer toutes les ventes en attente"""
-        await cleanup_expired_pending_sales()
+        cleanup_expired_pending_sales()
         
         with get_session() as session:
             query = session.query(PendingSaleModel)
@@ -90,9 +90,9 @@ if DATABASE_TYPE == "postgresql":
             return [pending_sale_to_dict(p) for p in pending_sales]
     
     @router.get("/count")
-    async def get_pending_sales_count(current_user: dict = Depends(get_current_user)):
+    def get_pending_sales_count(current_user: dict = Depends(get_current_user)):
         """Récupérer le nombre de ventes en attente actives"""
-        await cleanup_expired_pending_sales()
+        cleanup_expired_pending_sales()
         
         with get_session() as session:
             now = datetime.now(timezone.utc)
@@ -102,7 +102,7 @@ if DATABASE_TYPE == "postgresql":
             return {"count": count}
     
     @router.get("/{pending_id}")
-    async def get_pending_sale(
+    def get_pending_sale(
         pending_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -118,7 +118,7 @@ if DATABASE_TYPE == "postgresql":
             return pending_sale_to_dict(pending_sale)
     
     @router.post("", response_model=dict)
-    async def create_pending_sale(
+    def create_pending_sale(
         sale_data: PendingSaleCreate,
         current_user: dict = Depends(get_current_user)
     ):
@@ -180,7 +180,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.put("/{pending_id}")
-    async def update_pending_sale(
+    def update_pending_sale(
         pending_id: str,
         sale_data: PendingSaleUpdate,
         current_user: dict = Depends(get_current_user)
@@ -231,7 +231,7 @@ if DATABASE_TYPE == "postgresql":
             return {"message": "Vente en attente mise à jour", "id": pending_id}
     
     @router.delete("/{pending_id}")
-    async def cancel_pending_sale(
+    def cancel_pending_sale(
         pending_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -250,7 +250,7 @@ if DATABASE_TYPE == "postgresql":
             return {"message": "Vente en attente annulée", "id": pending_id}
     
     @router.post("/{pending_id}/complete")
-    async def complete_pending_sale(
+    def complete_pending_sale(
         pending_id: str,
         payment_method: str,
         payment_details: dict = None,

@@ -32,7 +32,7 @@ if DATABASE_TYPE == "postgresql":
     # Dans une vraie implémentation, créer une table price_history
     _price_history = []
     
-    async def create_price_history(
+    def create_price_history(
         product_id: str,
         prix_appro: float,
         prix_vente_prod: float,
@@ -88,7 +88,7 @@ if DATABASE_TYPE == "postgresql":
             return entry
     
     @router.get("/history/paginated")
-    async def get_price_history_paginated(
+    def get_price_history_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -126,7 +126,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/history", response_model=List[dict])
-    async def get_price_history(
+    def get_price_history(
         product_id: Optional[str] = None,
         change_type: Optional[str] = None,
         limit: int = Query(default=100, le=500),
@@ -144,7 +144,7 @@ if DATABASE_TYPE == "postgresql":
         return result[:limit]
     
     @router.get("/history/{history_id}", response_model=dict)
-    async def get_price_history_entry(
+    def get_price_history_entry(
         history_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -156,7 +156,7 @@ if DATABASE_TYPE == "postgresql":
         raise HTTPException(status_code=404, detail="Entrée non trouvée")
     
     @router.post("/update", response_model=dict)
-    async def update_product_prices(
+    def update_product_prices(
         data: PriceHistoryCreate,
         current_user: dict = Depends(get_current_user)
     ):
@@ -166,7 +166,7 @@ if DATABASE_TYPE == "postgresql":
         
         employee_code = current_user.get("employee_code", "N/A")
         
-        entry = await create_price_history(
+        entry = create_price_history(
             product_id=data.product_id,
             prix_appro=data.prix_appro,
             prix_vente_prod=data.prix_vente_prod,
@@ -178,7 +178,7 @@ if DATABASE_TYPE == "postgresql":
         return entry
     
     @router.get("/summary", response_model=dict)
-    async def get_prices_summary(
+    def get_prices_summary(
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer un résumé des prix"""

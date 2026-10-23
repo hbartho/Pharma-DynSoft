@@ -644,6 +644,7 @@ class CustomerRepository(BaseRepository):
                 email=data.get('email'),
                 address=data.get('address'),
                 notes=data.get('notes'),
+                max_debt_limit=float(data.get('max_debt_limit') or 0),
                 is_active=True,
             )
             session.add(customer)

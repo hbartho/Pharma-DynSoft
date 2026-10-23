@@ -27,7 +27,7 @@ if DATABASE_TYPE == "postgresql":
         return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/paginated")
-    async def get_customers_paginated(
+    def get_customers_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -87,7 +87,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("", response_model=Customer)
-    async def create_customer(
+    def create_customer(
         customer_data: CustomerCreate, 
         current_user: dict = Depends(get_current_user),
         _shift_check: dict = Depends(require_open_shift)
@@ -99,14 +99,14 @@ if DATABASE_TYPE == "postgresql":
         return Customer(**result)
     
     @router.get("", response_model=List[Customer])
-    async def get_customers(current_user: dict = Depends(get_current_user)):
+    def get_customers(current_user: dict = Depends(get_current_user)):
         """Get all customers"""
         repo = CustomerRepository()
         customers = repo.get_all()
         return [Customer(**c) for c in customers]
     
     @router.get("/{customer_id}", response_model=Customer)
-    async def get_customer(customer_id: str, current_user: dict = Depends(get_current_user)):
+    def get_customer(customer_id: str, current_user: dict = Depends(get_current_user)):
         """Get a specific customer"""
         repo = CustomerRepository()
         customer = repo.get_by_id_str(customer_id)
@@ -115,7 +115,7 @@ if DATABASE_TYPE == "postgresql":
         return Customer(**customer)
     
     @router.put("/{customer_id}", response_model=Customer)
-    async def update_customer(customer_id: str, customer_data: CustomerUpdate, current_user: dict = Depends(get_current_user)):
+    def update_customer(customer_id: str, customer_data: CustomerUpdate, current_user: dict = Depends(get_current_user)):
         """Update a customer"""
         repo = CustomerRepository()
         # Filtrer les champs None pour ne pas écraser les données existantes
@@ -126,7 +126,7 @@ if DATABASE_TYPE == "postgresql":
         return Customer(**result)
     
     @router.delete("/{customer_id}")
-    async def delete_customer(customer_id: str, current_user: dict = Depends(require_role(["admin"]))):
+    def delete_customer(customer_id: str, current_user: dict = Depends(require_role(["admin"]))):
         """Delete a customer (Admin only)"""
         repo = CustomerRepository()
         success = repo.delete_by_id_str(customer_id)
@@ -135,7 +135,7 @@ if DATABASE_TYPE == "postgresql":
         return {"message": "Customer deleted successfully"}
     
     @router.patch("/{customer_id}/toggle-status", response_model=dict)
-    async def toggle_customer_status(customer_id: str, current_user: dict = Depends(get_current_user)):
+    def toggle_customer_status(customer_id: str, current_user: dict = Depends(get_current_user)):
         """Activer/Désactiver un client (Admin uniquement)"""
         if current_user.get('role') != 'admin':
             raise HTTPException(status_code=403, detail="Seul un administrateur peut activer/désactiver un client")

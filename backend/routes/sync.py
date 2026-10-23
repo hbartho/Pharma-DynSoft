@@ -27,7 +27,7 @@ if DATABASE_TYPE == "postgresql":
         return db_manager.get_tenant_session(get_current_tenant())
     
     @router.post("/push")
-    async def sync_push(sync_data: SyncData, current_user: dict = Depends(get_current_user)):
+    def sync_push(sync_data: SyncData, current_user: dict = Depends(get_current_user)):
         """Push changes to server (PostgreSQL)"""
         from database.models_tenant import Product, Customer, Sale
         import uuid
@@ -95,7 +95,7 @@ if DATABASE_TYPE == "postgresql":
         return {"message": f"Synced {synced_count} changes"}
     
     @router.get("/pull")
-    async def sync_pull(since: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    def sync_pull(since: Optional[str] = None, current_user: dict = Depends(get_current_user)):
         """Pull changes from server (PostgreSQL)"""
         product_repo = ProductRepository()
         customer_repo = CustomerRepository()
@@ -124,7 +124,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/status")
-    async def sync_status(current_user: dict = Depends(get_current_user)):
+    def sync_status(current_user: dict = Depends(get_current_user)):
         """Vérifier le statut de synchronisation"""
         product_repo = ProductRepository()
         customer_repo = CustomerRepository()

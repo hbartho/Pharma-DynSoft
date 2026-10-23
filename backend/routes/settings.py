@@ -18,7 +18,7 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import SettingsRepository
     
     @router.get("/public")
-    async def get_public_settings():
+    def get_public_settings():
         """Get public settings - No authentication required"""
         repo = SettingsRepository()
         settings = repo.get_all()
@@ -28,7 +28,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/agencies")
-    async def get_all_agencies(current_user: dict = Depends(get_current_user)):
+    def get_all_agencies(current_user: dict = Depends(get_current_user)):
         """Get all available agencies (authentification requise)"""
         repo = SettingsRepository()
         settings = repo.get_all()
@@ -46,7 +46,7 @@ if DATABASE_TYPE == "postgresql":
         }]
     
     @router.get("")
-    async def get_settings(current_user: dict = Depends(get_current_user)):
+    def get_settings(current_user: dict = Depends(get_current_user)):
         """Get application settings"""
         repo = SettingsRepository()
         settings = repo.get_all()
@@ -70,7 +70,7 @@ if DATABASE_TYPE == "postgresql":
         return settings
     
     @router.put("")
-    async def update_settings(settings_data: SettingsUpdate, current_user: dict = Depends(require_role(["admin"]))):
+    def update_settings(settings_data: SettingsUpdate, current_user: dict = Depends(require_role(["admin"]))):
         """Update application settings (Admin only)"""
         repo = SettingsRepository()
         update_data = {k: v for k, v in settings_data.model_dump().items() if v is not None}

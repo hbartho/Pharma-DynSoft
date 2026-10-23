@@ -143,7 +143,7 @@ def recalculate_session_stats(db_session, session: InventorySessionModel):
 
 
 @router.get("/movements")
-async def get_stock_movements(
+def get_stock_movements(
     limit: int = Query(50, ge=1, le=200),
     skip: int = Query(0, ge=0),
     product_id: Optional[str] = None,
@@ -185,7 +185,7 @@ async def get_stock_movements(
 
 
 @router.get("/sessions/active")
-async def get_active_session(
+def get_active_session(
     current_user: dict = Depends(require_role(["admin", "pharmacien"]))
 ):
     """Récupérer la session d'inventaire active"""
@@ -202,7 +202,7 @@ async def get_active_session(
 
 
 @router.get("/sessions/history")
-async def get_inventory_history(
+def get_inventory_history(
     limit: int = Query(20, ge=1, le=100),
     skip: int = Query(0, ge=0),
     year: Optional[int] = Query(None, description="Filtrer par année"),
@@ -245,7 +245,7 @@ async def get_inventory_history(
 
 
 @router.post("/sessions")
-async def create_inventory_session(
+def create_inventory_session(
     session_data: InventorySessionCreate,
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -314,7 +314,7 @@ async def create_inventory_session(
 
 
 @router.get("/sessions/{session_id}")
-async def get_inventory_session(
+def get_inventory_session(
     session_id: str,
     current_user: dict = Depends(require_role(["admin", "pharmacien"]))
 ):
@@ -334,7 +334,7 @@ async def get_inventory_session(
 
 
 @router.put("/sessions/{session_id}/items/{item_id}")
-async def update_inventory_item(
+def update_inventory_item(
     session_id: str,
     item_id: str,
     item_update: InventoryItemUpdate,
@@ -379,7 +379,7 @@ async def update_inventory_item(
 
 
 @router.post("/sessions/{session_id}/validate")
-async def validate_inventory_session(
+def validate_inventory_session(
     session_id: str,
     validation: InventoryValidation,
     current_user: dict = Depends(require_role(["admin"]))
@@ -388,7 +388,7 @@ async def validate_inventory_session(
     with get_session() as db_session:
         session = db_session.query(InventorySessionModel).filter(
             InventorySessionModel.id == uuid.UUID(session_id)
-        ).first()
+        ).with_for_update().first()
         
         if not session:
             raise HTTPException(status_code=404, detail="Session non trouvée")
@@ -396,7 +396,6 @@ async def validate_inventory_session(
         if session.status != 'in_progress':
             raise HTTPException(status_code=400, detail="Cette session n'est plus modifiable")
         
-        product_repo = ProductRepository()
         adjustments = []
         
         if validation.apply_adjustments:
@@ -404,10 +403,9 @@ async def validate_inventory_session(
                 if item.actual_quantity is not None and item.discrepancy != 0:
                     new_stock = item.actual_quantity
                     
-                    # Mettre à jour le stock
-                    product_repo.update_by_id_str(
-                        str(item.product_id),
-                        {'stock': new_stock}
+                    # Stock fixé dans la même transaction que le mouvement
+                    db_session.query(Product).filter(Product.id == item.product_id).update(
+                        {Product.stock: new_stock}, synchronize_session=False
                     )
                     
                     # Créer mouvement de stock
@@ -454,7 +452,7 @@ async def validate_inventory_session(
 
 
 @router.delete("/sessions/{session_id}")
-async def cancel_inventory_session(
+def cancel_inventory_session(
     session_id: str,
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -477,7 +475,7 @@ async def cancel_inventory_session(
 
 
 @router.post("/sessions/{session_id}/refresh-theoretical")
-async def refresh_theoretical_stock(
+def refresh_theoretical_stock(
     session_id: str,
     current_user: dict = Depends(require_role(["admin", "pharmacien"]))
 ):

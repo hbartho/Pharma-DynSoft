@@ -56,13 +56,13 @@ if DATABASE_TYPE == "postgresql":
             "tenant_id": get_current_tenant(),
         }
     
-    async def get_tenant_timezone(tenant_id: str) -> str:
+    def get_tenant_timezone(tenant_id: str) -> str:
         """Récupérer le fuseau horaire du tenant"""
         settings_repo = SettingsRepository()
         return settings_repo.get("timezone", DEFAULT_TIMEZONE)
     
     @router.get("")
-    async def get_shift_schedules(
+    def get_shift_schedules(
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -91,7 +91,7 @@ if DATABASE_TYPE == "postgresql":
             return [schedule_to_dict(s) for s in schedules]
     
     @router.get("/calendar")
-    async def get_calendar_view(
+    def get_calendar_view(
         year: int,
         month: int,
         current_user: dict = Depends(require_role(["admin"]))
@@ -133,7 +133,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/check-eligibility")
-    async def check_shift_eligibility(
+    def check_shift_eligibility(
         current_user: dict = Depends(get_current_user)
     ):
         """Vérifier si l'utilisateur peut ouvrir un shift"""
@@ -149,7 +149,7 @@ if DATABASE_TYPE == "postgresql":
                 max_duration_hours=8.0
             )
         
-        tz_name = await get_tenant_timezone(get_current_tenant())
+        tz_name = get_tenant_timezone(get_current_tenant())
         try:
             local_tz = ZoneInfo(tz_name)
         except Exception:
@@ -211,7 +211,7 @@ if DATABASE_TYPE == "postgresql":
             )
     
     @router.get("/my-schedule")
-    async def get_my_schedule(
+    def get_my_schedule(
         date: Optional[str] = None,
         current_user: dict = Depends(get_current_user)
     ):
@@ -219,7 +219,7 @@ if DATABASE_TYPE == "postgresql":
         user_id = current_user['user_id']
         from datetime import date as date_type
         
-        tz_name = await get_tenant_timezone(get_current_tenant())
+        tz_name = get_tenant_timezone(get_current_tenant())
         try:
             local_tz = ZoneInfo(tz_name)
         except Exception:
@@ -238,7 +238,7 @@ if DATABASE_TYPE == "postgresql":
             return schedule_to_dict(schedule) if schedule else None
     
     @router.post("")
-    async def create_shift_schedule(
+    def create_shift_schedule(
         data: ShiftScheduleCreate,
         current_user: dict = Depends(require_role(["admin"]))
     ):
@@ -289,7 +289,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("/bulk")
-    async def create_bulk_shift_schedules(
+    def create_bulk_shift_schedules(
         schedules: List[dict],
         current_user: dict = Depends(require_role(["admin"]))
     ):
@@ -361,7 +361,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.delete("/date/{date}")
-    async def delete_schedules_by_date(
+    def delete_schedules_by_date(
         date: str,
         user_code: Optional[str] = Query(None),
         current_user: dict = Depends(require_role(["admin"]))
@@ -382,7 +382,7 @@ if DATABASE_TYPE == "postgresql":
             return {"message": f"{count} planification(s) supprimée(s)", "date": date}
 
     @router.delete("/{schedule_id}")
-    async def delete_shift_schedule(
+    def delete_shift_schedule(
         schedule_id: str,
         current_user: dict = Depends(require_role(["admin"]))
     ):

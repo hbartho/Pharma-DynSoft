@@ -2,6 +2,7 @@
 Authentication Module - PostgreSQL Only
 """
 from fastapi import Depends, HTTPException
+from starlette.concurrency import run_in_threadpool
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
@@ -118,7 +119,7 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
         
         # Vérifier que l'utilisateur existe
         repo = UserRepository(tenant_id)
-        user = repo.get_by_id_str(user_id)
+        user = await run_in_threadpool(repo.get_by_id_str, user_id)
         if not user:
             raise HTTPException(status_code=401, detail="Utilisateur non trouvé")
         
@@ -145,7 +146,7 @@ async def require_open_shift(current_user: dict = Depends(get_current_user)):
     repo = ShiftRepository()
     
     user_id = current_user.get('user_id')
-    open_shift = repo.get_active_by_user_str(user_id)
+    open_shift = await run_in_threadpool(repo.get_active_by_user_str, user_id)
     
     if not open_shift:
         raise HTTPException(

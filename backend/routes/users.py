@@ -39,7 +39,7 @@ if DATABASE_TYPE == "postgresql":
     from database.directory import get_directory_entry, upsert_directory_entry, remove_directory_entry
     
     @router.get("")
-    async def get_users(current_user: dict = Depends(require_admin)):
+    def get_users(current_user: dict = Depends(require_admin)):
         """Get all users (Admin only)"""
         repo = UserRepository()
         users = repo.get_all(include_inactive=True)
@@ -55,7 +55,7 @@ if DATABASE_TYPE == "postgresql":
         return result
     
     @router.get("/{user_id}")
-    async def get_user(user_id: str, current_user: dict = Depends(require_admin)):
+    def get_user(user_id: str, current_user: dict = Depends(require_admin)):
         """Get a specific user (Admin only)"""
         repo = UserRepository()
         user = repo.get_by_id_str(user_id)
@@ -71,7 +71,7 @@ if DATABASE_TYPE == "postgresql":
         return user
     
     @router.post("")
-    async def create_user_admin(user_data: UserCreate, current_user: dict = Depends(require_admin)):
+    def create_user_admin(user_data: UserCreate, current_user: dict = Depends(require_admin)):
         """Create a new user (Admin only)"""
         repo = UserRepository()
         email = user_data.email.strip().lower()
@@ -115,7 +115,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.put("/{user_id}")
-    async def update_user(user_id: str, user_update: UserUpdate, current_user: dict = Depends(require_admin)):
+    def update_user(user_id: str, user_update: UserUpdate, current_user: dict = Depends(require_admin)):
         """Update a user (Admin only)"""
         repo = UserRepository()
         
@@ -148,7 +148,7 @@ if DATABASE_TYPE == "postgresql":
         return updated_user
     
     @router.delete("/{user_id}")
-    async def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
+    def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
         """Delete a user (Admin only)"""
         if user_id == current_user['user_id']:
             raise HTTPException(status_code=400, detail="Cannot delete your own account")
@@ -164,7 +164,7 @@ if DATABASE_TYPE == "postgresql":
         return {"message": "User deleted successfully"}
     
     @router.patch("/{user_id}/toggle-status")
-    async def toggle_user_status(user_id: str, current_user: dict = Depends(require_admin)):
+    def toggle_user_status(user_id: str, current_user: dict = Depends(require_admin)):
         """Toggle user active status (Admin only)"""
         if user_id == current_user['user_id']:
             raise HTTPException(status_code=400, detail="Vous ne pouvez pas désactiver votre propre compte")
@@ -186,7 +186,7 @@ if DATABASE_TYPE == "postgresql":
         return updated_user
     
     @router.put("/{user_id}/password")
-    async def change_user_password(user_id: str, new_password: str, current_user: dict = Depends(require_admin)):
+    def change_user_password(user_id: str, new_password: str, current_user: dict = Depends(require_admin)):
         """Change a user's password (Admin only)"""
         repo = UserRepository()
         existing = repo.get_by_id_str(user_id)

@@ -84,7 +84,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/paginated")
-    async def get_debts_paginated(
+    def get_debts_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -172,7 +172,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/dashboard", response_model=dict)
-    async def get_debt_dashboard(
+    def get_debt_dashboard(
         current_user: dict = Depends(get_current_user),
         period: Optional[str] = Query(None, description="Période: week, month, quarter, year, all")
     ):
@@ -316,7 +316,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/customers-summary", response_model=List[dict])
-    async def get_customers_debt_summary(
+    def get_customers_debt_summary(
         current_user: dict = Depends(get_current_user),
         only_with_debt: bool = False
     ):
@@ -398,7 +398,7 @@ if DATABASE_TYPE == "postgresql":
             return result
     
     @router.get("", response_model=List[dict])
-    async def get_debts(
+    def get_debts(
         current_user: dict = Depends(get_current_user),
         customer_id: Optional[str] = None,
         status: Optional[str] = None
@@ -425,7 +425,7 @@ if DATABASE_TYPE == "postgresql":
             return [debt_to_dict(d, sale_number=sn) for d, sn in results]
     
     @router.get("/{debt_id}", response_model=dict)
-    async def get_debt(debt_id: str, current_user: dict = Depends(get_current_user)):
+    def get_debt(debt_id: str, current_user: dict = Depends(get_current_user)):
         """Récupérer une dette par ID"""
         with get_session() as session:
             result = session.query(DebtModel, Sale.sale_number).outerjoin(
@@ -437,7 +437,7 @@ if DATABASE_TYPE == "postgresql":
             return debt_to_dict(debt, sale_number=sale_number)
     
     @router.get("/{debt_id}/payments", response_model=List[dict])
-    async def get_debt_payments(debt_id: str, current_user: dict = Depends(get_current_user)):
+    def get_debt_payments(debt_id: str, current_user: dict = Depends(get_current_user)):
         """Récupérer l'historique des paiements d'une dette"""
         with get_session() as session:
             debt = session.query(DebtModel).filter(DebtModel.id == uuid.UUID(debt_id)).first()
@@ -446,7 +446,7 @@ if DATABASE_TYPE == "postgresql":
             return debt.payments or []
     
     @router.get("/customer/{customer_id}", response_model=List[dict])
-    async def get_customer_debts(
+    def get_customer_debts(
         customer_id: str,
         current_user: dict = Depends(get_current_user),
         include_paid: bool = False
@@ -464,7 +464,7 @@ if DATABASE_TYPE == "postgresql":
             return [debt_to_dict(d, sale_number=sn) for d, sn in results]
     
     @router.get("/customer/{customer_id}/available-credit", response_model=dict)
-    async def get_customer_available_credit(customer_id: str, current_user: dict = Depends(get_current_user)):
+    def get_customer_available_credit(customer_id: str, current_user: dict = Depends(get_current_user)):
         """Vérifier le crédit disponible d'un client"""
         customer_repo = CustomerRepository()
         customer = customer_repo.get_by_id_str(customer_id)
@@ -490,7 +490,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.post("/payment", response_model=dict)
-    async def create_debt_payment(
+    def create_debt_payment(
         payment_data: DebtPaymentCreate,
         current_user: dict = Depends(get_current_user)
     ):
@@ -539,7 +539,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("/{debt_id}/write-off", response_model=dict)
-    async def write_off_debt(
+    def write_off_debt(
         debt_id: str,
         request: WriteOffRequest,
         current_user: dict = Depends(get_current_user)
@@ -596,7 +596,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("/payment/bulk", response_model=dict)
-    async def create_bulk_payment(
+    def create_bulk_payment(
         request: BulkPaymentRequest,
         current_user: dict = Depends(require_open_shift)
     ):
@@ -663,7 +663,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/payments/history", response_model=List[dict])
-    async def get_all_payments_history(
+    def get_all_payments_history(
         current_user: dict = Depends(get_current_user),
         customer_id: Optional[str] = None,
         payment_method: Optional[str] = None,

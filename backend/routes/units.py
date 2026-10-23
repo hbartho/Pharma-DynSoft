@@ -17,7 +17,7 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import UnitRepository, ProductRepository
     
     @router.post("", response_model=Unit)
-    async def create_unit(unit_data: UnitCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def create_unit(unit_data: UnitCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Create a new product unit"""
         repo = UnitRepository()
         
@@ -31,14 +31,14 @@ if DATABASE_TYPE == "postgresql":
         return Unit(**result)
     
     @router.get("", response_model=List[Unit])
-    async def get_units(current_user: dict = Depends(get_current_user)):
+    def get_units(current_user: dict = Depends(get_current_user)):
         """Get all product units"""
         repo = UnitRepository()
         units = repo.get_all()
         return [Unit(**u) for u in units]
     
     @router.get("/{unit_id}", response_model=Unit)
-    async def get_unit(unit_id: str, current_user: dict = Depends(get_current_user)):
+    def get_unit(unit_id: str, current_user: dict = Depends(get_current_user)):
         """Get a specific unit"""
         repo = UnitRepository()
         unit = repo.get_by_id_str(unit_id)
@@ -47,7 +47,7 @@ if DATABASE_TYPE == "postgresql":
         return Unit(**unit)
     
     @router.put("/{unit_id}", response_model=Unit)
-    async def update_unit(unit_id: str, unit_data: UnitUpdate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def update_unit(unit_id: str, unit_data: UnitUpdate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Update a unit"""
         repo = UnitRepository()
         
@@ -67,7 +67,7 @@ if DATABASE_TYPE == "postgresql":
         return Unit(**result)
     
     @router.delete("/{unit_id}")
-    async def delete_unit(unit_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def delete_unit(unit_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Delete a unit"""
         product_repo = ProductRepository()
         

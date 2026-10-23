@@ -29,7 +29,7 @@ if DATABASE_TYPE == "postgresql":
         return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/paginated")
-    async def get_shifts_paginated(
+    def get_shifts_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -142,7 +142,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/current")
-    async def get_current_shift(current_user: dict = Depends(get_current_user)):
+    def get_current_shift(current_user: dict = Depends(get_current_user)):
         """Récupérer le shift ouvert de l'utilisateur actuel."""
         repo = ShiftRepository()
         user_id = current_user['user_id']
@@ -160,7 +160,7 @@ if DATABASE_TYPE == "postgresql":
         return shift
     
     @router.post("/open")
-    async def open_shift(data: ShiftOpen, current_user: dict = Depends(get_current_user)):
+    def open_shift(data: ShiftOpen, current_user: dict = Depends(get_current_user)):
         """Ouvrir un nouveau shift de caisse."""
         repo = ShiftRepository()
         settings_repo = SettingsRepository()
@@ -214,7 +214,7 @@ if DATABASE_TYPE == "postgresql":
         return result
     
     @router.post("/close")
-    async def close_shift(data: ShiftClose, current_user: dict = Depends(get_current_user)):
+    def close_shift(data: ShiftClose, current_user: dict = Depends(get_current_user)):
         """Fermer le shift actuel."""
         repo = ShiftRepository()
         user_id = current_user['user_id']
@@ -289,7 +289,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.post("/extend")
-    async def extend_shift(extension_minutes: int = 60, current_user: dict = Depends(get_current_user)):
+    def extend_shift(extension_minutes: int = 60, current_user: dict = Depends(get_current_user)):
         """Prolonger le shift actuel."""
         repo = ShiftRepository()
         user_id = current_user['user_id']
@@ -326,7 +326,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.post("/{shift_id}/extend")
-    async def extend_shift_by_id(
+    def extend_shift_by_id(
         shift_id: str,
         extension_minutes: int = 60, 
         current_user: dict = Depends(get_current_user)
@@ -373,7 +373,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/details/{shift_id}")
-    async def get_shift_details(shift_id: str, current_user: dict = Depends(get_current_user)):
+    def get_shift_details(shift_id: str, current_user: dict = Depends(get_current_user)):
         """Récupérer les détails complets d'un shift avec calculs."""
         from database.repositories_extended import SaleRepository
         
@@ -446,7 +446,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/summary/{shift_id}")
-    async def get_shift_summary(shift_id: str, current_user: dict = Depends(get_current_user)):
+    def get_shift_summary(shift_id: str, current_user: dict = Depends(get_current_user)):
         """Récupérer le résumé d'un shift."""
         repo = ShiftRepository()
         
@@ -465,7 +465,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/history")
-    async def get_shift_history(
+    def get_shift_history(
         days: int = 30,
         current_user: dict = Depends(require_role(["admin"]))
     ):
@@ -480,13 +480,13 @@ if DATABASE_TYPE == "postgresql":
         return shifts
     
     @router.get("/all-open")
-    async def get_all_open_shifts(current_user: dict = Depends(require_role(["admin"]))):
+    def get_all_open_shifts(current_user: dict = Depends(require_role(["admin"]))):
         """Récupérer tous les shifts ouverts (Admin)."""
         repo = ShiftRepository()
         return repo.get_all_active()
     
     @router.get("/calculate-expected")
-    async def calculate_expected_closing(current_user: dict = Depends(get_current_user)):
+    def calculate_expected_closing(current_user: dict = Depends(get_current_user)):
         """Calculer le montant attendu en caisse pour la clôture du shift."""
         from database.repositories_extended import SaleRepository
         
@@ -561,7 +561,7 @@ if DATABASE_TYPE == "postgresql":
         }
 
     @router.get("/stats")
-    async def get_shifts_stats(
+    def get_shifts_stats(
         period: str = Query(default="week", description="day, week, month"),
         current_user: dict = Depends(get_current_user)
     ):
@@ -626,7 +626,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/active")
-    async def get_active_shifts(current_user: dict = Depends(get_current_user)):
+    def get_active_shifts(current_user: dict = Depends(get_current_user)):
         """Récupérer tous les shifts actuellement actifs"""
         repo = ShiftRepository()
         active_shifts = repo.get_all_active()
@@ -647,7 +647,7 @@ if DATABASE_TYPE == "postgresql":
         return active_shifts
     
     @router.patch("/mark-alert/{alert_type}")
-    async def mark_alert_shown(
+    def mark_alert_shown(
         alert_type: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -684,7 +684,7 @@ if DATABASE_TYPE == "postgresql":
         }
 
     @router.delete("/{shift_id}")
-    async def delete_shift(
+    def delete_shift(
         shift_id: str,
         current_user: dict = Depends(require_role(["admin"]))
     ):

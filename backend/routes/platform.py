@@ -69,7 +69,7 @@ class ChangeOwnPassword(BaseModel):
 
 
 @router.post("/change-password")
-async def change_own_password(payload: ChangeOwnPassword, current_user: dict = Depends(require_super_admin)):
+def change_own_password(payload: ChangeOwnPassword, current_user: dict = Depends(require_super_admin)):
     """Le super admin change son propre mot de passe (stocké haché en BD)."""
     from auth import verify_password
     if len(payload.new_password) < 8:
@@ -104,7 +104,7 @@ def _tenant_to_dict(t: Tenant) -> dict:
 
 
 @router.get("/pharmacies")
-async def list_pharmacies(current_user: dict = Depends(require_super_admin)):
+def list_pharmacies(current_user: dict = Depends(require_super_admin)):
     """Liste toutes les pharmacies avec le nombre d'utilisateurs."""
     with db_manager.get_master_session() as session:
         tenants = session.query(Tenant).order_by(Tenant.created_at).all()
@@ -122,7 +122,7 @@ async def list_pharmacies(current_user: dict = Depends(require_super_admin)):
 
 
 @router.get("/pharmacies/stats")
-async def pharmacies_stats(current_user: dict = Depends(require_super_admin)):
+def pharmacies_stats(current_user: dict = Depends(require_super_admin)):
     """Chiffre d'affaires par pharmacie (jour, mois en cours, total) pour le super admin."""
     from datetime import timedelta
     from zoneinfo import ZoneInfo
@@ -247,7 +247,7 @@ def _copy_catalog(source_slug: str, target_slug: str) -> dict:
 
 
 @router.post("/pharmacies")
-async def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(require_super_admin)):
+def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(require_super_admin)):
     """Crée une pharmacie : schéma dédié + tables + compte admin + annuaire."""
     slug = (payload.slug or slugify(payload.name)).lower().strip()
     if not is_valid_slug(slug):
@@ -331,7 +331,7 @@ async def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(
 
 
 @router.put("/pharmacies/{slug}")
-async def update_pharmacy(slug: str, payload: PharmacyUpdate, current_user: dict = Depends(require_super_admin)):
+def update_pharmacy(slug: str, payload: PharmacyUpdate, current_user: dict = Depends(require_super_admin)):
     with db_manager.get_master_session() as session:
         tenant = session.query(Tenant).filter(Tenant.slug == slug).first()
         if not tenant:
@@ -351,7 +351,7 @@ async def update_pharmacy(slug: str, payload: PharmacyUpdate, current_user: dict
 
 
 @router.delete("/pharmacies/{slug}")
-async def delete_pharmacy(
+def delete_pharmacy(
     slug: str,
     confirm: str = Query(..., description="Retaper le slug pour confirmer"),
     current_user: dict = Depends(require_super_admin),
@@ -379,7 +379,7 @@ async def delete_pharmacy(
 
 
 @router.post("/pharmacies/{slug}/reset-admin-password")
-async def reset_pharmacy_user_password(slug: str, payload: AdminPasswordReset, current_user: dict = Depends(require_super_admin)):
+def reset_pharmacy_user_password(slug: str, payload: AdminPasswordReset, current_user: dict = Depends(require_super_admin)):
     """Réinitialise le mot de passe d'un utilisateur d'une pharmacie."""
     if len(payload.new_password) < 6:
         raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 6 caractères")

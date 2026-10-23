@@ -45,7 +45,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/stats")
-    async def get_prescriptions_stats(
+    def get_prescriptions_stats(
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer les statistiques des ordonnances"""
@@ -75,7 +75,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/paginated")
-    async def get_prescriptions_paginated(
+    def get_prescriptions_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -132,7 +132,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("", response_model=Prescription)
-    async def create_prescription(prescription_data: PrescriptionCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def create_prescription(prescription_data: PrescriptionCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Create a new prescription"""
         with get_session() as session:
             prescription = PrescriptionModel(
@@ -154,7 +154,7 @@ if DATABASE_TYPE == "postgresql":
             return Prescription(**result)
     
     @router.get("", response_model=List[Prescription])
-    async def get_prescriptions(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def get_prescriptions(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Get all prescriptions - pending first, then by date descending"""
         with get_session() as session:
             # Récupérer toutes les ordonnances, triées par statut puis par date
@@ -171,7 +171,7 @@ if DATABASE_TYPE == "postgresql":
             return result
     
     @router.put("/{prescription_id}/status")
-    async def update_prescription_status(prescription_id: str, new_status: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def update_prescription_status(prescription_id: str, new_status: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Update prescription status"""
         with get_session() as session:
             prescription = session.query(PrescriptionModel).filter(
@@ -193,7 +193,7 @@ if DATABASE_TYPE == "postgresql":
             return {"message": "Prescription updated successfully"}
     
     @router.put("/{prescription_id}/edit", response_model=Prescription)
-    async def edit_prescription(prescription_id: str, prescription_data: PrescriptionUpdate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def edit_prescription(prescription_id: str, prescription_data: PrescriptionUpdate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Edit a prescription"""
         with get_session() as session:
             prescription = session.query(PrescriptionModel).filter(
@@ -225,7 +225,7 @@ if DATABASE_TYPE == "postgresql":
             return Prescription(**result)
     
     @router.delete("/{prescription_id}")
-    async def delete_prescription(prescription_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def delete_prescription(prescription_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Delete a prescription"""
         with get_session() as session:
             prescription = session.query(PrescriptionModel).filter(

@@ -85,7 +85,7 @@ if DATABASE_TYPE == "postgresql":
     # ============== ROUTES ==============
     
     @router.post("", response_model=dict)
-    async def create_return(
+    def create_return(
         return_data: SaleReturnCreate,
         current_user: dict = Depends(require_open_shift)
     ):
@@ -99,9 +99,16 @@ if DATABASE_TYPE == "postgresql":
         
         with get_session() as session:
             # Vérifier que la vente existe
-            sale = session.query(Sale).filter(Sale.id == uuid.UUID(return_data.sale_id)).first()
+            sale = session.query(Sale).filter(Sale.id == uuid.UUID(return_data.sale_id)).with_for_update().first()
             if not sale:
                 raise HTTPException(status_code=404, detail="Vente non trouvée")
+            
+            # Quantités déjà retournées sur cette vente (sérialisé par le verrou sur la vente)
+            already_returned = {}
+            for prev in session.query(SaleReturnModel).filter(SaleReturnModel.sale_id == sale.id).all():
+                for pi in (prev.items or []):
+                    pid = str(pi.get('product_id'))
+                    already_returned[pid] = already_returned.get(pid, 0) + int(pi.get('quantity') or 0)
             
             # Vérifier le délai de retour
             is_eligible, message, _ = check_sale_return_eligibility(sale.created_at)
@@ -129,8 +136,10 @@ if DATABASE_TYPE == "postgresql":
                 if not original_item:
                     raise HTTPException(status_code=400, detail=f"Produit {item_product_id} non trouvé dans cette vente")
                 
-                if item_quantity > original_item.quantity:
-                    raise HTTPException(status_code=400, detail=f"Quantité de retour supérieure à la quantité vendue pour {original_item.product_name}")
+                remaining_qty = original_item.quantity - already_returned.get(item_product_id, 0)
+                if item_quantity > remaining_qty:
+                    raise HTTPException(status_code=400, detail=f"Quantité de retour supérieure à la quantité restante ({max(remaining_qty, 0)}) pour {original_item.product_name}")
+                already_returned[item_product_id] = already_returned.get(item_product_id, 0) + item_quantity
                 
                 item_refund = original_item.unit_price * item_quantity
                 total_refund += item_refund
@@ -145,7 +154,7 @@ if DATABASE_TYPE == "postgresql":
                 })
                 
                 # Mettre à jour le stock
-                product = session.query(Product).filter(Product.id == uuid.UUID(item_product_id)).first()
+                product = session.query(Product).filter(Product.id == uuid.UUID(item_product_id)).with_for_update().first()
                 if product:
                     product.stock = (product.stock or 0) + item_quantity
                     
@@ -182,7 +191,7 @@ if DATABASE_TYPE == "postgresql":
             return result
     
     @router.get("", response_model=List[dict])
-    async def get_returns(
+    def get_returns(
         sale_id: Optional[str] = None,
         limit: int = 100,
         current_user: dict = Depends(get_current_user)
@@ -201,7 +210,7 @@ if DATABASE_TYPE == "postgresql":
             return [return_to_dict(r) for r in returns]
     
     @router.get("/history", response_model=List[dict])
-    async def get_returns_history(
+    def get_returns_history(
         limit: int = 50,
         current_user: dict = Depends(get_current_user)
     ):
@@ -211,7 +220,7 @@ if DATABASE_TYPE == "postgresql":
             return [return_to_dict(r) for r in returns]
     
     @router.get("/check-eligibility/{sale_id}", response_model=dict)
-    async def check_eligibility_alt(
+    def check_eligibility_alt(
         sale_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -232,7 +241,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/sale/{sale_id}", response_model=List[dict])
-    async def get_returns_by_sale(
+    def get_returns_by_sale(
         sale_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -247,7 +256,7 @@ if DATABASE_TYPE == "postgresql":
                 return []
     
     @router.get("/sale/{sale_id}/eligibility", response_model=dict)
-    async def check_eligibility(
+    def check_eligibility(
         sale_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -270,7 +279,7 @@ if DATABASE_TYPE == "postgresql":
     from fastapi import Query
     
     @router.get("/history/paginated")
-    async def get_operations_history_paginated(
+    def get_operations_history_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         type_filter: Optional[str] = Query(default=None, description="all, sale, return"),
@@ -455,7 +464,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/history/operations", response_model=List[dict])
-    async def get_operations_history(
+    def get_operations_history(
         limit: int = 50,
         current_user: dict = Depends(get_current_user)
     ):
@@ -482,7 +491,7 @@ if DATABASE_TYPE == "postgresql":
     
     # Route avec paramètre dynamique - doit être à la fin pour éviter les conflits
     @router.get("/{return_id}", response_model=dict)
-    async def get_return(
+    def get_return(
         return_id: str,
         current_user: dict = Depends(get_current_user)
     ):

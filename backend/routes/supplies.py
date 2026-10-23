@@ -20,8 +20,9 @@ if DATABASE_TYPE == "postgresql":
     # ============ PostgreSQL Implementation ============
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import Supply as SupplyModel, SupplyItem as SupplyItemModel, Product, Category, Supplier
+    ProductModel = Product
     from database.repositories import ProductRepository, CategoryRepository, SupplierRepository
-    from sqlalchemy import desc, or_
+    from sqlalchemy import desc, or_, func
     
     def get_session():
         if USE_SUPABASE:
@@ -87,7 +88,7 @@ if DATABASE_TYPE == "postgresql":
         return result
     
     @router.get("/paginated")
-    async def get_supplies_paginated(
+    def get_supplies_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -149,7 +150,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("", response_model=dict)
-    async def create_supply(
+    def create_supply(
         supply_data: SupplyCreate,
         current_user: dict = Depends(require_open_shift)
     ):
@@ -273,7 +274,7 @@ if DATABASE_TYPE == "postgresql":
             return supply_to_dict(supply)
     
     @router.get("")
-    async def get_supplies(
+    def get_supplies(
         status: Optional[str] = None,
         current_user: dict = Depends(get_current_user)
     ):
@@ -305,7 +306,7 @@ if DATABASE_TYPE == "postgresql":
             return result
     
     @router.get("/pending-count")
-    async def get_pending_supplies_count(current_user: dict = Depends(get_current_user)):
+    def get_pending_supplies_count(current_user: dict = Depends(get_current_user)):
         """Récupérer le nombre d'approvisionnements en attente"""
         with get_session() as session:
             count = session.query(SupplyModel).filter(
@@ -314,7 +315,7 @@ if DATABASE_TYPE == "postgresql":
             return {"count": count}
     
     @router.get("/{supply_id}")
-    async def get_supply(supply_id: str, current_user: dict = Depends(get_current_user)):
+    def get_supply(supply_id: str, current_user: dict = Depends(get_current_user)):
         """Récupérer un approvisionnement par ID"""
         with get_session() as session:
             supply = session.query(SupplyModel).filter(
@@ -335,7 +336,7 @@ if DATABASE_TYPE == "postgresql":
             return data
     
     @router.put("/{supply_id}")
-    async def update_supply(
+    def update_supply(
         supply_id: str,
         supply_data: dict,
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
@@ -447,7 +448,7 @@ if DATABASE_TYPE == "postgresql":
             return supply_to_dict(supply)
 
     @router.post("/{supply_id}/validate")
-    async def validate_supply(
+    def validate_supply(
         supply_id: str,
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
     ):
@@ -466,25 +467,23 @@ if DATABASE_TYPE == "postgresql":
             if supply.is_validated:
                 raise HTTPException(status_code=400, detail="Approvisionnement déjà validé")
             
-            # Mettre à jour les stocks et les prix des produits
+            # Verrou sur l'approvisionnement : empêche une double validation concurrente
+            supply = session.query(SupplyModel).filter(
+                SupplyModel.id == supply.id, SupplyModel.is_validated == False  # noqa: E712
+            ).with_for_update().first()
+            if not supply:
+                raise HTTPException(status_code=400, detail="Approvisionnement déjà validé")
+            
+            # Stocks et prix mis à jour dans la même transaction (incrément SQL atomique)
             for item in supply.items:
-                product = product_repo.get_by_id(item.product_id)
-                if product:
-                    current_stock = product.get("stock", 0)
-                    new_stock = current_stock + item.quantity
-                    
-                    # Préparer les données de mise à jour
-                    update_data = {"stock": new_stock}
-                    
-                    # Mettre à jour le prix d'achat si défini
-                    if item.purchase_price and item.purchase_price > 0:
-                        update_data["purchase_price"] = item.purchase_price
-                    
-                    # Mettre à jour le prix de vente (prix public) si défini dans l'approvisionnement
-                    if item.selling_price and item.selling_price > 0:
-                        update_data["price"] = item.selling_price
-                    
-                    product_repo.update(item.product_id, update_data)
+                update_data = {ProductModel.stock: func.coalesce(ProductModel.stock, 0) + int(item.quantity)}
+                if item.purchase_price and item.purchase_price > 0:
+                    update_data[ProductModel.purchase_price] = item.purchase_price
+                if item.selling_price and item.selling_price > 0:
+                    update_data[ProductModel.price] = item.selling_price
+                session.query(ProductModel).filter(ProductModel.id == item.product_id).update(
+                    update_data, synchronize_session=False
+                )
             
             # Marquer comme validé
             supply.is_validated = True
@@ -525,7 +524,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.delete("/{supply_id}")
-    async def delete_supply(
+    def delete_supply(
         supply_id: str,
         current_user: dict = Depends(require_role(["admin"]))
     ):

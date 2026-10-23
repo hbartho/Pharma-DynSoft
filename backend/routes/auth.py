@@ -47,7 +47,7 @@ if DATABASE_TYPE == "postgresql":
     from database.directory import get_directory_entry, upsert_directory_entry, is_tenant_active
     
     @router.post("/register", response_model=User)
-    async def register(user_data: UserCreate, current_user: dict = Depends(require_admin)):
+    def register(user_data: UserCreate, current_user: dict = Depends(require_admin)):
         """Register a new user in the current pharmacy (Admin only)"""
         tenant = get_current_tenant()
         repo = UserRepository(tenant)
@@ -81,7 +81,7 @@ if DATABASE_TYPE == "postgresql":
         return User(**result)
     
     @router.post("/login", response_model=Token)
-    async def login(credentials: UserLogin, request: Request):
+    def login(credentials: UserLogin, request: Request):
         """Login and get access token (multi-pharmacies: le tenant est détecté via l'email)"""
         email = credentials.email.strip().lower()
         forwarded = request.headers.get("x-forwarded-for", "")
@@ -175,7 +175,7 @@ if DATABASE_TYPE == "postgresql":
         return Token(access_token=access_token, token_type="bearer", user=User(**user_response))
     
     @router.get("/me", response_model=UserResponse)
-    async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    def get_current_user_info(current_user: dict = Depends(get_current_user)):
         """Get current user information"""
         if current_user.get('role') == 'super_admin':
             return UserResponse(
@@ -214,7 +214,7 @@ if DATABASE_TYPE == "postgresql":
         return UserResponse(**user)
     
     @router.put("/change-password")
-    async def change_password(password_data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    def change_password(password_data: PasswordChange, current_user: dict = Depends(get_current_user)):
         """Change the current user's password"""
         repo = UserRepository()
         
@@ -238,13 +238,13 @@ if DATABASE_TYPE == "postgresql":
         return {"message": "Mot de passe mis à jour avec succès"}
     
     @router.post("/logout")
-    async def logout(current_user: dict = Depends(get_current_user)):
+    def logout(current_user: dict = Depends(get_current_user)):
         """Logout and invalidate the current session"""
         # Pour PostgreSQL, on ne fait rien de spécial car on ne stocke pas les sessions
         return {"message": "Déconnexion réussie"}
     
     @router.get("/verify-session")
-    async def verify_session(current_user: dict = Depends(get_current_user)):
+    def verify_session(current_user: dict = Depends(get_current_user)):
         """Verify if the current session is still valid"""
         return {"valid": True, "user_id": current_user['user_id']}
 

@@ -37,7 +37,7 @@ if DATABASE_TYPE == "postgresql":
         return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/dashboard")
-    async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         """Get dashboard statistics"""
         day_start, day_end = local_day_bounds()
         
@@ -78,7 +78,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/today-sales-by-payment")
-    async def get_today_sales_by_payment(
+    def get_today_sales_by_payment(
         date: str = None,
         current_user: dict = Depends(get_current_user)
     ):
@@ -161,7 +161,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/weekly")
-    async def get_weekly_stats(current_user: dict = Depends(get_current_user)):
+    def get_weekly_stats(current_user: dict = Depends(get_current_user)):
         """Get weekly sales statistics"""
         tz = get_pharmacy_tz()
         today_local = now_local(tz).date()
@@ -197,7 +197,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/stock-alerts")
-    async def get_stock_alerts(current_user: dict = Depends(get_current_user)):
+    def get_stock_alerts(current_user: dict = Depends(get_current_user)):
         """Get products with low stock"""
         with get_session() as session:
             products = session.query(Product).filter(Product.is_active == True).all()
@@ -226,7 +226,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/sales")
-    async def get_sales_report(
+    def get_sales_report(
         days: int = 30,
         start_date: str = None,
         end_date: str = None,
@@ -282,7 +282,7 @@ if DATABASE_TYPE == "postgresql":
             }
 
     @router.get("/sales-summary")
-    async def get_sales_summary(
+    def get_sales_summary(
         start_date: str = None,
         end_date: str = None,
         current_user: dict = Depends(get_current_user)
@@ -449,7 +449,7 @@ if DATABASE_TYPE == "postgresql":
             }
 
     @router.get("/accounting-summary")
-    async def get_accounting_summary(
+    def get_accounting_summary(
         start_date: str = None,
         end_date: str = None,
         current_user: dict = Depends(require_role(["admin"]))
@@ -482,7 +482,7 @@ if DATABASE_TYPE == "postgresql":
         return rows
 
     @router.get("/accounting-summary/export")
-    async def export_accounting_summary(
+    def export_accounting_summary(
         format: str = "pdf",
         start_date: str = None,
         end_date: str = None,

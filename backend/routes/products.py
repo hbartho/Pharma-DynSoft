@@ -32,7 +32,7 @@ if DATABASE_TYPE == "postgresql":
         return settings_repo.get("expiration_alert_days", 30)
     
     @router.get("/paginated")
-    async def get_products_paginated(
+    def get_products_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -185,7 +185,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("")
-    async def create_product(product_data: ProductCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def create_product(product_data: ProductCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Créer un nouveau produit"""
         repo = ProductRepository()
         
@@ -205,7 +205,7 @@ if DATABASE_TYPE == "postgresql":
         return result
     
     @router.get("")
-    async def get_products(
+    def get_products(
         sort_by: Optional[str] = Query(default="priority", description="priority, name, stock, expiration"),
         current_user: dict = Depends(require_role(["admin", "pharmacien", "caissier"]))
     ):
@@ -255,7 +255,7 @@ if DATABASE_TYPE == "postgresql":
         return products
     
     @router.get("/alerts")
-    async def get_product_alerts(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def get_product_alerts(current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Récupérer les alertes: stock bas et péremption proche"""
         repo = ProductRepository()
         settings_repo = SettingsRepository()
@@ -300,13 +300,13 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("/search")
-    async def search_products(q: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def search_products(q: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Rechercher des produits"""
         repo = ProductRepository()
         return repo.search(q, limit=50)
     
     @router.get("/{product_id}")
-    async def get_product(product_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def get_product(product_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Récupérer un produit spécifique"""
         repo = ProductRepository()
         product = repo.get_by_id_str(product_id)
@@ -315,7 +315,7 @@ if DATABASE_TYPE == "postgresql":
         return product
     
     @router.put("/{product_id}")
-    async def update_product(
+    def update_product(
         product_id: str,
         product_data: ProductUpdate,
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
@@ -344,7 +344,7 @@ if DATABASE_TYPE == "postgresql":
         return result
     
     @router.patch("/{product_id}/toggle-status")
-    async def toggle_product_status(product_id: str, current_user: dict = Depends(require_role(["admin"]))):
+    def toggle_product_status(product_id: str, current_user: dict = Depends(require_role(["admin"]))):
         """Activer/Désactiver un produit"""
         repo = ProductRepository()
         result = repo.toggle_status_by_id_str(product_id)
@@ -354,7 +354,7 @@ if DATABASE_TYPE == "postgresql":
         return {"message": f"Produit {status_text} avec succès", "is_active": result['is_active']}
     
     @router.patch("/{product_id}/min-stock")
-    async def update_product_min_stock_endpoint(
+    def update_product_min_stock_endpoint(
         product_id: str,
         min_stock: int,
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
@@ -367,7 +367,7 @@ if DATABASE_TYPE == "postgresql":
         return {"message": "Stock minimum mis à jour", "min_stock": min_stock}
     
     @router.delete("/{product_id}")
-    async def delete_product(product_id: str, current_user: dict = Depends(require_role(["admin"]))):
+    def delete_product(product_id: str, current_user: dict = Depends(require_role(["admin"]))):
         """Supprimer un produit"""
         repo = ProductRepository()
         

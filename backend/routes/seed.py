@@ -22,7 +22,7 @@ def generate_id():
     return str(uuid.uuid4())
 
 @router.post("/reset-and-seed")
-async def reset_and_seed_database(
+def reset_and_seed_database(
     confirm: str = "",
     current_user: dict = Depends(require_role(["admin"]))
 ):
@@ -214,7 +214,7 @@ async def reset_and_seed_database(
 
 
 @router.get("/status")
-async def get_seed_status(current_user: dict = Depends(require_role(["admin"]))):
+def get_seed_status(current_user: dict = Depends(require_role(["admin"]))):
     """Get current data counts in database (Admin only)"""
     try:
         counts = {}
@@ -233,7 +233,7 @@ async def get_seed_status(current_user: dict = Depends(require_role(["admin"])))
 
 
 @router.post("/migrate-split-payments")
-async def migrate_split_payments(current_user: dict = Depends(require_role(["admin"]))):
+def migrate_split_payments(current_user: dict = Depends(require_role(["admin"]))):
     """Add split payment columns to sales table if they don't exist."""
     try:
         session = db_manager.get_tenant_session(get_current_tenant())

@@ -32,6 +32,15 @@ POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
 # Mode "base unique + un schéma par pharmacie" (Supabase ou PostgreSQL local avec DATABASE_URL)
 USE_SUPABASE = bool(SUPABASE_URL)
 
+# Pool de connexions (multi-utilisateurs) : dimensionné pour le threadpool FastAPI
+POOL_OPTIONS = dict(
+    pool_pre_ping=True,
+    pool_size=int(os.environ.get("DB_POOL_SIZE", "10")),
+    max_overflow=int(os.environ.get("DB_MAX_OVERFLOW", "20")),
+    pool_timeout=30,
+    pool_recycle=1800,
+)
+
 # Base de données master pour la gestion des tenants
 MASTER_DB_NAME = "pharmaflow_master"
 
@@ -86,7 +95,7 @@ class DatabaseManager:
             main_async_url = get_database_url(MASTER_DB_NAME, async_mode=True)
             key = "master"
         
-        self._engines[key] = create_engine(main_url, pool_pre_ping=True)
+        self._engines[key] = create_engine(main_url, **POOL_OPTIONS)
         self._async_engines[key] = create_async_engine(main_async_url, pool_pre_ping=True)
         
         self._session_factories[key] = sessionmaker(
@@ -117,7 +126,7 @@ class DatabaseManager:
         
         if db_name not in self._engines:
             url = get_database_url(db_name)
-            self._engines[db_name] = create_engine(url, pool_pre_ping=True)
+            self._engines[db_name] = create_engine(url, **POOL_OPTIONS)
             self._session_factories[db_name] = sessionmaker(
                 bind=self._engines[db_name],
                 autocommit=False,

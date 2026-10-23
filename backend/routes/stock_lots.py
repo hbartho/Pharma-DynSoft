@@ -68,7 +68,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.get("", response_model=List[dict])
-    async def get_stock_lots(
+    def get_stock_lots(
         product_id: Optional[str] = None,
         include_empty: bool = False,
         current_user: dict = Depends(get_current_user)
@@ -99,7 +99,7 @@ if DATABASE_TYPE == "postgresql":
             return result
     
     @router.get("/expiring", response_model=List[dict])
-    async def get_expiring_lots(
+    def get_expiring_lots(
         days: int = 90,
         current_user: dict = Depends(get_current_user)
     ):
@@ -118,7 +118,7 @@ if DATABASE_TYPE == "postgresql":
             return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
 
     @router.put("/bulk-update", response_model=dict)
-    async def bulk_update_lots(
+    def bulk_update_lots(
         updates: List[dict],
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
     ):
@@ -163,7 +163,7 @@ if DATABASE_TYPE == "postgresql":
         }
 
     @router.get("/{lot_id}", response_model=dict)
-    async def get_stock_lot(
+    def get_stock_lot(
         lot_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -180,7 +180,7 @@ if DATABASE_TYPE == "postgresql":
             return lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None)
     
     @router.put("/{lot_id}", response_model=dict)
-    async def update_stock_lot(
+    def update_stock_lot(
         lot_id: str,
         update_data: StockLotUpdate,
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
@@ -207,7 +207,7 @@ if DATABASE_TYPE == "postgresql":
             return lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None)
     
     @router.get("/by-supply/{supply_id}", response_model=List[dict])
-    async def get_lots_by_supply(
+    def get_lots_by_supply(
         supply_id: str,
         current_user: dict = Depends(get_current_user)
     ):
@@ -223,7 +223,7 @@ if DATABASE_TYPE == "postgresql":
             return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
 
     @router.get("/product/{product_id}/lots", response_model=List[dict])
-    async def get_product_lots(
+    def get_product_lots(
         product_id: str,
         current_user: dict = Depends(get_current_user)
     ):

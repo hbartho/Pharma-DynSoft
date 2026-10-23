@@ -27,7 +27,7 @@ if DATABASE_TYPE == "postgresql":
         return db_manager.get_tenant_session(get_current_tenant())
     
     @router.get("/paginated")
-    async def get_suppliers_paginated(
+    def get_suppliers_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -84,7 +84,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("", response_model=Supplier)
-    async def create_supplier(
+    def create_supplier(
         supplier_data: SupplierCreate, 
         current_user: dict = Depends(require_role(["admin", "pharmacien"])),
         _shift_check: dict = Depends(require_open_shift)
@@ -97,7 +97,7 @@ if DATABASE_TYPE == "postgresql":
         return Supplier(**result)
     
     @router.get("", response_model=List[Supplier])
-    async def get_suppliers(
+    def get_suppliers(
         include_inactive: Optional[bool] = None,
         current_user: dict = Depends(require_role(["admin", "pharmacien", "caissier"]))
     ):
@@ -113,7 +113,7 @@ if DATABASE_TYPE == "postgresql":
         return [Supplier(**s) for s in suppliers]
     
     @router.get("/{supplier_id}", response_model=Supplier)
-    async def get_supplier(supplier_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien", "caissier"]))):
+    def get_supplier(supplier_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien", "caissier"]))):
         """Récupérer un fournisseur spécifique"""
         repo = SupplierRepository()
         supplier = repo.get_by_id_str(supplier_id)
@@ -127,7 +127,7 @@ if DATABASE_TYPE == "postgresql":
         return Supplier(**supplier)
     
     @router.put("/{supplier_id}", response_model=Supplier)
-    async def update_supplier(
+    def update_supplier(
         supplier_id: str, 
         supplier_data: SupplierUpdate, 
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
@@ -141,7 +141,7 @@ if DATABASE_TYPE == "postgresql":
         return Supplier(**result)
     
     @router.patch("/{supplier_id}/toggle-status", response_model=Supplier)
-    async def toggle_supplier_status(
+    def toggle_supplier_status(
         supplier_id: str,
         current_user: dict = Depends(require_role(["admin"]))
     ):
@@ -153,7 +153,7 @@ if DATABASE_TYPE == "postgresql":
         return Supplier(**result)
     
     @router.get("/{supplier_id}/can-delete")
-    async def check_supplier_can_delete(
+    def check_supplier_can_delete(
         supplier_id: str,
         current_user: dict = Depends(require_role(["admin", "pharmacien"]))
     ):
@@ -173,7 +173,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.delete("/{supplier_id}")
-    async def delete_supplier(
+    def delete_supplier(
         supplier_id: str, 
         current_user: dict = Depends(require_role(["admin"]))
     ):

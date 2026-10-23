@@ -98,7 +98,7 @@ def debt_to_dict(debt: SupplierDebt, session) -> dict:
 # ============== Routes ==============
 
 @router.get("")
-async def get_supplier_debts(
+def get_supplier_debts(
     status: Optional[str] = None,
     supplier_id: Optional[str] = None,
     overdue_only: bool = False,
@@ -167,7 +167,7 @@ async def get_supplier_debts(
 
 
 @router.get("/{debt_id}")
-async def get_supplier_debt(
+def get_supplier_debt(
     debt_id: str,
     current_user: dict = Depends(require_admin)
 ):
@@ -180,7 +180,7 @@ async def get_supplier_debt(
 
 
 @router.post("/{debt_id}/payment")
-async def record_payment(
+def record_payment(
     debt_id: str,
     payment: PaymentCreate,
     current_user: dict = Depends(require_admin)
@@ -236,7 +236,7 @@ async def record_payment(
 
 
 @router.post("/{debt_id}/write-off")
-async def write_off_debt(
+def write_off_debt(
     debt_id: str,
     data: WriteOffCreate,
     current_user: dict = Depends(require_admin)
@@ -281,7 +281,7 @@ async def write_off_debt(
 
 
 @router.post("/{debt_id}/credit")
-async def create_credit(
+def create_credit(
     debt_id: str,
     data: CreditCreate,
     current_user: dict = Depends(require_admin)
@@ -353,7 +353,7 @@ async def create_credit(
 
 
 @router.get("/by-supplier/{supplier_id}")
-async def get_debts_by_supplier(
+def get_debts_by_supplier(
     supplier_id: str,
     current_user: dict = Depends(require_admin)
 ):

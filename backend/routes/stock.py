@@ -21,7 +21,7 @@ if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import Product, StockMovement as StockMovementModel, StockMovementType as SMType
     from database.repositories import ProductRepository
-    from sqlalchemy import desc
+    from sqlalchemy import desc, func
     
     def get_session():
         if USE_SUPABASE:
@@ -62,7 +62,7 @@ if DATABASE_TYPE == "postgresql":
             
             return {"unit_cost": unit_cost, "total_value": total_value}
     
-    async def create_stock_movement(
+    def create_stock_movement(
         product_id: str,
         movement_type: str,
         movement_quantity: int,
@@ -76,14 +76,14 @@ if DATABASE_TYPE == "postgresql":
         with get_session() as session:
             # Récupérer le produit
             try:
-                product = session.query(Product).filter(Product.id == uuid.UUID(product_id)).first()
+                product = session.query(Product).filter(Product.id == uuid.UUID(product_id)).with_for_update().first()
             except ValueError:
                 raise HTTPException(status_code=404, detail="Produit non trouvé")
             
             if not product:
                 raise HTTPException(status_code=404, detail="Produit non trouvé")
             
-            # Calculer le nouveau stock
+            # Calculer le nouveau stock (ligne produit verrouillée)
             old_stock = product.stock or 0
             
             if movement_type.upper() in ["IN", "RETURN"]:
@@ -125,7 +125,7 @@ if DATABASE_TYPE == "postgresql":
     # ============== ROUTES ==============
     
     @router.get("/movements/paginated")
-    async def get_stock_movements_paginated(
+    def get_stock_movements_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -229,7 +229,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/losses/paginated")
-    async def get_stock_losses_paginated(
+    def get_stock_losses_paginated(
         page: int = Query(default=1, ge=1),
         limit: int = Query(default=20, ge=1, le=100),
         search: str = Query(default=""),
@@ -336,7 +336,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/losses/reasons")
-    async def get_loss_reasons(current_user: dict = Depends(get_current_user)):
+    def get_loss_reasons(current_user: dict = Depends(get_current_user)):
         """Récupérer la liste des motifs de perte possibles"""
         return [
             {"id": "expired", "label": "Produit périmé", "icon": "calendar"},
@@ -349,7 +349,7 @@ if DATABASE_TYPE == "postgresql":
         ]
     
     @router.get("/losses/pending")
-    async def get_pending_losses(current_user: dict = Depends(get_current_user)):
+    def get_pending_losses(current_user: dict = Depends(get_current_user)):
         """Récupérer les pertes en attente de validation"""
         with get_session() as session:
             # Les pertes en attente sont les mouvements LOSS avec validation_status 'pending' ou NULL
@@ -412,7 +412,7 @@ if DATABASE_TYPE == "postgresql":
             return result
     
     @router.get("/losses/history")
-    async def get_losses_history(
+    def get_losses_history(
         status: Optional[str] = None,
         reason: Optional[str] = None,
         product_id: Optional[str] = None,
@@ -495,7 +495,7 @@ if DATABASE_TYPE == "postgresql":
             ]
     
     @router.get("/losses/stats")
-    async def get_losses_stats(
+    def get_losses_stats(
         period: str = Query(default="month", description="day, week, month, year"),
         current_user: dict = Depends(get_current_user)
     ):
@@ -607,7 +607,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.post("/losses")
-    async def declare_loss(
+    def declare_loss(
         product_id: str = Query(...),
         quantity: int = Query(..., ge=1),
         reason: str = Query(...),
@@ -626,7 +626,7 @@ if DATABASE_TYPE == "postgresql":
         if notes:
             full_reason = f"{full_reason} - {notes}"
         
-        result = await create_stock_movement(
+        result = create_stock_movement(
             product_id=product_id,
             movement_type="loss",
             movement_quantity=-abs(quantity),  # Négatif pour une perte
@@ -646,7 +646,7 @@ if DATABASE_TYPE == "postgresql":
         }
     
     @router.post("/losses/{loss_id}/validate")
-    async def validate_loss(
+    def validate_loss(
         loss_id: str,
         action: str = Query(..., description="validate or reject"),
         rejection_reason: Optional[str] = Query(default=None),
@@ -663,7 +663,7 @@ if DATABASE_TYPE == "postgresql":
             try:
                 movement = session.query(StockMovementModel).filter(
                     StockMovementModel.id == uuid.UUID(loss_id)
-                ).first()
+                ).with_for_update().first()
             except ValueError:
                 raise HTTPException(status_code=404, detail="Perte non trouvée")
             
@@ -680,13 +680,10 @@ if DATABASE_TYPE == "postgresql":
             
             if action == "reject":
                 # Rejeter = Restaurer le stock et marquer comme rejeté
-                product_repo = ProductRepository()
-                product = product_repo.get_by_id_str(str(movement.product_id))
-                
-                if product:
-                    # Restaurer le stock (la perte avait soustrait du stock)
-                    new_stock = (product.get('stock', 0) or 0) + abs(movement.quantity)
-                    product_repo.update(str(movement.product_id), {'stock': new_stock})
+                # Restaurer le stock dans la même transaction (incrément SQL atomique)
+                session.query(Product).filter(Product.id == movement.product_id).update(
+                    {Product.stock: func.coalesce(Product.stock, 0) + abs(movement.quantity)}, synchronize_session=False
+                )
                 
                 # Mettre à jour le statut au lieu de supprimer
                 movement.validation_status = 'rejected'
@@ -716,7 +713,7 @@ if DATABASE_TYPE == "postgresql":
                 }
     
     @router.get("/movements", response_model=List[dict])
-    async def get_stock_movements(
+    def get_stock_movements(
         product_id: Optional[str] = None,
         movement_type: Optional[str] = None,
         limit: int = Query(default=500, le=1000),
@@ -762,26 +759,27 @@ if DATABASE_TYPE == "postgresql":
             ]
     
     @router.post("/movement", response_model=dict)
-    async def create_movement(
+    def create_movement(
         movement_data: StockMovementCreate,
         current_user: dict = Depends(require_open_shift)
     ):
         """Créer un mouvement de stock manuel"""
         employee_code = current_user.get('employee_code', 'N/A')
         
-        result = await create_stock_movement(
+        type_map = {"initial": "in", "supply": "in", "return": "return", "sale": "out", "transfer": "out", "adjustment": "adjustment"}
+        result = create_stock_movement(
             product_id=movement_data.product_id,
-            movement_type=movement_data.movement_type.value,
-            movement_quantity=movement_data.quantity,
+            movement_type=type_map.get(movement_data.movement_type.value, "adjustment"),
+            movement_quantity=movement_data.movement_quantity,
             agent_code=employee_code,
-            reference_type="manual",
-            reason=movement_data.reason
+            reference_type=movement_data.reference_type or "manual",
+            reason=movement_data.notes
         )
         
         return result
     
     @router.get("/alerts", response_model=List[dict])
-    async def get_stock_alerts(
+    def get_stock_alerts(
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer les alertes de stock (produits sous le seuil)"""
@@ -806,7 +804,7 @@ if DATABASE_TYPE == "postgresql":
             return alerts
     
     @router.get("/summary", response_model=dict)
-    async def get_stock_summary(
+    def get_stock_summary(
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer un résumé du stock"""
@@ -836,7 +834,7 @@ if DATABASE_TYPE == "postgresql":
             }
     
     @router.get("/valuation", response_model=List[dict])
-    async def get_stock_valuation(
+    def get_stock_valuation(
         method: str = Query(default="weighted_average", description="Méthode de valorisation"),
         current_user: dict = Depends(get_current_user)
     ):

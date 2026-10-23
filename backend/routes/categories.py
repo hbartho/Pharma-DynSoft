@@ -17,7 +17,7 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import CategoryRepository
     
     @router.post("", response_model=Category)
-    async def create_category(category_data: CategoryCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def create_category(category_data: CategoryCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Create a new category"""
         repo = CategoryRepository()
         data = category_data.model_dump()
@@ -25,14 +25,14 @@ if DATABASE_TYPE == "postgresql":
         return Category(**result)
     
     @router.get("", response_model=List[Category])
-    async def get_categories(current_user: dict = Depends(get_current_user)):
+    def get_categories(current_user: dict = Depends(get_current_user)):
         """Get all categories"""
         repo = CategoryRepository()
         categories = repo.get_all()
         return [Category(**c) for c in categories]
     
     @router.get("/{category_id}", response_model=Category)
-    async def get_category(category_id: str, current_user: dict = Depends(get_current_user)):
+    def get_category(category_id: str, current_user: dict = Depends(get_current_user)):
         """Get a specific category"""
         repo = CategoryRepository()
         category = repo.get_by_id_str(category_id)
@@ -41,7 +41,7 @@ if DATABASE_TYPE == "postgresql":
         return Category(**category)
     
     @router.put("/{category_id}", response_model=Category)
-    async def update_category(category_id: str, category_data: CategoryUpdate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def update_category(category_id: str, category_data: CategoryUpdate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Update a category"""
         repo = CategoryRepository()
         update_data = {k: v for k, v in category_data.model_dump().items() if v is not None}
@@ -51,7 +51,7 @@ if DATABASE_TYPE == "postgresql":
         return Category(**result)
     
     @router.delete("/{category_id}")
-    async def delete_category(category_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
+    def delete_category(category_id: str, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Delete a category"""
         from database.repositories import ProductRepository
         product_repo = ProductRepository()
