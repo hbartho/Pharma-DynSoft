@@ -464,6 +464,10 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Mouvement de stock par vente (✅ COMPLÉTÉE, testée preview)
+- ✅ Chaque vente crée, dans la même transaction, un StockMovement type OUT par produit (quantité négative, stock_after, reference_type="sale", reference_id=sale.id, reason "VNT-xxx - client", validation_status validated) → visible dans Stocks > Mouvements comme « Sortie / Vente: VNT-... »
+- ℹ️ Les validations d'approvisionnement ne créent toujours pas de mouvement IN (backlog)
+
 ### 17 Juin 2026 - Accès concurrents multi-utilisateurs (transactions / verrous) (✅ COMPLÉTÉE, testée)
 - ✅ 206 handlers `async def` → `def` (threadpool FastAPI) : les requêtes BD synchrones ne bloquent plus l'event loop (8 rapports lourds en parallèle : 1,2 s). Script `scripts/audit_async_handlers.py`. `get_current_user`/`require_open_shift` : DB via run_in_threadpool.
 - ✅ POST /sales = UNE transaction : `SELECT FOR UPDATE` clients + produits (ordre stable anti-deadlock, quantités agrégées), stock insuffisant → 409, rollback total si erreur, création de la **dette client** (table debts — n'était jamais créée avant !), contrôle de crédit sur la somme réelle des dettes, incrément `promo_codes.current_uses`, historique rabais et `shift_id` dans la même transaction

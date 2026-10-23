@@ -27,7 +27,7 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import ProductRepository, CustomerRepository, SettingsRepository, UserRepository
     from database.config import db_manager
     from database.tenant_context import get_current_tenant
-    from database.models_tenant import DiscountHistory, DiscountSource, Product, Customer, Debt, DebtStatus, PromoCode
+    from database.models_tenant import DiscountHistory, DiscountSource, Product, Customer, Debt, DebtStatus, PromoCode, StockMovement, StockMovementType
     from sqlalchemy import func
     
     def record_discount_history(session, sale_id, sale_number, sale_data, customer, employee_code, user_name):
@@ -287,6 +287,21 @@ if DATABASE_TYPE == "postgresql":
             sale = sale_repo.build(sale_dict, enriched_items)
             session.add(sale)
             session.flush()
+
+            # --- Trace de sortie de stock par produit (historique des mouvements) ---
+            for pid in product_ids:
+                session.add(StockMovement(
+                    id=uuid.uuid4(),
+                    product_id=pid,
+                    movement_type=StockMovementType.OUT,
+                    quantity=-needed[pid],
+                    stock_after=products[pid].stock or 0,
+                    reference_type="sale",
+                    reference_id=sale.id,
+                    agent_code=employee_code,
+                    reason=sale_number + (f" - {customer_name}" if customer_name else ""),
+                    validation_status="validated",
+                ))
 
             # --- Dette client liée à la vente ---
             if has_debt and debt_amount > 0:
