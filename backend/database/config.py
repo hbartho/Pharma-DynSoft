@@ -240,6 +240,11 @@ class DatabaseManager:
         if schema == "public":
             raise ValueError("Slug réservé")
         self.create_schema_tables(schema)
+        try:
+            from scripts.migrate_db import migrate_schema
+            migrate_schema("tenant", schema)
+        except Exception as e:
+            logger.warning(f"Stamp migrations {schema} : {e}")
         logger.info(f"Schéma tenant créé: {schema}")
         return schema
 

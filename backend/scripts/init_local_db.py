@@ -27,7 +27,6 @@ def wait_for_db(engine, retries: int = 30):
 
 def main():
     from database.config import db_manager, USE_SUPABASE
-    from database.base import Base
     import database.models_master  # noqa: F401
     import database.models_tenant  # noqa: F401
     from database.models_master import UserDirectory
@@ -38,29 +37,16 @@ def main():
         raise SystemExit("DATABASE_URL manquant : le mode local requiert une URL PostgreSQL unique")
 
     from database.tenant_context import FORCED_SCHEMA
-    from sqlalchemy import text
 
     engine = db_manager._engines["supabase"]
     wait_for_db(engine)
-    Base.metadata.create_all(engine, checkfirst=True)
-    print("Tables du schéma public OK")
-
-    # Nouvelles tables éventuelles dans les schémas des pharmacies existantes
-    from database.models_master import Tenant
-    with db_manager.get_master_session() as session:
-        schemas = [t.database_name for t in session.query(Tenant).all() if t.database_name and t.database_name != "public"]
-    for schema in schemas:
-        db_manager.create_schema_tables(schema)
-    if schemas:
-        print(f"Schémas pharmacies vérifiés : {', '.join(schemas)}")
+    from scripts.migrate_db import migrate_all, ensure_tenant_schema
+    for k, v in migrate_all().items():
+        print(f"  {k:28} {v}")
+    print("Tables et migrations OK")
 
     if FORCED_SCHEMA and FORCED_SCHEMA != "public":
-        with engine.connect() as conn:
-            conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{FORCED_SCHEMA}"'))
-            conn.commit()
-        tenant_tables = [t for t in Base.metadata.sorted_tables if t.schema is None]
-        Base.metadata.create_all(engine.execution_options(schema_translate_map={None: FORCED_SCHEMA}),
-                                 tables=tenant_tables, checkfirst=True)
+        ensure_tenant_schema(FORCED_SCHEMA)
         print(f"Serveur dédié : schéma {FORCED_SCHEMA} OK")
 
     with db_manager.get_master_session() as session:

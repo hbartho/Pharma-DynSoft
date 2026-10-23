@@ -4,7 +4,9 @@ A modular FastAPI application for pharmacy management.
 PostgreSQL-only backend (MongoDB removed)
 """
 from fastapi import FastAPI
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.cors import CORSMiddleware
+import os
 import logging
 
 from config import CORS_ORIGINS
@@ -115,6 +117,12 @@ app.include_router(cloud_sync_router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
+    if os.environ.get("AUTO_MIGRATE", "true").lower() != "false":
+        try:
+            from scripts.migrate_db import migrate_all
+            await run_in_threadpool(migrate_all)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Migrations BD au démarrage : {e}")
     start_cloud_sync_scheduler()
 
 @app.on_event("shutdown")

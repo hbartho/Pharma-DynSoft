@@ -464,6 +464,13 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - Migrations de schéma Alembic multi-schémas (✅ COMPLÉTÉE, testée cycle complet)
+- `backend/migrations/{master,tenant}/` (env.py + versions/0001_baseline.py vide) ; `scripts/migrate_db.py` : `migrate_all()` = create_all public → alembic master (public, table alembic_version_master) → alembic tenant sur public et sur CHAQUE t_<slug> (table alembic_version par schéma ; schéma sans version = create_all + stamp head ; sinon upgrade head). DDL tenant exécuté avec `SET LOCAL search_path TO "<schema>"` (schema_translate_map ne s'applique pas au DDL Alembic)
+- Appelé : au startup FastAPI (AUTO_MIGRATE≠false, threadpool), par init_local_db (Docker), par create_tenant_schema (stamp head) ; `ensure_tenant_schema()` pour cloud sync
+- Dev : `python scripts/make_migration.py tenant|master "msg" [--ref=t_slug]` (autogénération tables/colonnes ; index/contraintes/types ignorés — à écrire à la main). Référence tenant = 1er schéma t_* (public historique a du drift manuel : index idx_*, varchar vs enum discount_*, FKs)
+- Test local : stamp baseline → colonne test_note autogénérée → appliquée à public + 2 schémas → idempotent → nouveau schéma créé déjà à head ; tout remis à zéro ensuite. Supabase : public + t_noormin stampés 0001_baseline
+- ⚠️ Règle : ne jamais supprimer un fichier de version déjà appliqué (erreur « Can't locate revision »)
+
 ### 17 Juin 2026 - Import d'approvisionnement CSV/Excel (✅ COMPLÉTÉE, testée E2E preview)
 - Choix utilisateur : produit reconnu par Référence → Code-barres → Nom (insensible casse/accents) ; produit inconnu = ligne signalée et ignorée
 - ✅ `routes/supplies_import.py` : GET /supplies/import/template?format=xlsx|csv (modèle + feuille Aide), POST /supplies/import/preview (multipart ; CSV ; , tab | autodétecté, utf-8/cp1252 ; xlsx via openpyxl ; alias de colonnes FR/EN ; dates AAAA-MM-JJ, JJ/MM/AAAA… ; validations qté/prix/péremption) → lignes ok/error + résumé. Router inclus AVANT supplies_router (évite /supplies/{id})

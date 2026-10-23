@@ -157,6 +157,11 @@ Les données sont conservées dans le volume Docker `dynpharma_pgdata` : arrête
 reconstruire les conteneurs ne les efface pas. **Ne jamais** exécuter `docker compose down -v`
 (le `-v` supprime les données).
 
+**Mise à jour du code sans perte de données** : `backup` → remplacer le code → `install`.
+Au démarrage, le backend applique automatiquement les migrations de base (Alembic) à
+`public` **et à chaque schéma de pharmacie** : nouvelles tables, nouvelles colonnes, etc.
+Le journal affiche `Migrations BD : {... 'upgraded' ...}`. Aucune opération manuelle.
+
 ## 12. Dépannage
 
 | Symptôme | Cause probable / solution |
