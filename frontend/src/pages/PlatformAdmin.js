@@ -13,8 +13,9 @@ import {
 } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy,
+  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy, RotateCcw,
 } from 'lucide-react';
+import { PharmacyResetDialog } from '../components/PharmacyResetDialog';
 
 const fmtGNF = (n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`;
 
@@ -42,6 +43,7 @@ export default function PlatformAdmin() {
   const [syncTarget, setSyncTarget] = useState(null);
   const [syncToken, setSyncToken] = useState('');
   const [syncBusy, setSyncBusy] = useState(false);
+  const [dataResetTarget, setDataResetTarget] = useState(null);
 
   const generateSyncToken = async () => {
     setSyncBusy(true);
@@ -313,6 +315,9 @@ export default function PlatformAdmin() {
                     <Button variant="outline" size="sm" onClick={() => { setResetTarget(p); setResetForm({ email: '', new_password: '' }); }} data-testid={`reset-password-${p.slug}`}>
                       <KeyRound className="w-4 h-4" strokeWidth={1.5} />
                     </Button>
+                    <Button variant="outline" size="sm" className="text-amber-700 hover:text-amber-800 hover:bg-amber-50" onClick={() => setDataResetTarget(p)} title="Réinitialiser les données (ventes, stock, appros...)" data-testid={`reset-data-${p.slug}`}>
+                      <RotateCcw className="w-4 h-4" strokeWidth={1.5} />
+                    </Button>
                     {p.slug !== 'pharmacie_centrale' && (
                       <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => { setDeleteTarget(p); setDeleteConfirm(''); }} data-testid={`delete-pharmacy-${p.slug}`}>
                         <Trash2 className="w-4 h-4" strokeWidth={1.5} />
@@ -465,6 +470,9 @@ CLOUD_SYNC_HOUR=2`}</div>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog réinitialisation des données */}
+      <PharmacyResetDialog pharmacy={dataResetTarget} onClose={() => setDataResetTarget(null)} onDone={loadStats} />
 
       {/* Dialog suppression */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

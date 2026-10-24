@@ -794,3 +794,9 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - Bug corrigé : correction d'appro ne propageait pas un changement de prix d'une ligne existante au produit (comparaison après mutation). Vérifié 900→950→900.
 - `scripts/reset_tenant_data.py --schema <public|t_slug> --confirm RESET` : purge ventes/appros/lots/mouvements/dettes/retours/inventaires/shifts/plannings/historiques, stock produits → 0, conserve users/produits/catégories/unités/fournisseurs/clients/settings/promo/règles. Sauvegarde pg_dump ou, à défaut (pg_dump 15 vs serveur 17), copie des tables dans un schéma `bkp_<schema>_<stamp>` en base. Exécuté sur `public` (Ma Pharmacie) à la demande de l'utilisateur → sauvegarde `bkp_public_20261024_173530`.
 - Gestion des prix : tous les lots d'un produit affichent/portent le prix produit en vigueur (`selling_price` = product.price, `lot_selling_price` = valeur propre) ; modifier un lot, valider ou corriger un appro aligne tous les lots du produit.
+
+
+## 2026-10-24 — Réinitialisation des données depuis /platform (super-admin)
+- `services/tenant_reset.py` (reset_tenant_data, list_backups, drop_backup) partagé par le script CLI et l'API.
+- Endpoints : `POST /api/platform/pharmacies/{slug}/reset-data?confirm=<slug>` (sauvegarde auto en schéma `bkp_<schema>_<stamp>`, transaction unique), `GET .../backups`, `DELETE .../backups/{name}`.
+- UI : bouton ambre ↻ par pharmacie → `PharmacyResetDialog` (confirmation par slug, résumé, liste des sauvegardes supprimables). Testé API (403 non super-admin, 400 confirmation, reset + backups + drop) sur un tenant temporaire supprimé ensuite, UI vérifiée.

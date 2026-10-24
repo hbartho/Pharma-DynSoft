@@ -444,3 +444,57 @@ def reset_pharmacy_user_password(slug: str, payload: AdminPasswordReset, current
     
     repo.update(uuid.UUID(user["id"]), {"password": hash_password(payload.new_password)})
     return {"message": f"Mot de passe de {payload.email} réinitialisé"}
+
+
+
+def _tenant_or_404(slug: str) -> Tenant:
+    with db_manager.get_master_session() as session:
+        tenant = session.query(Tenant).filter(Tenant.slug == slug).first()
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Pharmacie non trouvée")
+        session.expunge(tenant)
+        return tenant
+
+
+@router.post("/pharmacies/{slug}/reset-data")
+def reset_pharmacy_data(
+    slug: str,
+    confirm: str = Query(..., description="Retaper le slug pour confirmer"),
+    backup: bool = Query(True),
+    current_user: dict = Depends(require_super_admin),
+):
+    """Remet une pharmacie à zéro (ventes, appros, stock, dettes...) en conservant utilisateurs, produits,
+    fournisseurs, clients, paramètres et codes promo. Sauvegarde automatique en base avant purge."""
+    from services.tenant_reset import reset_tenant_data
+    if confirm != slug:
+        raise HTTPException(status_code=400, detail="Confirmation invalide : retapez exactement le slug de la pharmacie")
+    _tenant_or_404(slug)
+    try:
+        result = reset_tenant_data(tenant_schema_name(slug), backup=backup)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Réinitialisation échouée (aucune donnée modifiée) : {exc}")
+    invalidate_sync_info(slug)
+    result["message"] = f"Pharmacie '{slug}' réinitialisée"
+    result["by"] = current_user.get("email")
+    result["at"] = datetime.now(timezone.utc).isoformat()
+    return result
+
+
+@router.get("/pharmacies/{slug}/backups")
+def list_pharmacy_backups(slug: str, current_user: dict = Depends(require_super_admin)):
+    from services.tenant_reset import list_backups
+    _tenant_or_404(slug)
+    return list_backups(tenant_schema_name(slug))
+
+
+@router.delete("/pharmacies/{slug}/backups/{name}")
+def delete_pharmacy_backup(slug: str, name: str, current_user: dict = Depends(require_super_admin)):
+    from services.tenant_reset import drop_backup, BACKUP_PREFIX
+    _tenant_or_404(slug)
+    if not name.startswith(f"{BACKUP_PREFIX}{tenant_schema_name(slug)}_"):
+        raise HTTPException(status_code=400, detail="Cette sauvegarde n'appartient pas à cette pharmacie")
+    try:
+        drop_backup(name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"message": f"Sauvegarde {name} supprimée"}
