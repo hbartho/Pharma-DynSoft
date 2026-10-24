@@ -310,19 +310,47 @@ export const setLastSyncTime = async (storeName = 'global', time = null) => {
 // User data
 // ============================================
 
+// Session par onglet (sessionStorage) ; IndexedDB garde la dernière connexion pour les nouveaux onglets / relance PWA
+const TAB_SESSION_KEY = 'dyn_tab_session';
+
+const readTabSession = () => {
+  try {
+    const raw = sessionStorage.getItem(TAB_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+
+const writeTabSession = (data) => {
+  try {
+    if (data) sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(data));
+    else sessionStorage.removeItem(TAB_SESSION_KEY);
+  } catch { /* stockage indisponible */ }
+};
+
 export const saveUserData = async (user, token) => {
+  const data = { key: 'currentUser', user, token, savedAt: new Date().toISOString() };
+  writeTabSession(data);
   const db = await getDB();
-  await db.put('user', { key: 'currentUser', user, token, savedAt: new Date().toISOString() });
+  await db.put('user', data);
 };
 
 export const getUserData = async () => {
+  const tabSession = readTabSession();
+  if (tabSession) return tabSession;
   const db = await getDB();
-  return await db.get('user', 'currentUser');
+  const stored = await db.get('user', 'currentUser');
+  if (stored) writeTabSession(stored);
+  return stored || null;
 };
 
 export const clearUserData = async () => {
+  const tabSession = readTabSession();
+  writeTabSession(null);
   const db = await getDB();
-  await db.delete('user', 'currentUser');
+  const stored = await db.get('user', 'currentUser');
+  if (stored && (!tabSession || stored.token === tabSession.token)) {
+    await db.delete('user', 'currentUser');
+  }
 };
 
 // ============================================

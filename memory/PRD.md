@@ -756,3 +756,9 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - Dialogue d'import CSV/Excel : champs marqués *, bouton « Créer » désactivé tant qu'ils sont vides, message d'aide.
 - Backend `POST /api/supplies` refuse (400) toute création sans fournisseur ou sans N° facture (import et saisie manuelle).
 - Testé : API 400 sur les deux cas, UI bouton activé seulement avec les deux renseignés.
+
+
+## 2026-10-24 — Session par onglet
+- Cause du « dernier connecté gagne partout » : une seule session par navigateur (IndexedDB). Le backend (JWT) n'a jamais invalidé les autres sessions.
+- Fix `services/indexedDB.js` : la session est épinglée dans `sessionStorage` par onglet ; IndexedDB garde la dernière connexion pour les nouveaux onglets / relance PWA. Déconnexion ne supprime la session IndexedDB que si c'est la même.
+- Testé : super-admin onglet 1 + admin onglet 2, chacun conservé après reload.
