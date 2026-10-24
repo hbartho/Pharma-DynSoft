@@ -79,6 +79,8 @@ export const useDeclareLoss = () => {
       queryClient.invalidateQueries({ queryKey: ['losses-stats'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stockLosses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -101,6 +103,8 @@ export const useValidateLoss = () => {
       queryClient.invalidateQueries({ queryKey: ['losses-stats'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stockLosses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

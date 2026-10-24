@@ -15,6 +15,7 @@ router = APIRouter(prefix="/prices", tags=["Prices"])
 
 DATABASE_TYPE = os.environ.get("DB_TYPE", "postgresql")
 from database.tenant_context import get_current_tenant
+from services.pricing import estimate_purchase_price
 
 
 if DATABASE_TYPE == "postgresql":
@@ -166,7 +167,7 @@ if DATABASE_TYPE == "postgresql":
             for p in products:
                 stock = p.stock or 0
                 price = p.price or 0
-                purchase_price = p.purchase_price or (price * 0.7)
+                purchase_price = estimate_purchase_price(price, p.purchase_price)
                 
                 total_stock_value += stock * price
                 

@@ -287,7 +287,13 @@ export const useCreateSale = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.salesHistory });
       queryClient.invalidateQueries({ queryKey: queryKeys.products }); // Stock mis à jour
       queryClient.invalidateQueries({ queryKey: queryKeys.productAlerts });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockMovements });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockLots });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+      queryClient.invalidateQueries({ queryKey: queryKeys.debts });
+      queryClient.invalidateQueries({ queryKey: ['customers-debt-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['debt-dashboard'] });
       
       toast.success('Vente enregistrée avec succès', {
         description: `N° ${newSale.sale_number}`,

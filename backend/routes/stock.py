@@ -15,6 +15,7 @@ router = APIRouter(prefix="/stock", tags=["Stock"])
 
 DATABASE_TYPE = os.environ.get("DB_TYPE", "postgresql")
 from database.tenant_context import get_current_tenant
+from services.pricing import estimate_purchase_price
 
 
 if DATABASE_TYPE == "postgresql":
@@ -52,7 +53,7 @@ if DATABASE_TYPE == "postgresql":
                 return {"unit_cost": 0, "total_value": 0}
             
             current_stock = product.stock or 0
-            purchase_price = product.purchase_price or product.price * 0.7 if product.price else 0
+            purchase_price = estimate_purchase_price(product.price, product.purchase_price)
             
             if current_stock <= 0:
                 return {"unit_cost": 0, "total_value": 0}
@@ -390,7 +391,7 @@ if DATABASE_TYPE == "postgresql":
             result = []
             for m in losses:
                 product = products_data.get(str(m.product_id), {})
-                unit_price = product.get('purchase_price', 0) or (product.get('price', 0) * 0.7 if product.get('price') else 0)
+                unit_price = estimate_purchase_price(product.get('price'), product.get('purchase_price'))
                 estimated_value = abs(m.quantity) * unit_price
                 
                 reason_code, reason_label = get_reason_info(m.reason)
@@ -563,7 +564,7 @@ if DATABASE_TYPE == "postgresql":
             by_reason = {}
             for m in losses:
                 product = products_data.get(str(m.product_id), {})
-                unit_price = product.get('purchase_price', 0) or product.get('price', 0) * 0.7 if product.get('price') else 0
+                unit_price = estimate_purchase_price(product.get('price'), product.get('purchase_price'))
                 loss_value = abs(m.quantity) * unit_price
                 total_value += loss_value
                 
@@ -846,7 +847,7 @@ if DATABASE_TYPE == "postgresql":
             for p in products:
                 stock = p.stock or 0
                 if stock > 0:
-                    purchase_price = p.purchase_price or (p.price * 0.7 if p.price else 0)
+                    purchase_price = estimate_purchase_price(p.price, p.purchase_price)
                     valuations.append({
                         "product_id": str(p.id),
                         "product_name": p.name,

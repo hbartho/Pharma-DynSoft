@@ -161,7 +161,7 @@ const Products = () => {
     name: '',
     description: '',
     color: '#3B82F6',
-    markup_coefficient: '1.0',
+    markup_coefficient: '1.4',
     min_stock: '',
   });
   const [unitFormData, setUnitFormData] = useState({
@@ -207,7 +207,7 @@ const Products = () => {
   const getSelectedCategoryCoefficient = () => {
     if (!formData.category_id) return null;
     const category = categories.find(c => c.id === formData.category_id);
-    return category?.markup_coefficient || 1.0;
+    return category?.markup_coefficient || 1.4;
   };
 
   // Générer automatiquement la référence produit
@@ -289,7 +289,7 @@ const Products = () => {
     
     const categoryData = {
       ...categoryFormData,
-      markup_coefficient: parseFloat(categoryFormData.markup_coefficient) || 1.0,
+      markup_coefficient: parseFloat(categoryFormData.markup_coefficient) || 1.4,
       min_stock: categoryFormData.min_stock !== '' ? parseInt(categoryFormData.min_stock) : null,
     };
     
@@ -418,7 +418,7 @@ const Products = () => {
       name: category.name,
       description: category.description || '',
       color: category.color || '#3B82F6',
-      markup_coefficient: (category.markup_coefficient || 1.0).toString(),
+      markup_coefficient: (category.markup_coefficient || 1.4).toString(),
       min_stock: category.min_stock !== null && category.min_stock !== undefined ? category.min_stock.toString() : '',
     });
   };
@@ -451,7 +451,7 @@ const Products = () => {
       name: '',
       description: '',
       color: '#3B82F6',
-      markup_coefficient: '1.0',
+      markup_coefficient: '1.4',
       min_stock: '',
     });
   };
@@ -730,7 +730,7 @@ const Products = () => {
                               <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                                 <span className="flex items-center gap-1">
                                   <Calculator className="w-3 h-3" />
-                                  Coef: ×{cat.markup_coefficient || 1.0}
+                                  Coef: ×{cat.markup_coefficient || 1.4}
                                 </span>
                                 {cat.min_stock !== null && cat.min_stock !== undefined && (
                                   <span className="flex items-center gap-1 text-amber-600">
@@ -818,7 +818,7 @@ const Products = () => {
                         className="mt-1"
                       />
                       <p className="text-xs text-slate-500 mt-1">
-                        Prix public = Prix cession × {categoryFormData.markup_coefficient || '1.0'}
+                        Prix public = Prix cession × {categoryFormData.markup_coefficient || '1.4'}
                       </p>
                     </div>
                   </div>

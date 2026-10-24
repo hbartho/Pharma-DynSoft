@@ -134,6 +134,10 @@ export const useValidateSupply = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.products });
       queryClient.invalidateQueries({ queryKey: queryKeys.productAlerts });
       queryClient.invalidateQueries({ queryKey: queryKeys.stockMovements });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockLots });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: queryKeys.supplierDebts });
+      queryClient.invalidateQueries({ queryKey: ['priceHistory'] });
       toast.success('Approvisionnement validé - Stock mis à jour');
     },
     onError: (error) => {

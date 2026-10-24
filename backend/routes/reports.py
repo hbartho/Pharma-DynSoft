@@ -10,6 +10,7 @@ from services.tz_service import get_pharmacy_tz, local_day_bounds, parse_local_d
 
 DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
 from database.tenant_context import get_current_tenant
+from services.pricing import estimate_purchase_price
 
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -61,7 +62,7 @@ if DATABASE_TYPE == "postgresql":
             ).count()
             
             # Valeur du stock (estimation simple)
-            total_stock_value = sum((p.stock or 0) * (p.purchase_price or p.price * 0.7 or 0) for p in products)
+            total_stock_value = sum((p.stock or 0) * estimate_purchase_price(p.price, p.purchase_price) for p in products)
             
             # Méthode de valorisation
             setting = session.query(Setting).filter(Setting.key == 'stock_valuation_method').first()

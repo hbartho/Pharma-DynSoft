@@ -95,7 +95,10 @@ export const queryKeys = {
   
   // Stock
   stockValuation: ['stock', 'valuation'],
-  stockMovements: ['stock', 'movements'],
+  stockMovements: ['stock-movements'],
+  stockLots: ['stock-lots'],
+  debts: ['debts'],
+  supplierDebts: ['supplier-debts'],
 };
 
 // Helper pour invalider plusieurs queries

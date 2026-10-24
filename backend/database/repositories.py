@@ -245,7 +245,7 @@ class CategoryRepository(BaseRepository):
                 name=data['name'],
                 description=data.get('description'),
                 color=data.get('color', '#3B82F6'),
-                markup_coefficient=float(data.get('markup_coefficient', 1.0)),
+                markup_coefficient=float(data.get('markup_coefficient') or 1.4),
                 min_stock=data.get('min_stock'),
             )
             session.add(category)

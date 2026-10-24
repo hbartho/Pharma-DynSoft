@@ -150,6 +150,10 @@ export const useCreateReturn = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.salesHistory });
       queryClient.invalidateQueries({ queryKey: queryKeys.products });
       queryClient.invalidateQueries({ queryKey: queryKeys.productAlerts });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockMovements });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockLots });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: ['operationsHistory'] });
       toast.success('Retour effectué avec succès');
     },
     onError: (error) => {

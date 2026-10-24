@@ -130,7 +130,7 @@ class Category(Base, UUIDMixin, TimestampMixin):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     color = Column(String(7), default="#3B82F6")  # Hex color
-    markup_coefficient = Column(Float, default=1.0, nullable=False)
+    markup_coefficient = Column(Float, default=1.4, nullable=False)
     min_stock = Column(Integer, nullable=True)  # Stock minimum par défaut pour cette catégorie
     
     # Relations

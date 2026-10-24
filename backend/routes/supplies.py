@@ -22,6 +22,7 @@ if DATABASE_TYPE == "postgresql":
     from database.models_tenant import Supply as SupplyModel, SupplyItem as SupplyItemModel, Product, Category, Supplier
     ProductModel = Product
     from services.price_history import record_price_change
+    from services.pricing import default_selling_price
     from database.repositories import ProductRepository, CategoryRepository, SupplierRepository
     from sqlalchemy import desc, or_, func
     
@@ -158,6 +159,7 @@ if DATABASE_TYPE == "postgresql":
         """Créer un nouvel approvisionnement"""
         employee_code = current_user.get("employee_code", "N/A")
         product_repo = ProductRepository()
+        category_repo = CategoryRepository()
         
         with get_session() as session:
             if not supply_data.supplier_id:
@@ -215,12 +217,16 @@ if DATABASE_TYPE == "postgresql":
                 elif item_data.tax_rate is not None:
                     tax_rate_value = float(item_data.tax_rate)
                 
+                selling = item_data.selling_price or item_data.prix_public_modifie
+                if not selling or selling <= 0:
+                    cat = category_repo.get_by_id_str(product.get("category_id")) if product.get("category_id") else None
+                    selling = default_selling_price(item_data.unit_price, product.get("price"), (cat or {}).get("markup_coefficient"))
                 items_data.append({
                     "product_id": item_data.product_id,
                     "product_name": product.get("name"),
                     "quantity": item_data.quantity,
                     "unit_price": item_data.unit_price,
-                    "selling_price": item_data.selling_price or item_data.prix_public_modifie or item_data.unit_price * 1.3,
+                    "selling_price": selling,
                     "lot_number": item_data.lot_number,
                     "expiration_date": item_data.date_peremption or item_data.expiration_date,
                     "shelf_location": item_data.shelf_location or item_data.rayon,

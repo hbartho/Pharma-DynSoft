@@ -26,7 +26,7 @@ const calculateOfflineDashboardStats = async () => {
   
   const todayRevenue = todaySales.reduce((sum, s) => sum + (s.total || 0), 0);
   const lowStockCount = products.filter(p => (p.stock || 0) <= (p.min_stock || 10)).length;
-  const totalStockValue = products.reduce((sum, p) => sum + ((p.stock || 0) * (p.purchase_price || p.price * 0.7 || 0)), 0);
+  const totalStockValue = products.reduce((sum, p) => sum + ((p.stock || 0) * (p.purchase_price || (p.price ? p.price / 1.4 : 0))), 0);
   
   return {
     today_sales_count: todaySales.length,

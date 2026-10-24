@@ -121,7 +121,7 @@ const Supplies = () => {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const { data: allSuppliers = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useSuppliers();
-  const { data: allProducts = [], isLoading: productsLoading, refetch: refetchProducts } = useProducts();
+  const { data: allProducts = [], isLoading: productsLoading } = useProducts();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const { data: units = [], isLoading: unitsLoading } = useUnits();
   const { data: appSettings = { currency: 'GNF' } } = useSettingsQuery();
@@ -280,7 +280,7 @@ const Supplies = () => {
     if (!product) return;
     
     const category = categories.find(c => c.id === product?.category_id);
-    const coefficient = category?.markup_coefficient || 1.0;
+    const coefficient = category?.markup_coefficient || 1.4;
     const purchasePrice = parseFloat(itemForm.unit_price);  // Prix Cession
     const tvaRate = parseFloat(itemForm.tva_rate) || 0;
     const quantity = parseInt(itemForm.quantity);
@@ -297,23 +297,8 @@ const Supplies = () => {
     // Le prix de vente final = Prix Public Modifié (si fourni) OU Prix Public Base
     const sellingPrice = prixPublicModifie !== null ? prixPublicModifie : prixPublicBase;
     
-    // Mettre à jour le prix de base du produit en arrière-plan (silencieusement)
-    // Le prix de vente (price) du produit = Prix Public Base calculé
-    api.put(`/products/${product.id}`, {
-      price: prixPublicBase,  // Prix public base = Prix Cession × Coefficient
-      purchase_price: purchasePrice  // Mettre à jour aussi le prix d'achat
-    }).then(() => {
-      // Mettre à jour selectedProductInfo pour refléter le nouveau prix
-      setSelectedProductInfo(prev => prev ? {
-        ...prev,
-        selling_price: prixPublicBase
-      } : null);
-      // Rafraîchir la liste des produits
-      refetchProducts();
-    }).catch((err) => {
-      // Silencieux - ne pas bloquer l'ajout de l'item si la mise à jour du produit échoue
-      console.warn('Mise à jour du prix produit échouée:', err);
-    });
+    // Le prix du produit (public + cession) est mis à jour uniquement à la validation de l'approvisionnement
+    setSelectedProductInfo(prev => prev ? { ...prev, selling_price: prixPublicBase } : null);
     
     // Prix TTC = Prix de vente × (1 + TVA/100)
     const prixTTC = tvaRate > 0 
@@ -414,12 +399,12 @@ const Supplies = () => {
     setProductSearch(item.product_name);
     
     // Récupérer le coefficient depuis le produit/catégorie si non présent dans l'item
-    let coefficient = item.markup_coefficient || 1.0;
+    let coefficient = item.markup_coefficient || 1.4;
     if (!item.markup_coefficient) {
       const product = products.find(p => p.id === item.product_id);
       if (product) {
         const category = categories.find(c => c.id === product.category_id);
-        coefficient = category?.markup_coefficient || 1.0;
+        coefficient = category?.markup_coefficient || 1.4;
       }
     }
     
@@ -437,7 +422,7 @@ const Supplies = () => {
     if (product) {
       // Récupérer les infos de la catégorie pour le coefficient
       const category = categories.find(c => c.id === product.category_id);
-      const coefficient = category?.markup_coefficient || 1.0;
+      const coefficient = category?.markup_coefficient || 1.4;
       const purchasePrice = product.purchase_price || 0;
       const sellingPrice = Math.round(purchasePrice * coefficient);
       
@@ -466,7 +451,7 @@ const Supplies = () => {
     
     // Si on a un produit sélectionné et un prix de cession valide, recalculer le prix public modifié
     if (selectedProductInfo && priceValue !== '' && !isNaN(parseFloat(priceValue))) {
-      const coefficient = selectedProductInfo.markup_coefficient || 1.0;
+      const coefficient = selectedProductInfo.markup_coefficient || 1.4;
       const newPrixPublic = Math.round(parseFloat(priceValue) * coefficient);
       
       setItemForm({
@@ -485,7 +470,7 @@ const Supplies = () => {
   // Calcul du prix public BASE (pour affichage info) = Prix Cession × Coefficient
   const calculatedPrixPublicBase = useMemo(() => {
     if (!itemForm.unit_price || !selectedProductInfo) return 0;
-    const coefficient = selectedProductInfo.markup_coefficient || 1.0;
+    const coefficient = selectedProductInfo.markup_coefficient || 1.4;
     return Math.round(parseFloat(itemForm.unit_price) * coefficient);
   }, [itemForm.unit_price, selectedProductInfo]);
 

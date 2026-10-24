@@ -150,7 +150,7 @@ if DATABASE_TYPE == "postgresql":
                 if product['category_id'] and product['category_id'] in categories:
                     cat = categories[product['category_id']]
                     product['category_name'] = cat.get('name')
-                    product['markup_coefficient'] = cat.get('markup_coefficient', 1.0)
+                    product['markup_coefficient'] = cat.get('markup_coefficient') or 1.4
                 
                 # Calculer alertes
                 product['needs_restock'] = product['stock'] <= product['min_stock']

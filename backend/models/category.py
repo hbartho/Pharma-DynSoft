@@ -9,7 +9,7 @@ class Category(BaseModel):
     name: str
     description: Optional[str] = None
     color: Optional[str] = "#3B82F6"
-    markup_coefficient: float = 1.0  # Coefficient d'intérêt (prix vente = prix achat * coef)
+    markup_coefficient: float = 1.4  # Coefficient d'intérêt (prix vente = prix achat * coef)
     min_stock: Optional[int] = None  # Stock minimum par catégorie (surcharge le paramètre global)
     tenant_id: Optional[str] = "default"  # Optionnel pour PostgreSQL multi-tenant
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -18,7 +18,7 @@ class CategoryCreate(BaseModel):
     name: str
     description: Optional[str] = None
     color: Optional[str] = "#3B82F6"
-    markup_coefficient: float = 1.0
+    markup_coefficient: float = 1.4
     min_stock: Optional[int] = None  # Stock minimum par catégorie
 
 class CategoryUpdate(BaseModel):
