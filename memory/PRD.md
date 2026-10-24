@@ -782,3 +782,9 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - React Query : `queryKeys.stockMovements` corrigé en ['stock-movements'] (était ['stock','movements'] → Mouvements jamais rafraîchis) ; ajout invalidations dashboard / stock-lots / debts / customers / supplier-debts / priceHistory après vente, validation appro, retour, perte, modif lot.
 - Données « en dur » restantes = placeholders/valeurs par défaut légitimes (timezone Africa/Conakry, GNF, +224) — aucune URL, identifiant ou prix codé en dur.
 - Testing agent iteration_46 : backend 10/10, flux A/B/C UI OK (fraîcheur sans rechargement) ; écart Cat ×1 corrigé ensuite et vérifié à l'écran.
+
+
+## 2026-10-24 — Correction d'un approvisionnement validé (admin) — iteration_47
+- `PUT /api/supplies/{id}/correct` (admin) : motif obligatoire ; lignes rapprochées par id (modif / ajout / suppression) ; stock ajusté par différence avec mouvement ADJUSTMENT reference_type `supply_correction` (« Correction appro APP-xxx : motif ») ; refus 400 si la réduction dépasse le stock disponible (message avec quantité minimale) ; prix produit + price_history pour les lignes nouvelles ou dont un prix a changé ; dette fournisseur recalculée (paiements conservés, statut recalculé) ; trace `[Correction date par CODE] motif` dans les notes de l'appro.
+- Frontend : bouton ambre sur les appros validés (admin), bannière + champ motif, bouton « Appliquer la correction » ; hook `useCorrectSupply` ; Mouvements affiche le type « Correction appro ».
+- Tests : backend 9/9 (pytest backend/tests/test_supply_correction.py), UI admin OK. Appro de test validé APP-E5F09E3B conservé (non supprimable).

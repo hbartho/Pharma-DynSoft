@@ -62,6 +62,15 @@ const MOVEMENT_TYPES = {
     borderColor: 'border-purple-200',
     isOutflow: null  // Peut être les deux
   },
+  supply_correction: { 
+    label: 'Correction appro', 
+    icon: ArrowRightLeft, 
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-800',
+    borderColor: 'border-amber-300',
+    isOutflow: null
+  },
 };
 
 const useStockMovementsInfinite = (filters) => {
@@ -443,7 +452,7 @@ const StockMovements = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredMovements.map((movement, index) => {
-                    const config = getMovementConfig(movement.movement_type);
+                    const config = getMovementConfig(movement.reference_type === 'supply_correction' ? 'supply_correction' : movement.movement_type);
                     const Icon = config.icon;
                     const qty = getSignedQuantity(movement);
                     const isPositive = qty > 0;

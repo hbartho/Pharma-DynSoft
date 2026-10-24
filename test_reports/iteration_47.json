@@ -1,0 +1,39 @@
+{
+  "summary": "Correction d'appro validé (admin) testée. Backend : 9/9 pytest OK (motif obligatoire 400, pharmacien 403, appro non validé 400, correction valide avec stock A -1 / B -4, prix A 1600/1100, 2 mouvements 'Correction appro APP-xxx : motif', dette 9900, notes tracées ; refus sous stock dispo avec message clair ; facture obligatoire ; qté 0 refusée ; régression create/PUT/validate + champs obligatoires OK). Frontend admin : bouton ambre, titre, bannière, motif, bouton désactivé sans motif, modification de ligne, toast 'Approvisionnement corrigé', total de la carte mis à jour (12000->11000), page Produits à jour sans rechargement (10->11), lignes 'Correction appro' sur Mouvements : tout OK. Test UI pharmacien BLOQUÉ : son shift a expiré (00:00-08:00), l'appli affiche une modale bloquante et cache la liste, donc 0 bouton de correction mais pas de carte visible à vérifier ; la revue de code (supply.is_validated && isAdmin) et le 403 backend confirment le comportement.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/supplies/{id}/correct", "issue": "Si le nouveau total est inférieur au montant déjà payé, remaining_amount est mis à 0 et la dette passe PAID sans rien signaler : le trop-perçu (avoir fournisseur) est perdu en silence."},
+      {"endpoint": "PUT /api/supplies/{id}/correct", "issue": "Quand un produit apparaît sur plusieurs lignes avec des prix différents, c'est le prix de la dernière ligne qui s'applique au produit (price_updates est indexé par product_id). Le comportement est acceptable mais non documenté."},
+      {"endpoint": "GET /api/stock/movements/paginated", "issue": "La colonne Référence de la page Mouvements affiche le reference_type brut 'Supply_correction: Correction appro ...' (cosmétique, pas de libellé lisible)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Supplies dialog items table (correction/edit)", "issue": "À l'ouverture d'un appro existant, la colonne Stock des lignes affiche 0, la catégorie est vide et la colonne P.TTC affiche le prix de base (1400) au lieu du prix modifié (1600). Les valeurs ne deviennent correctes qu'après avoir édité la ligne. Cause : handleEdit ne renseigne ni current_stock ni category_name, et calcule prix_ttc à partir de prixPublicBase.", "selector": "[role=dialog] table tr", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Supplies cards", "issues": ["Le numéro d'appro (APP-xxx) n'apparaît pas sur la carte, alors que le titre de la boîte de dialogue, les mouvements et les notes y font référence : difficile de faire le lien.", "Le champ 'Total TTC Facture' a une bordure rouge à l'ouverture de la boîte de dialogue de correction."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_supply_correction.py", "/app/test_reports/pytest/pytest_supply_correction.xml"],
+  "action_items": [
+    "(Optionnel) Avertir ou bloquer quand la correction fait passer le total sous le montant déjà payé au fournisseur",
+    "Remplir current_stock / category_name et calculer prix_ttc à partir du prix modifié dans le handleEdit de Supplies.js",
+    "(Optionnel) Ajouter un libellé lisible pour reference_type 'supply_correction' sur la page Mouvements et afficher supply_number sur les cartes"
+  ],
+  "critical_code_review_comments": [
+    "correct_validated_supply : la logique est solide (verrou FOR UPDATE, deltas par produit, refus avant toute modification, mouvements, historique des prix, dette, notes, le tout dans une seule transaction)",
+    "Le frontend renvoie formData.notes, qui contient l'historique des corrections déjà présent, et ce champ est modifiable : l'admin peut effacer les traces des corrections précédentes. La trace stockée dans les mouvements et dans l'historique des prix reste intacte.",
+    "Supplies.js fait 2270 lignes : à découper",
+    "update_supply ligne 370 : priorité d'opérateurs ambiguë dans `supply_data.get('supplier_id') or str(...) if supply.supplier_id else None` (code préexistant)"
+  ],
+  "updated_files": ["/app/backend/tests/test_supply_correction.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% admin flows ; pharmacien UI non vérifiable (shift expiré)"},
+  "seed_data_creation": "Appro validé de test APP-952BD76A (id 952bd76a-5f68-499b-bf11-05f492d37289, facture TEST_CORR_653458cc). Un appro validé ne peut pas être supprimé, il reste donc en base. Stocks et prix restaurés par mouvements manuels 'TEST restore'. APP-E5F09E3B corrigé 10->9 puis remis à 10 via l'UI (stock du 3HP KIT revenu à 11). Chaque exécution du pytest crée un nouvel appro validé non supprimable.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Lancer : REACT_APP_BACKEND_URL=... pytest backend/tests/test_supply_correction.py. Les cartes de la page Produits ne sont pas des lignes de tableau. Le lien de navigation sidebar existe en double (un caché) : utiliser 'visible=true'. Le pharmacien est hors de son shift (00:00-08:00) : la page Supplies est bloquée pour lui en dehors de ces heures.",
+  "test_credentials": "admin@pharmaflow.com/admin123 ; pharmacien@pharmaflow.com/Pharma#2026 (le fichier test_credentials.md indique encore 'mdp inconnu' pour le pharmacien : à mettre à jour)"
+}
