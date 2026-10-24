@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 CLOUD_SYNC_URL = os.environ.get("CLOUD_SYNC_URL", "").rstrip("/")
 CLOUD_SYNC_TOKEN = os.environ.get("CLOUD_SYNC_TOKEN", "")
 CLOUD_SYNC_SLUG = os.environ.get("CLOUD_SYNC_SLUG", "").strip().lower()
-CLOUD_SYNC_HOUR = int(os.environ.get("CLOUD_SYNC_HOUR", "2"))
+CLOUD_SYNC_HOUR = min(23, max(0, int(os.environ.get("CLOUD_SYNC_HOUR", "2") or 2)))  # 0–23 ; 24 ne déclencherait jamais
 FULL_EVERY_DAYS = 7
 CHUNK = 300
 CURSOR_OVERLAP = timedelta(minutes=5)
