@@ -464,6 +464,9 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## Changelog
 
+### 17 Juin 2026 - FIX « Method Not Allowed » modification planification shift (✅ CORRIGÉE, testée)
+- Cause : le front appelait PUT /shift-schedules/{id} mais la route n'existait pas (seuls POST/DELETE). Ajout `update_shift_schedule` (horaires, durée max 1-24h, notes, date avec contrôle de doublon) dans routes/shift_schedules.py
+
 ### 17 Juin 2026 - Migrations de schéma Alembic multi-schémas (✅ COMPLÉTÉE, testée cycle complet)
 - `backend/migrations/{master,tenant}/` (env.py + versions/0001_baseline.py vide) ; `scripts/migrate_db.py` : `migrate_all()` = create_all public → alembic master (public, table alembic_version_master) → alembic tenant sur public et sur CHAQUE t_<slug> (table alembic_version par schéma ; schéma sans version = create_all + stamp head ; sinon upgrade head). DDL tenant exécuté avec `SET LOCAL search_path TO "<schema>"` (schema_translate_map ne s'applique pas au DDL Alembic)
 - Appelé : au startup FastAPI (AUTO_MIGRATE≠false, threadpool), par init_local_db (Docker), par create_tenant_schema (stamp head) ; `ensure_tenant_schema()` pour cloud sync

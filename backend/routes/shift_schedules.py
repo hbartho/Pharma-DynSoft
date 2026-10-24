@@ -381,6 +381,50 @@ if DATABASE_TYPE == "postgresql":
             
             return {"message": f"{count} planification(s) supprimée(s)", "date": date}
 
+    @router.put("/{schedule_id}")
+    def update_shift_schedule(
+        schedule_id: str,
+        data: ShiftScheduleUpdate,
+        current_user: dict = Depends(require_role(["admin"]))
+    ):
+        """Modifier une planification (horaires, durée max, notes, date)"""
+        with get_session() as session:
+            try:
+                schedule = session.query(ShiftScheduleModel).filter(
+                    ShiftScheduleModel.id == uuid.UUID(schedule_id)
+                ).with_for_update().first()
+            except ValueError:
+                raise HTTPException(status_code=404, detail="Planification non trouvée")
+            if not schedule:
+                raise HTTPException(status_code=404, detail="Planification non trouvée")
+            
+            if data.scheduled_date:
+                new_date = datetime.strptime(data.scheduled_date, '%Y-%m-%d').date()
+                if new_date != schedule.schedule_date:
+                    clash = session.query(ShiftScheduleModel).filter(
+                        and_(
+                            ShiftScheduleModel.user_id == schedule.user_id,
+                            ShiftScheduleModel.schedule_date == new_date,
+                            ShiftScheduleModel.id != schedule.id
+                        )
+                    ).first()
+                    if clash:
+                        raise HTTPException(status_code=400, detail=f"Une planification existe déjà pour cet utilisateur le {data.scheduled_date}")
+                    schedule.schedule_date = new_date
+            if data.start_time:
+                schedule.start_time = data.start_time
+            if data.end_time:
+                schedule.end_time = data.end_time
+            if data.max_duration_hours is not None:
+                if data.max_duration_hours <= 0 or data.max_duration_hours > 24:
+                    raise HTTPException(status_code=400, detail="Durée maximale invalide (1 à 24 h)")
+                schedule.max_duration_hours = data.max_duration_hours
+            if data.notes is not None:
+                schedule.notes = data.notes
+            session.commit()
+            session.refresh(schedule)
+            return {"message": "Planification mise à jour", "id": schedule_id, "schedule": schedule_to_dict(schedule)}
+
     @router.delete("/{schedule_id}")
     def delete_shift_schedule(
         schedule_id: str,
