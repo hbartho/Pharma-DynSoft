@@ -7,7 +7,7 @@ import { useSettingsQuery } from '../hooks/useSettings';
 import { formatTimeInTz, DEFAULT_TZ } from '../utils/timezoneUtils';
 import { hasPageAccess } from '../config/pagesAccess';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, UserCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { ShiftAlertModal, CloseShiftModal, OpenShiftModal } from './ShiftModals';
 import {
@@ -300,6 +300,13 @@ const Layout = ({ children }) => {
   };
 
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const displayName = user ? ([user.first_name, user.last_name].filter(Boolean).join(' ') || user.name || user.email) : '';
+
+  useEffect(() => {
+    const roleLabels = { admin: 'Administrateur', pharmacien: 'Pharmacien', caissier: 'Caissier' };
+    document.title = user ? `${displayName} · ${roleLabels[user.role] || user.role} — DynSoft Pharma` : 'DynSoft Pharma';
+    return () => { document.title = 'DynSoft Pharma'; };
+  }, [user, displayName]);
 
   const handleLogout = async () => {
     // Vérifier si un shift est ouvert
@@ -384,7 +391,7 @@ const Layout = ({ children }) => {
             {pharmacyName && (
               <p className="text-sm font-semibold text-teal-700 truncate" data-testid="pharmacy-name-mobile-drawer">{pharmacyName}</p>
             )}
-            <p className="text-sm text-slate-500 truncate">{user?.name}</p>
+            <p className="text-sm text-slate-500 truncate">{displayName}</p>
             <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${getRoleColor(user?.role)}`}>
               {getRoleLabel(user?.role)}
             </span>
@@ -491,7 +498,7 @@ const Layout = ({ children }) => {
                 {pharmacyName && (
                   <p className="text-sm font-semibold text-teal-700 truncate" data-testid="pharmacy-name-desktop">{pharmacyName}</p>
                 )}
-                <p className="text-sm text-slate-500 truncate">{user?.name}</p>
+                <p className="text-sm text-slate-500 truncate">{displayName}</p>
                 <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${getRoleColor(user?.role)}`}>
                   {getRoleLabel(user?.role)}
                 </span>
@@ -890,7 +897,20 @@ const Layout = ({ children }) => {
       </main>
 
       {/* Indicateur de Shift flottant fixe - Global (centré en haut, sous header mobile) */}
-      <div className="fixed top-16 md:top-4 left-1/2 transform -translate-x-1/2 z-40">
+      <div className="fixed top-16 md:top-4 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-2">
+        {user && (
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 md:py-2 bg-white border border-slate-200 rounded-full shadow-md max-w-[45vw]"
+            title={`Connecté : ${displayName} (${getRoleLabel(user.role)})`}
+            data-testid="current-user-badge"
+          >
+            <UserCircle2 className="w-4 h-4 text-teal-700 shrink-0" strokeWidth={1.5} />
+            <span className="text-xs md:text-sm font-semibold text-slate-800 truncate" data-testid="current-user-name">{displayName}</span>
+            <span className={`hidden sm:inline text-[10px] md:text-xs font-medium px-2 py-0.5 rounded-full ${getRoleColor(user.role)}`} data-testid="current-user-role">
+              {getRoleLabel(user.role)}
+            </span>
+          </div>
+        )}
         {currentShift ? (
           <div className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-green-50 border border-green-200 rounded-full shadow-md">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>

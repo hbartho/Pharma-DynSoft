@@ -762,3 +762,8 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - Cause du « dernier connecté gagne partout » : une seule session par navigateur (IndexedDB). Le backend (JWT) n'a jamais invalidé les autres sessions.
 - Fix `services/indexedDB.js` : la session est épinglée dans `sessionStorage` par onglet ; IndexedDB garde la dernière connexion pour les nouveaux onglets / relance PWA. Déconnexion ne supprime la session IndexedDB que si c'est la même.
 - Testé : super-admin onglet 1 + admin onglet 2, chacun conservé après reload.
+
+
+## 2026-10-24 — Compte connecté visible
+- Badge flottant en haut (nom + rôle, `current-user-badge`) à côté de l'indicateur de shift ; titre de l'onglet navigateur = « Nom · Rôle — DynSoft Pharma ».
+- Correction : le nom utilisateur (sidebar) utilisait `user.name` inexistant → `displayName` = first_name + last_name (fallback email).
