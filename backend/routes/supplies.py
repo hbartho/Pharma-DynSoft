@@ -567,6 +567,9 @@ if DATABASE_TYPE == "postgresql":
                 total_amount += subtotal
                 shelf_location = item_data.get("shelf_location") or item_data.get("rayon")
                 
+                # Prix : appliqué au produit si la ligne est nouvelle ou si un prix a changé (comparé AVANT mise à jour de la ligne)
+                changed = old is None or old.product_id != product_id or float(old.purchase_price or 0) != unit_price or float(old.selling_price or 0) != selling
+                
                 if old is not None:
                     kept_ids.add(str(old.id))
                     lot_number = (item_data.get("lot_number") or "").strip() or old.lot_number or f"{supply.supply_number}-{idx}"
@@ -591,8 +594,6 @@ if DATABASE_TYPE == "postgresql":
                     ))
                 new_qty_by_product[product_id] = new_qty_by_product.get(product_id, 0) + quantity
                 
-                # Prix : appliqué au produit si la ligne est nouvelle ou si un prix a changé
-                changed = old is None or old.product_id != product_id or float(old.purchase_price or 0) != unit_price or float(old.selling_price or 0) != selling
                 if changed:
                     price_updates[product_id] = (prod, unit_price, selling)
             
@@ -639,6 +640,9 @@ if DATABASE_TYPE == "postgresql":
                     prod.purchase_price = purchase
                 if selling > 0:
                     prod.price = selling
+                    session.query(SupplyItemModel).filter(SupplyItemModel.product_id == product_id).update(
+                        {SupplyItemModel.selling_price: selling}, synchronize_session=False
+                    )
             
             # --- Dette fournisseur ---
             old_total = float(supply.total_amount or 0)
@@ -722,6 +726,10 @@ if DATABASE_TYPE == "postgresql":
                     update_data[ProductModel.purchase_price] = item.purchase_price
                 if item.selling_price and item.selling_price > 0:
                     update_data[ProductModel.price] = item.selling_price
+                    # Tous les lots du produit alignés sur le nouveau prix public
+                    session.query(SupplyItemModel).filter(SupplyItemModel.product_id == item.product_id).update(
+                        {SupplyItemModel.selling_price: item.selling_price}, synchronize_session=False
+                    )
                 session.query(ProductModel).filter(ProductModel.id == item.product_id).update(
                     update_data, synchronize_session=False
                 )

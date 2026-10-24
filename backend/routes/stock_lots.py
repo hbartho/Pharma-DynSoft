@@ -64,7 +64,8 @@ if DATABASE_TYPE == "postgresql":
             "initial_quantity": item.quantity,
             "current_quantity": item.quantity,  # Simplifié
             "purchase_price": item.purchase_price or 0,
-            "selling_price": item.selling_price or 0,
+            "selling_price": (product.price if product is not None and product.price else item.selling_price) or 0,
+            "lot_selling_price": item.selling_price or 0,
             "expiration_date": item.expiration_date.isoformat() if item.expiration_date else None,
             "supply_date": supply.supply_date.isoformat() if supply and supply.supply_date else None,
             "supply_id": str(item.supply_id) if item.supply_id else None,
@@ -137,6 +138,10 @@ if DATABASE_TYPE == "postgresql":
                             reference_type="stock_lot", reference_id=item.id, notes=f"Gestion des prix - lot {item.lot_number or ''}".strip())
         if new_price is not None:
             product.price = new_price
+            # Tous les lots du produit alignés sur le prix produit en vigueur
+            session.query(SupplyItem).filter(SupplyItem.product_id == product.id).update(
+                {SupplyItem.selling_price: new_price}, synchronize_session=False
+            )
         if new_purchase is not None:
             product.purchase_price = new_purchase
 
