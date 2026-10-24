@@ -472,6 +472,212 @@ if DATABASE_TYPE == "postgresql":
             
             return supply_to_dict(supply)
 
+    @router.put("/{supply_id}/correct")
+    def correct_validated_supply(
+        supply_id: str,
+        supply_data: dict,
+        current_user: dict = Depends(require_role(["admin"]))
+    ):
+        """Corriger un approvisionnement validé (admin) : stock, prix, dette fournisseur recalculés par différence"""
+        from database.models_tenant import SupplierDebt, DebtStatus, StockMovement, StockMovementType
+        
+        reason = (supply_data.get("correction_reason") or "").strip()
+        if not reason:
+            raise HTTPException(status_code=400, detail="Le motif de correction est obligatoire")
+        new_items = supply_data.get("items") or []
+        if not new_items:
+            raise HTTPException(status_code=400, detail="Un approvisionnement doit contenir au moins une ligne")
+        employee_code = current_user.get("employee_code", "N/A")
+        now = datetime.now(timezone.utc)
+        
+        with get_session() as session:
+            supply = session.query(SupplyModel).filter(
+                SupplyModel.id == uuid.UUID(supply_id)
+            ).with_for_update().first()
+            if not supply:
+                raise HTTPException(status_code=404, detail="Approvisionnement non trouvé")
+            if not supply.is_validated:
+                raise HTTPException(status_code=400, detail="Cet approvisionnement n'est pas validé : utilisez la modification normale")
+            
+            # --- En-tête ---
+            new_supplier_id = supply_data.get("supplier_id") or (str(supply.supplier_id) if supply.supplier_id else None)
+            if not new_supplier_id:
+                raise HTTPException(status_code=400, detail="Le fournisseur est obligatoire")
+            new_invoice = (supply_data.get("invoice_number") if "invoice_number" in supply_data else supply.invoice_number) or ""
+            if not new_invoice.strip():
+                raise HTTPException(status_code=400, detail="Le N° facture est obligatoire")
+            new_delivery_note = supply_data.get("delivery_note_number") if "delivery_note_number" in supply_data else supply.delivery_note_number
+            for field, value, label in (("invoice_number", new_invoice, "cette facture"), ("delivery_note_number", new_delivery_note, "ce BL")):
+                if value:
+                    dup = session.query(SupplyModel).filter(
+                        SupplyModel.supplier_id == uuid.UUID(new_supplier_id),
+                        getattr(SupplyModel, field) == value,
+                        SupplyModel.id != supply.id
+                    ).first()
+                    if dup:
+                        raise HTTPException(status_code=400, detail=f"Un approvisionnement avec ce fournisseur et {label} ({value}) existe déjà")
+            supply.supplier_id = uuid.UUID(new_supplier_id)
+            supply.invoice_number = new_invoice
+            supply.delivery_note_number = new_delivery_note
+            if "purchase_order_ref" in supply_data:
+                supply.purchase_order_ref = supply_data.get("purchase_order_ref")
+            if supply_data.get("supply_date"):
+                supply.supply_date = datetime.fromisoformat(str(supply_data["supply_date"])[:10]).date()
+            
+            # --- Lignes : rapprochement par id ---
+            old_items = {str(i.id): i for i in supply.items}
+            old_qty_by_product = {}
+            for i in supply.items:
+                old_qty_by_product[i.product_id] = old_qty_by_product.get(i.product_id, 0) + int(i.quantity)
+            
+            kept_ids = set()
+            new_qty_by_product = {}
+            price_updates = {}  # product_id -> (old_item or None, purchase, selling)
+            total_amount = 0.0
+            next_idx = len(supply.items)
+            for idx, item_data in enumerate(new_items, start=1):
+                quantity = int(item_data.get("quantity") or 0)
+                if quantity <= 0:
+                    raise HTTPException(status_code=400, detail=f"Quantité invalide pour {item_data.get('product_name') or 'une ligne'}")
+                unit_price = float(item_data.get("unit_price", item_data.get("purchase_price", 0)) or 0)
+                expiration = item_data.get("date_peremption") or item_data.get("expiration_date")
+                if not expiration:
+                    raise HTTPException(status_code=400, detail=f"Date de péremption obligatoire pour {item_data.get('product_name') or item_data['product_id']}")
+                product_id = uuid.UUID(item_data["product_id"])
+                prod = session.query(Product).filter(Product.id == product_id).first()
+                if not prod:
+                    raise HTTPException(status_code=400, detail=f"Produit {item_data['product_id']} non trouvé")
+                
+                old = old_items.get(str(item_data.get("id") or ""))
+                selling = item_data.get("selling_price") or item_data.get("prix_public_modifie")
+                if not selling or selling <= 0:
+                    if old is not None and old.product_id == product_id:
+                        selling = old.selling_price
+                    else:
+                        coef = prod.category.markup_coefficient if prod.category is not None else None
+                        selling = default_selling_price(unit_price, prod.price, coef)
+                selling = float(selling)
+                
+                tax_rate = 0.0
+                for key in ("tva_rate", "tva", "tax_rate"):
+                    if item_data.get(key) is not None:
+                        tax_rate = float(item_data.get(key))
+                        break
+                subtotal = unit_price * quantity
+                total_amount += subtotal
+                shelf_location = item_data.get("shelf_location") or item_data.get("rayon")
+                
+                if old is not None:
+                    kept_ids.add(str(old.id))
+                    lot_number = (item_data.get("lot_number") or "").strip() or old.lot_number or f"{supply.supply_number}-{idx}"
+                    old.product_id = product_id
+                    old.product_name = item_data.get("product_name") or prod.name
+                    old.quantity = quantity
+                    old.purchase_price = unit_price
+                    old.selling_price = selling
+                    old.subtotal = subtotal
+                    old.lot_number = lot_number
+                    old.expiration_date = expiration
+                    old.shelf_location = shelf_location
+                    old.tax_rate = tax_rate
+                else:
+                    next_idx += 1
+                    session.add(SupplyItemModel(
+                        id=uuid.uuid4(), supply_id=supply.id, product_id=product_id,
+                        product_name=item_data.get("product_name") or prod.name,
+                        quantity=quantity, purchase_price=unit_price, selling_price=selling, subtotal=subtotal,
+                        lot_number=(item_data.get("lot_number") or "").strip() or f"{supply.supply_number}-{next_idx}",
+                        expiration_date=expiration, shelf_location=shelf_location, tax_rate=tax_rate,
+                    ))
+                new_qty_by_product[product_id] = new_qty_by_product.get(product_id, 0) + quantity
+                
+                # Prix : appliqué au produit si la ligne est nouvelle ou si un prix a changé
+                changed = old is None or old.product_id != product_id or float(old.purchase_price or 0) != unit_price or float(old.selling_price or 0) != selling
+                if changed:
+                    price_updates[product_id] = (prod, unit_price, selling)
+            
+            # Lignes supprimées
+            for item_id, old in old_items.items():
+                if item_id not in kept_ids:
+                    session.delete(old)
+            
+            # --- Stock par différence, refus si déjà vendu ---
+            movements = []
+            for product_id in set(old_qty_by_product) | set(new_qty_by_product):
+                delta = new_qty_by_product.get(product_id, 0) - old_qty_by_product.get(product_id, 0)
+                if delta == 0:
+                    continue
+                prod = session.query(Product).filter(Product.id == product_id).with_for_update().first()
+                current_stock = int(prod.stock or 0)
+                if current_stock + delta < 0:
+                    sold = old_qty_by_product.get(product_id, 0) - current_stock
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(f"{prod.name} : stock actuel {current_stock}, impossible de retirer {abs(delta)} unité(s) "
+                                f"({max(sold, 0)} déjà vendue(s) ou sortie(s) sur cet approvisionnement). "
+                                f"Quantité totale minimale pour ce produit : {max(old_qty_by_product.get(product_id, 0) - current_stock, 0)}")
+                    )
+                prod.stock = current_stock + delta
+                movements.append(StockMovement(
+                    id=uuid.uuid4(), product_id=product_id,
+                    movement_type=StockMovementType.ADJUSTMENT, quantity=delta, stock_after=prod.stock,
+                    reference_type="supply_correction", reference_id=supply.id, agent_code=employee_code,
+                    reason=f"Correction appro {supply.supply_number} : {reason}",
+                    validation_status="validated", validated_by=employee_code, validated_at=now,
+                ))
+            for m in movements:
+                session.add(m)
+            
+            # --- Prix ---
+            for product_id, (prod, purchase, selling) in price_updates.items():
+                record_price_change(
+                    session, prod, purchase if purchase > 0 else None, selling if selling > 0 else None,
+                    "supply", employee_code, reference_type="supply_correction", reference_id=supply.id,
+                    notes=f"Correction appro {supply.supply_number} : {reason}",
+                )
+                if purchase > 0:
+                    prod.purchase_price = purchase
+                if selling > 0:
+                    prod.price = selling
+            
+            # --- Dette fournisseur ---
+            old_total = float(supply.total_amount or 0)
+            supply.total_amount = total_amount
+            debt = session.query(SupplierDebt).filter(SupplierDebt.supply_id == supply.id).first()
+            if debt is not None:
+                paid = float(debt.original_amount or 0) - float(debt.remaining_amount or 0)
+                debt.supplier_id = supply.supplier_id
+                debt.original_amount = total_amount
+                debt.remaining_amount = max(total_amount - paid, 0)
+                if debt.remaining_amount <= 0:
+                    debt.status = DebtStatus.PAID
+                elif paid > 0:
+                    debt.status = DebtStatus.PARTIAL
+                else:
+                    debt.status = DebtStatus.PENDING
+                if abs(total_amount - old_total) > 0.009:
+                    debt.notes = f"{debt.notes or ''}\n[Correction {now.strftime('%d/%m/%Y %H:%M')} par {employee_code}] montant {old_total:.0f} → {total_amount:.0f} : {reason}".strip()
+                debt.updated_at = now
+            elif total_amount > 0:
+                session.add(SupplierDebt(
+                    id=uuid.uuid4(), supplier_id=supply.supplier_id, supply_id=supply.id,
+                    original_amount=total_amount, remaining_amount=total_amount, status=DebtStatus.PENDING,
+                    due_date=(now + timedelta(days=30)).date(), payments=[],
+                    notes=f"Créée lors de la correction de l'appro {supply.supply_number} : {reason}",
+                    created_at=now, updated_at=now,
+                ))
+            
+            # --- Trace sur l'approvisionnement ---
+            base_notes = supply_data.get("notes") if "notes" in supply_data else supply.notes
+            supply.notes = f"{(base_notes or '').rstrip()}\n[Correction {now.strftime('%d/%m/%Y %H:%M')} par {employee_code}] {reason}".strip()
+            
+            session.commit()
+            session.refresh(supply)
+            result = supply_to_dict(supply)
+            result["stock_adjustments"] = [{"product_id": str(m.product_id), "quantity": m.quantity, "stock_after": m.stock_after} for m in movements]
+            result["price_updates"] = len(price_updates)
+            return result
+
     @router.post("/{supply_id}/validate")
     def validate_supply(
         supply_id: str,

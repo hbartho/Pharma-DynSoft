@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -34,7 +35,7 @@ import BarcodeScanner from '../components/BarcodeScanner';
 import { SupplyImportDialog } from '../components/SupplyImportDialog';
 import { FileSpreadsheet } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSupplies, useCreateSupply, useUpdateSupply, useDeleteSupply, useValidateSupply } from '../hooks/useSupplies';
+import { useSupplies, useCreateSupply, useUpdateSupply, useDeleteSupply, useValidateSupply, useCorrectSupply } from '../hooks/useSupplies';
 import api from '../services/api';
 import { useSuppliesInfinite } from '../hooks/useInfiniteScroll';
 import { useSuppliers, useCreateSupplier } from '../hooks/useSuppliers';
@@ -143,6 +144,7 @@ const Supplies = () => {
     });
   };
   const updateSupply = useUpdateSupply();
+  const correctSupply = useCorrectSupply();
   const deleteSupply = useDeleteSupply();
   const validateSupply = useValidateSupply();
   const createSupplier = useCreateSupplier();
@@ -157,6 +159,8 @@ const Supplies = () => {
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [editingSupply, setEditingSupply] = useState(null);
+  const [correctionReason, setCorrectionReason] = useState('');
+  const isCorrection = !!(editingSupply && editingSupply.is_validated);
   const [viewingSupply, setViewingSupply] = useState(null);
   const [supplyToDelete, setSupplyToDelete] = useState(null);
   const [supplyToValidate, setSupplyToValidate] = useState(null);
@@ -254,6 +258,7 @@ const Supplies = () => {
     setItemForm({ product_id: '', quantity: '', unit_price: '', prix_public_modifie: '', date_peremption: '', lot_number: '', shelf_location: '', tva_rate: '0' });
     setProductSearch('');
     setSelectedProductInfo(null);
+    setCorrectionReason('');
   };
 
   const handleAddItem = () => {
@@ -544,6 +549,11 @@ const Supplies = () => {
       return;
     }
     
+    if (isCorrection && !correctionReason.trim()) {
+      toast.error('Veuillez indiquer le motif de la correction');
+      return;
+    }
+    
     // Préserver la date locale en ajoutant l'heure locale actuelle
     const supplyDateWithTime = new Date(formData.supply_date + 'T12:00:00');
     
@@ -556,18 +566,30 @@ const Supplies = () => {
       is_credit_note: formData.is_credit_note,
       notes: formData.notes || null,
       items: formData.items.map(item => ({
+        id: item.id,
         product_id: item.product_id,
+        product_name: item.product_name,
         quantity: item.quantity,
         unit_price: item.unit_price,
         date_peremption: item.date_peremption || null,
         lot_number: item.lot_number || null,
         shelf_location: item.shelf_location || null,
         tva_rate: item.tva_rate || 0,
-        prix_public_modifie: item.prix_public_modifie || null
+        prix_public_modifie: item.prix_public_modifie || item.prix_public_base || null
       }))
     };
     
-    if (editingSupply) {
+    if (isCorrection) {
+      correctSupply.mutate(
+        { supplyId: editingSupply.id, data: { ...submitData, correction_reason: correctionReason.trim() } },
+        {
+          onSuccess: () => {
+            setShowDialog(false);
+            resetForm();
+          },
+        }
+      );
+    } else if (editingSupply) {
       updateSupply.mutate(
         { supplyId: editingSupply.id, data: submitData },
         {
@@ -589,8 +611,8 @@ const Supplies = () => {
   };
 
   const handleEdit = async (supply) => {
-    if (supply.is_validated) {
-      toast.error('Impossible de modifier un approvisionnement validé');
+    if (supply.is_validated && !isAdmin) {
+      toast.error('Seul un administrateur peut corriger un approvisionnement validé');
       return;
     }
     
@@ -841,11 +863,35 @@ const Supplies = () => {
             </DialogTrigger>
             <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
-                  {editingSupply ? 'Modifier l\'approvisionnement' : 'Nouvel approvisionnement'}
+                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }} data-testid="supply-dialog-title">
+                  {isCorrection ? `Corriger l'approvisionnement validé ${editingSupply.supply_number || ''}` : editingSupply ? 'Modifier l\'approvisionnement' : 'Nouvel approvisionnement'}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {isCorrection && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3" data-testid="supply-correction-banner">
+                    <div className="flex items-start gap-2 text-amber-900">
+                      <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <p className="text-sm">
+                        Cet approvisionnement est déjà validé. Les écarts de quantité seront appliqués au stock (mouvement « Correction appro »),
+                        les prix modifiés seront appliqués aux produits et la dette fournisseur sera recalculée.
+                        Une réduction en dessous des quantités déjà vendues sera refusée.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="correction_reason" className="text-amber-900">Motif de la correction <span className="text-red-500">*</span></Label>
+                      <Textarea
+                        id="correction_reason"
+                        data-testid="supply-correction-reason"
+                        value={correctionReason}
+                        onChange={(e) => setCorrectionReason(e.target.value)}
+                        placeholder="Ex : erreur de saisie sur la quantité du lot 2, prix facturé différent du BL..."
+                        rows={2}
+                        className={`mt-1 bg-white ${!correctionReason.trim() ? 'border-red-300' : ''}`}
+                      />
+                    </div>
+                  </div>
+                )}
                 {/* Info générale */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
@@ -935,11 +981,12 @@ const Supplies = () => {
                 
                 <div>
                   <Label htmlFor="notes">Notes</Label>
-                  <Input
+                  <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="Notes ou observations..."
+                    rows={isCorrection ? 3 : 1}
                     className="mt-1"
                   />
                 </div>
@@ -1337,8 +1384,8 @@ const Supplies = () => {
                   <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                     Annuler
                   </Button>
-                  <Button type="submit" className="bg-teal-700 hover:bg-teal-800" disabled={formData.items.length === 0}>
-                    {editingSupply ? 'Mettre à jour' : 'Enregistrer (en attente)'}
+                  <Button type="submit" data-testid="supply-submit-btn" className={isCorrection ? 'bg-amber-600 hover:bg-amber-700' : 'bg-teal-700 hover:bg-teal-800'} disabled={formData.items.length === 0 || correctSupply.isPending || (isCorrection && !correctionReason.trim())}>
+                    {correctSupply.isPending ? 'Correction en cours…' : isCorrection ? 'Appliquer la correction' : editingSupply ? 'Mettre à jour' : 'Enregistrer (en attente)'}
                   </Button>
                 </div>
               </form>
@@ -1565,6 +1612,19 @@ const Supplies = () => {
                         <Eye className="w-4 h-4" />
                       )}
                     </Button>
+                    {supply.is_validated && isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(supply)}
+                        className="text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                        title="Corriger (admin) : stock, prix et dette recalculés"
+                        disabled={loadingSupplyDetails}
+                        data-testid={`supply-correct-btn-${supply.id}`}
+                      >
+                        {loadingSupplyDetails ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit className="w-4 h-4" />}
+                      </Button>
+                    )}
                     {!supply.is_validated && (
                       <>
                         {isAdmin && (
@@ -1711,7 +1771,7 @@ const Supplies = () => {
               {viewingSupply.notes && (
                 <div>
                   <p className="text-slate-500 text-sm">Notes</p>
-                  <p className="font-medium">{viewingSupply.notes}</p>
+                  <p className="font-medium whitespace-pre-line" data-testid="supply-view-notes">{viewingSupply.notes}</p>
                 </div>
               )}
               

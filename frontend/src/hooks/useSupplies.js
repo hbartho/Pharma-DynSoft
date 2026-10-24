@@ -94,6 +94,42 @@ export const useUpdateSupply = () => {
 };
 
 /**
+ * Corriger un approvisionnement déjà validé (admin) : stock, prix et dette recalculés
+ */
+export const useCorrectSupply = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ supplyId, data }) => {
+      const response = await api.put(`/supplies/${supplyId}/correct`, data);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.supplies });
+      queryClient.invalidateQueries({ queryKey: queryKeys.supply(data.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productAlerts });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockMovements });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stockLots });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: queryKeys.supplierDebts });
+      queryClient.invalidateQueries({ queryKey: ['priceHistory'] });
+      const adj = (data.stock_adjustments || []).length;
+      toast.success('Approvisionnement corrigé', {
+        description: `${adj} ajustement(s) de stock, ${data.price_updates || 0} prix mis à jour`,
+      });
+    },
+    onError: (error) => {
+      toast.error('Correction refusée', {
+        description: error.response?.data?.detail || error.message,
+        duration: 8000,
+      });
+    },
+  });
+};
+
+
+/**
  * Supprimer un approvisionnement
  */
 export const useDeleteSupply = () => {
