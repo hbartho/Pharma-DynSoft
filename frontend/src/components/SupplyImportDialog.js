@@ -45,11 +45,13 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
   };
 
   const submit = () => {
+    if (!meta.supplier_id) { toast.error('Veuillez sélectionner un fournisseur'); return; }
+    if (!meta.invoice_number.trim()) { toast.error('Veuillez saisir le N° facture'); return; }
     const okRows = preview.rows.filter((r) => r.status === 'ok');
     onCreate({
-      supplier_id: meta.supplier_id || null,
+      supplier_id: meta.supplier_id,
       delivery_note_number: meta.delivery_note_number || null,
-      invoice_number: meta.invoice_number || null,
+      invoice_number: meta.invoice_number.trim(),
       notes: `Import fichier ${preview.filename}`,
       items: okRows.map((r) => ({
         product_id: r.product_id,
@@ -64,6 +66,7 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
   };
 
   const ok = preview?.summary?.ok || 0;
+  const metaValid = !!meta.supplier_id && meta.invoice_number.trim().length > 0;
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -107,15 +110,16 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <Label className="text-sm">Fournisseur</Label>
+                <Label className="text-sm">Fournisseur <span className="text-red-500">*</span></Label>
                 <Select value={meta.supplier_id} onValueChange={(v) => setMeta({ ...meta, supplier_id: v })}>
-                  <SelectTrigger className="mt-1" data-testid="supply-import-supplier"><SelectValue placeholder="Fournisseur (optionnel)" /></SelectTrigger>
+                  <SelectTrigger className={`mt-1 ${!meta.supplier_id ? 'border-red-300' : ''}`} data-testid="supply-import-supplier"><SelectValue placeholder="Sélectionner un fournisseur" /></SelectTrigger>
                   <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label className="text-sm">N° bon de livraison</Label><Input className="mt-1" value={meta.delivery_note_number} onChange={(e) => setMeta({ ...meta, delivery_note_number: e.target.value })} data-testid="supply-import-bl" /></div>
-              <div><Label className="text-sm">N° facture</Label><Input className="mt-1" value={meta.invoice_number} onChange={(e) => setMeta({ ...meta, invoice_number: e.target.value })} data-testid="supply-import-invoice" /></div>
+              <div><Label className="text-sm">N° facture <span className="text-red-500">*</span></Label><Input className={`mt-1 ${!meta.invoice_number.trim() ? 'border-red-300' : ''}`} placeholder="Ex: FACT-001" value={meta.invoice_number} onChange={(e) => setMeta({ ...meta, invoice_number: e.target.value })} data-testid="supply-import-invoice" /></div>
             </div>
+            {!metaValid && <p className="text-xs text-red-600" data-testid="supply-import-meta-hint">Le fournisseur et le N° facture sont obligatoires pour créer l'approvisionnement.</p>}
 
             <div className="flex flex-wrap gap-3 text-sm" data-testid="supply-import-summary">
               <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {ok} ligne(s) prête(s)</span>
@@ -156,7 +160,7 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setPreview(null)} data-testid="supply-import-back"><ArrowLeft className="w-4 h-4 mr-2" />Autre fichier</Button>
-              <Button onClick={submit} disabled={ok === 0 || creating} className="bg-teal-700 hover:bg-teal-800" data-testid="supply-import-submit">
+              <Button onClick={submit} disabled={ok === 0 || creating || !metaValid} className="bg-teal-700 hover:bg-teal-800" data-testid="supply-import-submit">
                 {creating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" strokeWidth={1.5} />}
                 Créer l'approvisionnement ({ok} ligne{ok > 1 ? 's' : ''})
               </Button>

@@ -160,6 +160,10 @@ if DATABASE_TYPE == "postgresql":
         product_repo = ProductRepository()
         
         with get_session() as session:
+            if not supply_data.supplier_id:
+                raise HTTPException(status_code=400, detail="Le fournisseur est obligatoire")
+            if not (supply_data.invoice_number or "").strip():
+                raise HTTPException(status_code=400, detail="Le N° facture est obligatoire")
             # Vérifier l'unicité de la combinaison (Fournisseur + Bon de livraison + Facture)
             if supply_data.supplier_id and (supply_data.delivery_note_number or supply_data.invoice_number):
                 existing_query = session.query(SupplyModel).filter(

@@ -750,3 +750,9 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - `/app/frontend/src/pages/Dashboard.js` - Tableau de bord
 - `/app/backend/routes/reports.py` - API statistiques
 - `/app/backend/routes/shifts.py` - API shifts
+
+
+## 2026-10-24 — Import approvisionnement : fournisseur et N° facture obligatoires
+- Dialogue d'import CSV/Excel : champs marqués *, bouton « Créer » désactivé tant qu'ils sont vides, message d'aide.
+- Backend `POST /api/supplies` refuse (400) toute création sans fournisseur ou sans N° facture (import et saisie manuelle).
+- Testé : API 400 sur les deux cas, UI bouton activé seulement avec les deux renseignés.
