@@ -200,6 +200,8 @@ if DATABASE_TYPE == "postgresql":
                 product = product_repo.get_by_id_str(item_data.product_id)
                 if not product:
                     raise HTTPException(status_code=400, detail=f"Produit {item_data.product_id} non trouvé")
+                if not (item_data.date_peremption or item_data.expiration_date):
+                    raise HTTPException(status_code=400, detail=f"Date de péremption obligatoire pour {product.get('name')}")
                 
                 item_total = item_data.unit_price * item_data.quantity
                 total_amount += item_total

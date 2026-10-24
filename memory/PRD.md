@@ -767,3 +767,8 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 ## 2026-10-24 — Compte connecté visible
 - Badge flottant en haut (nom + rôle, `current-user-badge`) à côté de l'indicateur de shift ; titre de l'onglet navigateur = « Nom · Rôle — DynSoft Pharma ».
 - Correction : le nom utilisateur (sidebar) utilisait `user.name` inexistant → `displayName` = first_name + last_name (fallback email).
+
+
+## 2026-10-24 — Date de péremption obligatoire (import + création)
+- Aperçu import : lignes sans date / date invalide / date passée → statut erreur, exclues (déjà en place, re-vérifié).
+- `POST /api/supplies` refuse désormais (400) tout item sans date de péremption, quel que soit le canal.
