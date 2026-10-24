@@ -772,3 +772,13 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 ## 2026-10-24 — Date de péremption obligatoire (import + création)
 - Aperçu import : lignes sans date / date invalide / date passée → statut erreur, exclues (déjà en place, re-vérifié).
 - `POST /api/supplies` refuse désormais (400) tout item sans date de péremption, quel que soit le canal.
+
+
+## 2026-10-24 — Audit données en dur & fraîcheur des prix (iteration_46)
+- Coefficient de référence 1.4 centralisé : `backend/services/pricing.py` (DEFAULT_MARKUP, estimate_purchase_price, default_selling_price) et `frontend/src/lib/pricing.js` (markupOf, estimatePurchasePrice). Tous les fallbacks `×1.3`, `×1.0`, `||1`, `×0.7` remplacés (supplies, prices, reports, stock, Supplies.js, Products.js, PriceManagement.js, useDashboard.js). Défaut catégorie = 1.4 (modèle, repo, pydantic).
+- Ligne d'appro sans prix public (import CSV) : prix actuel du produit, sinon cession × coef catégorie — plus jamais 1.3. `update_supply` aligné sur `create_supply` (fournisseur, facture, date péremption obligatoires).
+- Supprimé la mise à jour silencieuse PUT /products à l'ajout d'une ligne d'appro (était un no-op : ProductUpdate n'a pas de prix) — le prix ne change qu'à la validation.
+- `/api/stock-lots` renvoie markup_coefficient, prix_public_base, category_name, lot_number réel.
+- React Query : `queryKeys.stockMovements` corrigé en ['stock-movements'] (était ['stock','movements'] → Mouvements jamais rafraîchis) ; ajout invalidations dashboard / stock-lots / debts / customers / supplier-debts / priceHistory après vente, validation appro, retour, perte, modif lot.
+- Données « en dur » restantes = placeholders/valeurs par défaut légitimes (timezone Africa/Conakry, GNF, +224) — aucune URL, identifiant ou prix codé en dur.
+- Testing agent iteration_46 : backend 10/10, flux A/B/C UI OK (fraîcheur sans rechargement) ; écart Cat ×1 corrigé ensuite et vérifié à l'écran.

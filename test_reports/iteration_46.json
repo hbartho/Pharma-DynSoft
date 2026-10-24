@@ -1,0 +1,43 @@
+{
+  "summary": "Tested whether data stays fresh after changes (no page reload) and the backend price fallbacks. Backend: 10/10 pytest passed. If a supply line is created without a selling_price, it gets the product's current price (not ×1.3). Supplier, invoice number and expiry date are required (400 if missing). The product does not change before validation. Dashboard, stock valuation, prices summary and stock summary all return 200. Frontend (in-app navigation only): Flow A passed: supply APP-A8A12079 was created in the UI and the product did not change. After validation, /products showed stock 0->2, Cession 1000 and Public 1500, and /price-management showed the lot at 1000/1500. Flow B passed: sale VNT-71333385 (1 unit, cash, 1500 GNF). /stock-movements showed the Sortie -1 'Vente: VNT-71333385' row at the top (count 11->12), /products stock 2->1, dashboard 'Ventes aujourd'hui' 0->1. Flow C passed: lot price changed to 1600 on /price-management, then /products showed Public 1600 and /sales showed 1600 GNF in search and cart (sale not completed). Price history entry was recorded. One data discrepancy remains: Price Management shows 'Cat: ×1' and computes the base 'Prix public' column as cession×1 (1000 GNF instead of 1400 for category Antibiotiques ×1.4).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/stock-lots (routes/stock_lots.py lot_to_dict)", "issue": "Does not return markup_coefficient or prix_public_base. As a result PriceManagement always falls back to coefficient 1.0. Also current_quantity = initial quantity ('Simplifié'), not the remaining quantity: for this product the lots show qty 2+3+5 while stock is 1. lot_number is hardcoded None even though SupplyItem has lot_number (APP-A8A12079-1)."},
+      {"endpoint": "PUT /api/supplies/{id} (update_supply)", "issue": "Not aligned with create_supply. selling_price falls back to 0 instead of default_selling_price(). No check for required supplier, invoice number or date_peremption, so editing a pending supply can remove required fields. At validation a 0 selling_price leaves the product price unchanged, but the lot shows a 0 price in Price Management."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PriceManagement.js lines 318/603/608/612", "issue": "Hardcoded fallback `lot.markup_coefficient || 1.0`. The table shows '(Cat: ×1)' and 'PRIX PUBLIC' = cession×1 (1000 GNF), but the Supplies form shows ×1.4 for the same product/category (Antibiotiques). This is the discrepancy the audit was meant to remove. Coloring and the '⚠ Sous le coef.' warning are also wrong.", "selector": "tbody tr (Coef. column)", "priority": "HIGH"},
+      {"component": "Supplies.js remaining `|| 1` fallbacks", "issue": "Lines 608, 1138, 1148, 1183, 1190, 1279 and 2121 still use `markup_coefficient || 1` (only some lines were changed to 1.4). Any product without a category coefficient will show inconsistent base prices, coefficients and warnings.", "selector": "n/a", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Supplies form / Sales list", "issues": ["Native browser date pickers (input type=date) are used for 'Périme le', 'Date d'approvisionnement' and the sales date filter instead of the shadcn Calendar/Popover."]},
+      {"screen": "Sales dialog", "issues": ["The Code Promo placeholder 'PROMO2026' is dark enough to look like a pre-filled value; use a lighter placeholder colour."]},
+      {"screen": "Header", "issues": ["Right after login the user badge (Mamadou/Administrateur) briefly overlaps another pill behind it (text fragment visible behind the badge)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_pricing_freshness.py", "/app/test_reports/pytest/pytest_iter46.xml"],
+  "action_items": [
+    "Return markup_coefficient (category) and prix_public_base from /api/stock-lots, and change PriceManagement fallbacks from 1.0 to 1.4 (ideally from a single shared constant).",
+    "Replace the remaining `markup_coefficient || 1` in Supplies.js (lines 608, 1138, 1148, 1183, 1190, 1279, 2121) with the 1.4 reference constant.",
+    "Align update_supply with create_supply: use the default_selling_price fallback and check supplier, invoice number and date_peremption.",
+    "In stock-lots, expose the real lot_number and, if possible, the remaining quantity rather than the initial quantity."
+  ],
+  "critical_code_review_comments": [
+    "The 1.4 coefficient is duplicated as a literal in many frontend files. Export a single DEFAULT_MARKUP constant (e.g. lib/pricing.js), or serve it from settings, to avoid future drift.",
+    "Supplies.js is 2210 lines and Sales.js is over 3000 lines; both should be split into smaller components.",
+    "_apply_lot_prices_to_product: editing ANY lot (even an old or fully sold one) overwrites the product's global price. Expected under the 'last edit wins' rule, but worth documenting or restricting to the active FEFO lot.",
+    "React Query staleTime is 5 min, so freshness depends entirely on invalidations; the invalidations added in useSales, useSupplies and useStockLots were verified working."
+  ],
+  "updated_files": ["/app/backend/tests/test_pricing_freshness.py"],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% of requested flows (A, B, C). 1 price-display discrepancy found on Price Management"},
+  "seed_data_creation": "Validated test supply APP-A8A12079 (id a8a12079-bb92-41e7-bc79-f1bbe7c3f61e, invoice TEST_INV_UI_46A, GUIBIOMED SARL, 2 × '3HP KIT GEL' at cession 1000 / public 1500, lot APP-A8A12079-1, expiry 2028-06-30, supplier debt 2000 GNF created). Test sale VNT-71333385 (1 unit, 1500 GNF cash). Lot price later changed to 1600, so product 0839bdd9 is now price 1600, purchase 1000, stock 1. The pytest supplies were not validated and were deleted in teardown.",
+  "test_credentials": "admin@pharmaflow.com/admin123 OK; pharmacien@pharmaflow.com/Pharma#2026 OK (login 200). Auth uses a Bearer token (no app httpOnly cookie); CORS sends an explicit origin with credentials=true. Brute-force lockout was not tested, to avoid locking the admin account.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Navigate via a[href=...]:visible links (hidden duplicates exist). Supplies form: supplier combobox is the first button[role=combobox] in the dialog, #invoice_number, the item expiry is the 2nd input[type=date] in the dialog, and qty/cession/public are the inputs in div.grid-cols-3. Validate button title='Valider (Admin uniquement)', then 'Valider l'approvisionnement'. Sales: new-sale-button, then [data-testid=sale-form] [data-testid=product-search-input], add-to-cart-{id}, sale-submit-button. Price Management: inline row inputs plus save-all-prices-btn. Admin shift was already open.",
+  "rca of the issue": "Price Management coefficient discrepancy: stock_lots.lot_to_dict never includes the category markup_coefficient, and PriceManagement.js uses `|| 1.0`, so the base price = cession × 1. Fix: join the product category in GET /stock-lots, return markup_coefficient (fallback DEFAULT_MARKUP) and prix_public_base, and change the frontend fallback to 1.4."
+}

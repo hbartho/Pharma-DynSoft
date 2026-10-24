@@ -42,6 +42,7 @@ if DATABASE_TYPE == "postgresql":
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import SupplyItem, Supply, Product
     from services.price_history import record_price_change
+    from services.pricing import DEFAULT_MARKUP
     from sqlalchemy import desc
     
     def get_session():
@@ -51,7 +52,12 @@ if DATABASE_TYPE == "postgresql":
     
     def lot_to_dict(item, supply=None, product=None, supplier=None) -> dict:
         """Convertir un supply_item en lot de stock"""
+        category = product.category if product is not None else None
+        coefficient = (category.markup_coefficient if category is not None and category.markup_coefficient else None) or DEFAULT_MARKUP
         return {
+            "markup_coefficient": coefficient,
+            "prix_public_base": round((item.purchase_price or 0) * coefficient),
+            "category_name": category.name if category is not None else None,
             "id": str(item.id),
             "product_id": str(item.product_id),
             "product_name": item.product_name or (product.name if product else "Inconnu"),
@@ -64,7 +70,7 @@ if DATABASE_TYPE == "postgresql":
             "supply_id": str(item.supply_id) if item.supply_id else None,
             "supplier_name": supplier.name if supplier else None,
             "supplier_id": str(supply.supplier_id) if supply and supply.supplier_id else None,
-            "lot_number": None,  # Pas de numéro de lot dans ce modèle
+            "lot_number": item.lot_number,
             "tenant_id": get_current_tenant()
         }
     

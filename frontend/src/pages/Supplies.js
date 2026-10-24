@@ -45,6 +45,7 @@ import { useSettingsQuery } from '../hooks/useSettings';
 import { SkeletonSuppliesPage } from '../components/ui/skeleton-shimmer';
 import { useCurrentShift, useCanOperate } from '../hooks/useShifts';
 import { useShiftEligibility } from '../hooks/useShiftSchedules';
+import { markupOf } from '../lib/pricing';
 
 const Supplies = () => {
   const { user } = useAuth();
@@ -280,7 +281,7 @@ const Supplies = () => {
     if (!product) return;
     
     const category = categories.find(c => c.id === product?.category_id);
-    const coefficient = category?.markup_coefficient || 1.4;
+    const coefficient = markupOf(category?.markup_coefficient);
     const purchasePrice = parseFloat(itemForm.unit_price);  // Prix Cession
     const tvaRate = parseFloat(itemForm.tva_rate) || 0;
     const quantity = parseInt(itemForm.quantity);
@@ -399,12 +400,12 @@ const Supplies = () => {
     setProductSearch(item.product_name);
     
     // Récupérer le coefficient depuis le produit/catégorie si non présent dans l'item
-    let coefficient = item.markup_coefficient || 1.4;
+    let coefficient = markupOf(item.markup_coefficient);
     if (!item.markup_coefficient) {
       const product = products.find(p => p.id === item.product_id);
       if (product) {
         const category = categories.find(c => c.id === product.category_id);
-        coefficient = category?.markup_coefficient || 1.4;
+        coefficient = markupOf(category?.markup_coefficient);
       }
     }
     
@@ -422,7 +423,7 @@ const Supplies = () => {
     if (product) {
       // Récupérer les infos de la catégorie pour le coefficient
       const category = categories.find(c => c.id === product.category_id);
-      const coefficient = category?.markup_coefficient || 1.4;
+      const coefficient = markupOf(category?.markup_coefficient);
       const purchasePrice = product.purchase_price || 0;
       const sellingPrice = Math.round(purchasePrice * coefficient);
       
@@ -451,7 +452,7 @@ const Supplies = () => {
     
     // Si on a un produit sélectionné et un prix de cession valide, recalculer le prix public modifié
     if (selectedProductInfo && priceValue !== '' && !isNaN(parseFloat(priceValue))) {
-      const coefficient = selectedProductInfo.markup_coefficient || 1.4;
+      const coefficient = markupOf(selectedProductInfo.markup_coefficient);
       const newPrixPublic = Math.round(parseFloat(priceValue) * coefficient);
       
       setItemForm({
@@ -470,7 +471,7 @@ const Supplies = () => {
   // Calcul du prix public BASE (pour affichage info) = Prix Cession × Coefficient
   const calculatedPrixPublicBase = useMemo(() => {
     if (!itemForm.unit_price || !selectedProductInfo) return 0;
-    const coefficient = selectedProductInfo.markup_coefficient || 1.4;
+    const coefficient = markupOf(selectedProductInfo.markup_coefficient);
     return Math.round(parseFloat(itemForm.unit_price) * coefficient);
   }, [itemForm.unit_price, selectedProductInfo]);
 
@@ -605,7 +606,7 @@ const Supplies = () => {
       const itemsWithTotals = (fullSupply.items || []).map(item => {
         const quantity = item.quantity || 0;
         const unitPrice = item.unit_price || 0;  // Prix Cession
-        const coefficient = item.markup_coefficient || 1;
+        const coefficient = markupOf(item.markup_coefficient);
         const tvaRate = item.tva_rate || 0;
         
         // Prix Public de base = Prix Cession × Coef (TOUJOURS calculé)
@@ -1135,7 +1136,7 @@ const Supplies = () => {
                               {formatAmount(
                                 itemForm.prix_public_modifie 
                                   ? parseFloat(itemForm.prix_public_modifie) 
-                                  : Math.round((parseFloat(itemForm.unit_price) || selectedProductInfo.last_purchase_price || 0) * (selectedProductInfo.markup_coefficient || 1))
+                                  : Math.round((parseFloat(itemForm.unit_price) || selectedProductInfo.last_purchase_price || 0) * (markupOf(selectedProductInfo.markup_coefficient)))
                               )}
                             </span>
                           </div>
@@ -1145,7 +1146,7 @@ const Supplies = () => {
                             <span className="ml-1 font-bold">
                               {(() => {
                                 const prixCession = parseFloat(itemForm.unit_price) || 0;
-                                const prixPublicBase = Math.round(prixCession * (selectedProductInfo.markup_coefficient || 1));
+                                const prixPublicBase = Math.round(prixCession * (markupOf(selectedProductInfo.markup_coefficient)));
                                 const prixVente = itemForm.prix_public_modifie 
                                   ? parseFloat(itemForm.prix_public_modifie) 
                                   : prixPublicBase;
@@ -1180,14 +1181,14 @@ const Supplies = () => {
                         {/* Warning: Prix Public Modifié < Prix de base */}
                         {itemForm.prix_public_modifie && itemForm.unit_price && (() => {
                           const prixCession = parseFloat(itemForm.unit_price) || 0;
-                          const prixPublicBase = Math.round(prixCession * (selectedProductInfo.markup_coefficient || 1));
+                          const prixPublicBase = Math.round(prixCession * (markupOf(selectedProductInfo.markup_coefficient)));
                           const prixModifie = parseFloat(itemForm.prix_public_modifie);
                           return prixModifie < prixPublicBase;
                         })() && (
                           <div className="mt-2 p-2 bg-amber-50 border border-amber-300 rounded-lg flex items-center gap-2 text-amber-800">
                             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                             <span className="text-xs">
-                              <span className="font-medium">Attention :</span> Prix modifié ({formatAmount(parseFloat(itemForm.prix_public_modifie))}) &lt; Prix base ({formatAmount(Math.round(parseFloat(itemForm.unit_price) * (selectedProductInfo.markup_coefficient || 1)))}) — Marge réduite (rabais/liquidation)
+                              <span className="font-medium">Attention :</span> Prix modifié ({formatAmount(parseFloat(itemForm.prix_public_modifie))}) &lt; Prix base ({formatAmount(Math.round(parseFloat(itemForm.unit_price) * (markupOf(selectedProductInfo.markup_coefficient))))}) — Marge réduite (rabais/liquidation)
                             </span>
                           </div>
                         )}
@@ -1276,7 +1277,7 @@ const Supplies = () => {
                               </td>
                               <td className="px-2 py-2 text-right font-medium text-teal-700">{item.quantity}</td>
                               <td className="px-2 py-2 text-right">{formatAmount(item.unit_price)}</td>
-                              <td className="px-2 py-2 text-center text-teal-600">×{item.markup_coefficient || 1}</td>
+                              <td className="px-2 py-2 text-center text-teal-600">×{markupOf(item.markup_coefficient)}</td>
                               <td className="px-2 py-2 text-right font-medium text-emerald-700">
                                 {formatAmount(item.prix_public_base || item.selling_price || 0)}
                                 {item.selling_price && item.prix_public_base && item.selling_price !== item.prix_public_base && (
@@ -1737,7 +1738,7 @@ const Supplies = () => {
                       <tbody className="divide-y divide-slate-100">
                         {viewingSupply.items?.map((item, index) => {
                           const prixCession = item.unit_price || item.purchase_price || 0;
-                          const coefficient = item.markup_coefficient || 1.4;
+                          const coefficient = markupOf(item.markup_coefficient);
                           const prixPublicBase = Math.round(prixCession * coefficient);
                           const prixPublic = item.selling_price || prixPublicBase;
                           const tvaRate = item.tva_rate || 0;
@@ -2118,7 +2119,7 @@ const Supplies = () => {
                     <tbody className="divide-y divide-slate-100">
                       {supplyToValidate.items?.map((item, idx) => {
                         const prixCession = item.unit_price || 0;
-                        const prixPublicBase = item.prix_public_base || item.selling_price || (prixCession * (item.markup_coefficient || 1));
+                        const prixPublicBase = item.prix_public_base || item.selling_price || (prixCession * (markupOf(item.markup_coefficient)));
                         // Total HT = Prix Cession × Quantité
                         const totalHT = prixCession * item.quantity;
                         return (

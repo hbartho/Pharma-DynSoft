@@ -29,6 +29,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
+import { markupOf } from '../lib/pricing';
 
 const PriceManagement = () => {
   const { user } = useAuth();
@@ -315,7 +316,7 @@ const PriceManagement = () => {
                   {paginatedLots.map((lot) => {
                     const displaySellingPrice = getDisplayValue(lot, 'selling_price');
                     const displayPurchasePrice = getDisplayValue(lot, 'purchase_price');
-                    const coefficient = lot.markup_coefficient || 1.0;
+                    const coefficient = markupOf(lot.markup_coefficient);
                     // Prix public de base = prix cession × coefficient catégorie
                     const prixPublicBase = lot.prix_public_base || Math.round(displayPurchasePrice * coefficient);
                     // Prix modifié = si différent du prix base
@@ -600,16 +601,16 @@ const PriceManagement = () => {
                           </span>
                         </p>
                         <p className="text-xs text-teal-600">
-                          Coefficient catégorie: ×{editingLot.markup_coefficient || 1.0}
+                          Coefficient catégorie: ×{markupOf(editingLot.markup_coefficient)}
                         </p>
                       </div>
                       {editingLot.new_purchase_price > 0 && (
                         <div className={`text-sm font-medium px-2 py-1 rounded ${
-                          (editingLot.new_selling_price / editingLot.new_purchase_price) >= (editingLot.markup_coefficient || 1.0)
+                          (editingLot.new_selling_price / editingLot.new_purchase_price) >= (markupOf(editingLot.markup_coefficient))
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-amber-100 text-amber-700'
                         }`}>
-                          {(editingLot.new_selling_price / editingLot.new_purchase_price) >= (editingLot.markup_coefficient || 1.0)
+                          {(editingLot.new_selling_price / editingLot.new_purchase_price) >= (markupOf(editingLot.markup_coefficient))
                             ? '✓ Conforme'
                             : '⚠ Sous le coef.'
                           }

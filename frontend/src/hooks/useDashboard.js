@@ -8,6 +8,7 @@ import api from '../services/api';
 import { getAllItems } from '../services/indexedDB';
 import { todayInTz, formatDateInTz } from '../utils/timezoneUtils';
 import { getAppTimezone } from '../services/dateService';
+import { estimatePurchasePrice } from '../lib/pricing';
 
 // ============================================
 // Helper pour calculs offline du dashboard
@@ -26,7 +27,7 @@ const calculateOfflineDashboardStats = async () => {
   
   const todayRevenue = todaySales.reduce((sum, s) => sum + (s.total || 0), 0);
   const lowStockCount = products.filter(p => (p.stock || 0) <= (p.min_stock || 10)).length;
-  const totalStockValue = products.reduce((sum, p) => sum + ((p.stock || 0) * (p.purchase_price || (p.price ? p.price / 1.4 : 0))), 0);
+  const totalStockValue = products.reduce((sum, p) => sum + ((p.stock || 0) * estimatePurchasePrice(p.price, p.purchase_price)), 0);
   
   return {
     today_sales_count: todaySales.length,

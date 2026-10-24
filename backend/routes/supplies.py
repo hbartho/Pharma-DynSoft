@@ -405,6 +405,10 @@ if DATABASE_TYPE == "postgresql":
                 supply.delivery_note_number = supply_data["delivery_note_number"]
             if "invoice_number" in supply_data:
                 supply.invoice_number = supply_data["invoice_number"]
+            if not supply.supplier_id:
+                raise HTTPException(status_code=400, detail="Le fournisseur est obligatoire")
+            if not (supply.invoice_number or "").strip():
+                raise HTTPException(status_code=400, detail="Le N° facture est obligatoire")
             if "notes" in supply_data:
                 supply.notes = supply_data["notes"]
             
@@ -421,8 +425,16 @@ if DATABASE_TYPE == "postgresql":
                     subtotal = item_data["quantity"] * item_data.get("unit_price", item_data.get("purchase_price", 0))
                     total_amount += subtotal
                     
-                    # Gérer selling_price avec fallback sur prix_public_modifie
-                    selling_price = item_data.get("selling_price") or item_data.get("prix_public_modifie") or 0
+                    expiration = item_data.get("date_peremption") or item_data.get("expiration_date")
+                    if not expiration:
+                        raise HTTPException(status_code=400, detail=f"Date de péremption obligatoire pour {item_data.get('product_name') or item_data['product_id']}")
+                    
+                    # Prix public : saisi, sinon prix actuel du produit, sinon cession × coefficient catégorie
+                    selling_price = item_data.get("selling_price") or item_data.get("prix_public_modifie")
+                    if not selling_price or selling_price <= 0:
+                        prod = session.query(Product).filter(Product.id == uuid.UUID(item_data["product_id"])).first()
+                        coef = prod.category.markup_coefficient if prod is not None and prod.category is not None else None
+                        selling_price = default_selling_price(item_data.get("unit_price", item_data.get("purchase_price", 0)), prod.price if prod else None, coef)
                     
                     # Gérer shelf_location avec fallback sur rayon
                     shelf_location = item_data.get("shelf_location") or item_data.get("rayon")
@@ -447,7 +459,7 @@ if DATABASE_TYPE == "postgresql":
                         selling_price=selling_price,
                         subtotal=subtotal,
                         lot_number=(item_data.get("lot_number") or "").strip() or f"{supply.supply_number}-{idx}",
-                        expiration_date=item_data.get("date_peremption") or item_data.get("expiration_date"),
+                        expiration_date=expiration,
                         shelf_location=shelf_location,
                         tax_rate=tax_rate
                     )
