@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { Plus, Users, Edit, Trash2, Search, Phone, Mail, MapPin, Loader2, CloudOff, Wallet, AlertTriangle, Power, UserCheck, UserX, Timer } from 'lucide-react';
+import { Plus, Users, Edit, Trash2, Search, Phone, Mail, MapPin, Loader2, CloudOff, Wallet, AlertTriangle, Power, UserCheck, UserX, Timer, Lock } from 'lucide-react';
 import { useCustomers, useToggleCustomerStatus } from '../hooks/useCustomers';
 import { useCustomersInfinite } from '../hooks/useInfiniteScroll';
 import { useCustomersDebtSummary } from '../hooks/useDebts';
@@ -139,8 +139,9 @@ const Customers = () => {
     e.preventDefault();
     
     if (editingCustomer) {
+      const { max_debt_limit, ...rest } = formData;
       updateCustomer.mutate(
-        { ...formData, id: editingCustomer.id },
+        { customerId: editingCustomer.id, data: isAdmin ? formData : rest },
         {
           onSuccess: () => {
             setShowDialog(false);
@@ -286,32 +287,32 @@ const Customers = () => {
                     placeholder="Adresse complète"
                   />
                 </div>
-                {/* Seuil de dette - visible uniquement pour les admins */}
-                {user?.role === 'admin' && (
-                  <div className="pt-4 border-t border-slate-200">
-                    <Label htmlFor="max_debt_limit" className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-slate-500" />
-                      Seuil de crédit maximum
-                    </Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        id="max_debt_limit"
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={formData.max_debt_limit}
-                        onChange={(e) => setFormData({ ...formData, max_debt_limit: parseFloat(e.target.value) || 0 })}
-                        data-testid="customer-debt-limit-input"
-                        placeholder="0"
-                        className="flex-1"
-                      />
-                      <span className="text-sm text-slate-500">GNF</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      0 = pas de crédit autorisé
-                    </p>
+                {/* Seuil de dette - modifiable uniquement par les admins, visible (grisé) pour les autres */}
+                <div className="pt-4 border-t border-slate-200">
+                  <Label htmlFor="max_debt_limit" className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-slate-500" />
+                    Seuil de crédit maximum
+                    {!isAdmin && <Lock className="w-3.5 h-3.5 text-slate-400" data-testid="customer-debt-limit-lock" />}
+                  </Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      id="max_debt_limit"
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={formData.max_debt_limit}
+                      onChange={(e) => setFormData({ ...formData, max_debt_limit: parseFloat(e.target.value) || 0 })}
+                      data-testid="customer-debt-limit-input"
+                      placeholder="0"
+                      disabled={!isAdmin}
+                      className={`flex-1 ${!isAdmin ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                    />
+                    <span className="text-sm text-slate-500">GNF</span>
                   </div>
-                )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    {isAdmin ? '0 = pas de crédit autorisé' : 'Seul un administrateur peut modifier ce seuil'}
+                  </p>
+                </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <Button type="button" variant="outline" onClick={() => { setShowDialog(false); resetForm(); }}>
                     Annuler

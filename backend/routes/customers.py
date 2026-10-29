@@ -95,6 +95,8 @@ if DATABASE_TYPE == "postgresql":
         """Create a new customer"""
         repo = CustomerRepository()
         data = customer_data.model_dump()
+        if current_user.get("role") != "admin":
+            data["max_debt_limit"] = 0  # Seul un admin fixe le seuil de crédit
         result = repo.create(data)
         return Customer(**result)
     
@@ -120,6 +122,8 @@ if DATABASE_TYPE == "postgresql":
         repo = CustomerRepository()
         # Filtrer les champs None pour ne pas écraser les données existantes
         update_data = {k: v for k, v in customer_data.model_dump().items() if v is not None}
+        if "max_debt_limit" in update_data and current_user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Seul un administrateur peut modifier le seuil de crédit")
         result = repo.update_by_id_str(customer_id, update_data)
         if not result:
             raise HTTPException(status_code=404, detail="Customer not found")
