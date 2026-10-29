@@ -800,3 +800,9 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - `services/tenant_reset.py` (reset_tenant_data, list_backups, drop_backup) partagé par le script CLI et l'API.
 - Endpoints : `POST /api/platform/pharmacies/{slug}/reset-data?confirm=<slug>` (sauvegarde auto en schéma `bkp_<schema>_<stamp>`, transaction unique), `GET .../backups`, `DELETE .../backups/{name}`.
 - UI : bouton ambre ↻ par pharmacie → `PharmacyResetDialog` (confirmation par slug, résumé, liste des sauvegardes supprimables). Testé API (403 non super-admin, 400 confirmation, reset + backups + drop) sur un tenant temporaire supprimé ensuite, UI vérifiée.
+
+
+## 2026-10-24 — Seuil de crédit client : admin seulement + bug édition (iteration_48/49)
+- Cause réelle : `GET /api/customers/paginated` ne renvoyait pas `max_debt_limit` → formulaire toujours à 0 et sauvegarde écrasait le seuil. Ajout de `max_debt_limit` et `current_debt` (somme dettes pending/partial, 1 requête).
+- Frontend : champ seuil toujours visible, désactivé + cadenas pour non-admin ; mutation via useOfflineMutation format `{...data, id}` (une tentative `{customerId,data}` avait cassé l'édition — corrigée).
+- Backend : PUT non-admin avec max_debt_limit → 403 ; POST non-admin → seuil forcé à 0. Agent de test : backend 6/6, UI admin + pharmacien OK.
