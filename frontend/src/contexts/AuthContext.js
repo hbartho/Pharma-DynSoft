@@ -1,4 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { useAutoLogout } from '../hooks/useAutoLogout';
 import { getUserData, saveUserData, clearUserData } from '../services/indexedDB';
 import { syncData, forceFullSync } from '../services/syncService';
 import api from '../services/api';
@@ -108,14 +110,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = useCallback(async (opts = {}) => {
     await clearUserData();
     sessionStorage.removeItem('adminShiftModalDismissed');
     setUser(null);
     setToken(null);
     setIsSyncing(false);
     setSyncProgress(null);
-  };
+    if (opts.auto) {
+      toast.info('Session fermée automatiquement', { description: `Déconnexion pour ${opts.reason}. Veuillez vous reconnecter.`, duration: 8000 });
+    }
+  }, []);
+
+  // Déconnexion auto : 15 min d'inactivité, mise en veille du PC
+  useAutoLogout(!!user, logout);
 
   const value = {
     user,

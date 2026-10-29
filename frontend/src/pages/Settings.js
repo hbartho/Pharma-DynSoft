@@ -40,6 +40,10 @@ const Settings = () => {
     mtn_money_default_phone: '',
     default_shift_duration_hours: 8,
     timezone: 'Africa/Conakry',
+    pharmacy_address: '',
+    pharmacy_phone: '',
+    receipt_footer: 'Merci de votre visite',
+    receipt_print_prompt: true,
   });
   
   const [offlineStats, setOfflineStats] = useState(null);
@@ -64,6 +68,10 @@ const Settings = () => {
         mtn_money_default_phone: settingsData.mtn_money_default_phone || '',
         default_shift_duration_hours: settingsData.default_shift_duration_hours || 8,
         timezone: settingsData.timezone || 'Africa/Conakry',
+        pharmacy_address: settingsData.pharmacy_address || '',
+        pharmacy_phone: settingsData.pharmacy_phone || '',
+        receipt_footer: settingsData.receipt_footer ?? 'Merci de votre visite',
+        receipt_print_prompt: settingsData.receipt_print_prompt !== false,
       });
     }
   }, [settingsData]);
@@ -268,6 +276,26 @@ const Settings = () => {
                   placeholder="Ma Pharmacie"
                   className="mt-1"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="pharmacy_address">Adresse (imprimée sur le reçu)</Label>
+                <Input id="pharmacy_address" value={localSettings.pharmacy_address} onChange={(e) => setLocalSettings({ ...localSettings, pharmacy_address: e.target.value })} placeholder="Quartier, commune, ville" className="mt-1" data-testid="settings-pharmacy-address" />
+              </div>
+              <div>
+                <Label htmlFor="pharmacy_phone">Téléphone (imprimé sur le reçu)</Label>
+                <Input id="pharmacy_phone" value={localSettings.pharmacy_phone} onChange={(e) => setLocalSettings({ ...localSettings, pharmacy_phone: e.target.value })} placeholder="+224 6xx xx xx xx" className="mt-1" data-testid="settings-pharmacy-phone" />
+              </div>
+              <div>
+                <Label htmlFor="receipt_footer">Message de pied de ticket</Label>
+                <Input id="receipt_footer" value={localSettings.receipt_footer} onChange={(e) => setLocalSettings({ ...localSettings, receipt_footer: e.target.value })} placeholder="Merci de votre visite" className="mt-1" data-testid="settings-receipt-footer" />
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-slate-200 p-3">
+                <div>
+                  <Label htmlFor="receipt_print_prompt">Proposer l'impression du reçu après chaque vente</Label>
+                  <p className="text-xs text-slate-500">Désactivé : le ticket part directement à l'imprimante</p>
+                </div>
+                <input id="receipt_print_prompt" type="checkbox" className="h-4 w-4 accent-teal-700" checked={localSettings.receipt_print_prompt} onChange={(e) => setLocalSettings({ ...localSettings, receipt_print_prompt: e.target.checked })} data-testid="settings-receipt-prompt" />
               </div>
 
               <div>

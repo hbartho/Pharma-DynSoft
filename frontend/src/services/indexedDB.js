@@ -310,7 +310,8 @@ export const setLastSyncTime = async (storeName = 'global', time = null) => {
 // User data
 // ============================================
 
-// Session par onglet (sessionStorage) ; IndexedDB garde la dernière connexion pour les nouveaux onglets / relance PWA
+// Session par onglet uniquement (sessionStorage) : fermer l'onglet/navigateur déconnecte l'agent.
+// IndexedDB garde une copie pour les services hors-ligne de la même session, jamais pour restaurer un nouvel onglet.
 const TAB_SESSION_KEY = 'dyn_tab_session';
 
 const readTabSession = () => {
@@ -335,22 +336,13 @@ export const saveUserData = async (user, token) => {
 };
 
 export const getUserData = async () => {
-  const tabSession = readTabSession();
-  if (tabSession) return tabSession;
-  const db = await getDB();
-  const stored = await db.get('user', 'currentUser');
-  if (stored) writeTabSession(stored);
-  return stored || null;
+  return readTabSession();
 };
 
 export const clearUserData = async () => {
-  const tabSession = readTabSession();
   writeTabSession(null);
   const db = await getDB();
-  const stored = await db.get('user', 'currentUser');
-  if (stored && (!tabSession || stored.token === tabSession.token)) {
-    await db.delete('user', 'currentUser');
-  }
+  await db.delete('user', 'currentUser');
 };
 
 // ============================================

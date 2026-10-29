@@ -26,6 +26,9 @@ import { useShiftEligibility } from '../hooks/useShiftSchedules';
 import { usePendingSales, usePendingSalesCount, useCreatePendingSale, useCancelPendingSale } from '../hooks/usePendingSales';
 import { SkeletonSalesPage } from '../components/ui/skeleton-shimmer';
 import { useAuth } from '../contexts/AuthContext';
+import { ReceiptPromptDialog } from '../components/ReceiptPromptDialog';
+import { CreditLimitAlert } from '../components/CreditLimitAlert';
+import { printReceipt } from '../lib/receipt';
 
 // Composant pour le formulaire de rabais par produit
 const ProductDiscountForm = ({ item, onApply, onCancel }) => {
@@ -205,6 +208,7 @@ const Sales = () => {
 
   // Local state
   const [showDialog, setShowDialog] = useState(false);
+  const [receiptSale, setReceiptSale] = useState(null); // vente à proposer à l'impression
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
@@ -1246,6 +1250,11 @@ const Sales = () => {
           } else if (newSale.is_split_payment) {
             toast.success('Vente enregistrée avec paiement mixte');
           }
+          if (appSettings?.receipt_print_prompt === false) {
+            handlePrintReceipt(newSale);
+          } else {
+            setReceiptSale(newSale);
+          }
         },
         onError: async (error) => {
           // Si erreur, basculer en mode offline
@@ -1286,6 +1295,18 @@ const Sales = () => {
         toast.error('Erreur lors de l\'enregistrement');
       }
     }
+  };
+
+  const handlePrintReceipt = (sale, cashReceived) => {
+    const ok = printReceipt({
+      sale: cashReceived != null ? { ...sale, cash_received: cashReceived } : sale,
+      settings: appSettings,
+      agentName: user?.first_name || user?.name || user?.employee_code,
+      customerName: sale.customer_id ? getCustomerName(sale.customer_id) : '',
+      formatAmount,
+    });
+    if (!ok) toast.error('Fenêtre d\'impression bloquée : autorisez les pop-ups pour ce site');
+    setReceiptSale(null);
   };
 
   const handleViewDetails = (sale) => {
@@ -1929,6 +1950,15 @@ const Sales = () => {
                       <p className="mt-1 text-sm text-teal-600">
                         ✓ Client sélectionné: {customers.find(c => c.id === selectedCustomer)?.name}
                       </p>
+                    )}
+                    {selectedCustomer && selectedCustomer !== 'none' && (
+                      <div className="mt-2">
+                        <CreditLimitAlert
+                          credit={customerCredit}
+                          requestedDebt={paymentMethod === 'debt' ? calculateTotal() : useDebtPayment ? (parseFloat(debtAmount) || 0) : 0}
+                          formatAmount={formatAmount}
+                        />
+                      </div>
                     )}
                   </div>
                   <div>
@@ -3524,6 +3554,9 @@ const Sales = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Popup impression du reçu après vente */}
+      <ReceiptPromptDialog sale={receiptSale} onPrint={(cash) => handlePrintReceipt(receiptSale, cash)} onClose={() => setReceiptSale(null)} formatAmount={formatAmount} />
 
       {/* Barcode Scanner */}
       {showBarcodeScanner && (

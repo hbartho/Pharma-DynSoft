@@ -60,7 +60,11 @@ if DATABASE_TYPE == "postgresql":
             "shift_max_duration": 12,
             "pending_sale_expiration_hours": 24,
             "timezone": "Africa/Conakry",
-            "debt_overdue_days": 90
+            "debt_overdue_days": 90,
+            "pharmacy_address": "",
+            "pharmacy_phone": "",
+            "receipt_footer": "Merci de votre visite",
+            "receipt_print_prompt": True,
         }
         
         for key, default in defaults.items():

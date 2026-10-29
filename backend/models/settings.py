@@ -41,3 +41,8 @@ class SettingsUpdate(BaseModel):
     default_shift_duration_hours: Optional[int] = None
     # Délai en jours après lequel une dette est considérée en retard
     debt_overdue_days: Optional[int] = None
+    # Reçu de caisse (ticket 80 mm)
+    pharmacy_address: Optional[str] = None
+    pharmacy_phone: Optional[str] = None
+    receipt_footer: Optional[str] = None
+    receipt_print_prompt: Optional[bool] = None
