@@ -28,6 +28,7 @@ const RECEIPT_CSS = `
 `;
 
 const DEFAULT_LOGO = `${window.location.origin}/images/receipt-logo.png`;
+export const receiptLogoSrc = (settings = {}) => settings.receipt_logo || DEFAULT_LOGO;
 
 const headerHtml = (settings) => `<div class="hd">
   <img src="${esc(settings.receipt_logo || DEFAULT_LOGO)}" alt="" />

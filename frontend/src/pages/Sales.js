@@ -28,7 +28,7 @@ import { SkeletonSalesPage } from '../components/ui/skeleton-shimmer';
 import { useAuth } from '../contexts/AuthContext';
 import { ReceiptPromptDialog } from '../components/ReceiptPromptDialog';
 import { CreditLimitAlert } from '../components/CreditLimitAlert';
-import { printReceipt } from '../lib/receipt';
+import { printReceipt, receiptLogoSrc } from '../lib/receipt';
 import { searchProducts } from '../lib/productSearch';
 
 // Composant pour le formulaire de rabais par produit
@@ -1371,11 +1371,16 @@ const Sales = () => {
             color: #1e293b;
           }
           .header { 
-            text-align: center; 
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            text-align: left; 
             margin-bottom: 30px; 
             padding-bottom: 20px; 
             border-bottom: 2px solid #0d9488;
           }
+          .header img { width: 80px; height: 80px; object-fit: contain; flex: 0 0 auto; }
+          .header .ht { flex: 1; }
           .header h1 { 
             color: #0d9488; 
             font-size: 28px; 
@@ -1385,6 +1390,8 @@ const Sales = () => {
             color: #64748b; 
             font-size: 14px;
           }
+          .header .sub { font-size: 13px; color: #64748b; }
+          .header .doc { margin-left: auto; text-align: right; font-size: 18px; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: 1px; }
           .info-grid { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -1494,6 +1501,7 @@ const Sales = () => {
             color: #94a3b8;
             font-size: 12px;
           }
+          .footer p.powered { margin-top: 10px; font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; }
           @media print {
             body { padding: 20px; }
             .no-print { display: none; }
@@ -1502,8 +1510,13 @@ const Sales = () => {
       </head>
       <body>
         <div class="header">
-          <h1>${appSettings?.pharmacy_name || 'DynSoft Pharma'}</h1>
-          <p>Reçu de vente</p>
+          <img src="${receiptLogoSrc(appSettings)}" alt="Logo" />
+          <div class="ht">
+            <h1>${appSettings?.pharmacy_name || 'DynSoft Pharma'}</h1>
+            ${appSettings?.pharmacy_address ? `<p class="sub">${appSettings.pharmacy_address}</p>` : ''}
+            ${appSettings?.pharmacy_phone ? `<p class="sub">Tél : ${appSettings.pharmacy_phone}</p>` : ''}
+          </div>
+          <div class="doc">Reçu de vente</div>
         </div>
         
         <div class="info-grid">
@@ -1519,17 +1532,14 @@ const Sales = () => {
             <label>Mode de paiement</label>
             <span>${paymentLabel}</span>
           </div>
-          ${!sale.is_split_payment ? `
           <div class="info-item">
             <label>Référence</label>
             <span>${sale.sale_number || sale.id?.substring(0, 8).toUpperCase() || 'N/A'}</span>
           </div>
-          ` : `
           <div class="info-item">
-            <label>Référence</label>
-            <span>${sale.sale_number || sale.id?.substring(0, 8).toUpperCase() || 'N/A'}</span>
+            <label>Agent</label>
+            <span>${sale.employee_code || user?.employee_code || '-'}</span>
           </div>
-          `}
         </div>
         
         ${debtSection}
@@ -1576,23 +1586,20 @@ const Sales = () => {
         </div>
         
         <div class="footer">
-          <p>Merci pour votre achat !</p>
+          <p>${appSettings?.receipt_footer || 'Merci de votre visite'}</p>
           <p style="margin-top: 5px;">Document généré le ${new Date().toLocaleString('fr-FR')}</p>
+          <p class="powered">Produit par DynSoft Pharma</p>
         </div>
+        <script>window.onload=function(){window.focus();window.print();};</script>
       </body>
       </html>
     `;
     
-    // Ouvrir une nouvelle fenêtre et imprimer/sauvegarder en PDF
+    // Ouvrir une nouvelle fenêtre et imprimer/sauvegarder en PDF (impression lancée une fois le logo chargé)
     const printWindow = window.open('', '_blank');
+    if (!printWindow) { toast.error('Fenêtre bloquée : autorisez les pop-ups pour ce site'); return; }
     printWindow.document.write(printContent);
     printWindow.document.close();
-    printWindow.focus();
-    
-    // Attendre le chargement puis lancer l'impression
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
     
     toast.success('Document PDF généré');
   };

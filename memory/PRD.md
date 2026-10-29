@@ -836,3 +836,4 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 ## 2026-06 — Historique des mouvements (bug)
 - La validation d'un appro crée désormais un mouvement « Entrée » (IN) par ligne (réf. supply, lot, agent). Migration tenant `0002_supply_in_mvts` reconstitue les entrées des appros déjà validés (reason « historique reconstitué »), appliquée à tous les schémas au démarrage.
 - Filtres dates déplacés côté serveur (`date_from`/`date_to` sur /stock/movements/paginated) : s'appliquent à tout l'historique, plus seulement aux pages chargées.
+- Reçu PDF (A4, bouton PDF historique ventes) : logo en haut à gauche (même logo que le ticket), adresse/tél, agent (code), pied configurable + « Produit par DynSoft Pharma » ; impression lancée après chargement du logo.
