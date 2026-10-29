@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
-import { Building2, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Building2, KeyRound, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../services/api';
 import logoImage from '../images/logo.jpg';
@@ -32,10 +32,20 @@ const Login = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
+  const [loginError, setLoginError] = useState('');
+
+  const friendlyLoginError = (message, status) => {
+    if (!status) return 'Connexion au serveur impossible. Vérifiez votre réseau.';
+    if (/incorrect email or password/i.test(message || '')) return 'Email ou mot de passe incorrect';
+    if (/login failed/i.test(message || '')) return 'Erreur de connexion';
+    return message || 'Erreur de connexion';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     setLoading(true);
+    setLoginError('');
 
     const result = await login(formData.email, formData.password);
     
@@ -43,13 +53,16 @@ const Login = () => {
       toast.success('Connexion réussie!');
       navigate(result.user?.role === 'super_admin' ? '/platform' : '/dashboard');
     } else {
-      toast.error(result.message || 'Erreur de connexion');
+      const msg = friendlyLoginError(result.message, result.status);
+      setLoginError(msg);
+      toast.error(msg);
     }
     
     setLoading(false);
   };
 
   const handleChange = (e) => {
+    setLoginError('');
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -187,6 +200,13 @@ const Login = () => {
                 </button>
               </div>
             </div>
+
+            {loginError && (
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700" data-testid="login-error">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
 
             <Button
               type="submit"

@@ -38,7 +38,7 @@ api.interceptors.response.use(
         description: 'Cette pharmacie est synchronisée depuis son serveur local : les modifications se font sur place.',
       });
     }
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
       const errorDetail = error.response?.data?.detail || '';
       
       // Vérifier si c'est une session invalidée (connexion depuis un autre appareil)

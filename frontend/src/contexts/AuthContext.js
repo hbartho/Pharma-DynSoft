@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true, user: userData };
     } catch (error) {
-      return { success: false, message: error.response?.data?.detail || 'Login failed' };
+      return { success: false, status: error.response?.status, message: error.response?.data?.detail || 'Login failed' };
     }
   };
 
