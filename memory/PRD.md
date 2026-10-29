@@ -823,3 +823,8 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ## 2026-10-29 — Réimpression du reçu
 - Bouton imprimante (`receipt-sale-{id}`) dans la liste des ventes + bouton « Réimprimer le reçu » dans le détail (`detail-print-receipt`) ; ticket marqué « *** DUPLICATA *** ». Vérifié : popup ouverte, print() appelé, code-barres, pied, mention DynSoft.
+
+
+## 2026-10-29 — Reçu de remboursement de dette
+- `POST /api/debts/payment/bulk` renvoie receipt_number, client, solde restant, agent. `lib/receipt.js buildDebtPaymentReceiptHtml` (ticket 80 mm : dette avant, montant payé, mode, SOLDE RESTANT, code-barres). Popup « Imprimer le reçu de remboursement ? » dans Dettes (impression directe si receipt_print_prompt=false) ; bouton réimpression dans l'historique (DUPLICATA, « SOLDE ACTUEL » du client). Fix : nom de l'agent dans l'historique (lookup par employee_code).
+- Vérifié UI : popup, ticket imprimé, réimpression. Dettes de test soldées.

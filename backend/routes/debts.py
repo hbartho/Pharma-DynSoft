@@ -655,11 +655,24 @@ if DATABASE_TYPE == "postgresql":
             
             session.commit()
             
+            customer_remaining = session.query(func.coalesce(func.sum(DebtModel.remaining_amount), 0)).filter(
+                DebtModel.customer_id == uuid.UUID(request.customer_id),
+                DebtModel.status.in_([DebtStatus.PENDING, DebtStatus.PARTIAL])
+            ).scalar() or 0
+            customer = session.query(Customer).filter(Customer.id == uuid.UUID(request.customer_id)).first()
             return {
                 "total_applied": request.amount - remaining_payment,
                 "remaining_from_payment": remaining_payment,
                 "payments_created": len(debts_updated),
-                "debts_updated": debts_updated
+                "debts_updated": debts_updated,
+                "receipt_number": f"RBT-{uuid.uuid4().hex[:8].upper()}",
+                "payment_method": request.payment_method,
+                "customer_id": request.customer_id,
+                "customer_name": customer.name if customer else None,
+                "customer_phone": customer.phone if customer else None,
+                "customer_remaining_debt": float(customer_remaining),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_by": current_user.get("employee_code", "N/A"),
             }
     
     @router.get("/payments/history", response_model=List[dict])
@@ -727,8 +740,8 @@ if DATABASE_TYPE == "postgresql":
                     created_by_id = payment.get('created_by') or payment.get('user_id')
                     agent_code = payment.get('agent_code', '')
                     if created_by_id:
-                        user = users.get(str(created_by_id), {})
-                        payment_copy['created_by_name'] = user.get('name', agent_code or 'Utilisateur inconnu')
+                        user = users.get(str(created_by_id)) or next((u for u in users.values() if u.get('employee_code') == created_by_id), {})
+                        payment_copy['created_by_name'] = user.get('name') or f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or agent_code or str(created_by_id)
                     elif agent_code:
                         # Chercher l'utilisateur par employee_code
                         user_by_code = next((u for u in users.values() if u.get('employee_code') == agent_code), None)

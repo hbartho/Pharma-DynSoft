@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Progress } from '../components/ui/progress';
@@ -12,7 +12,7 @@ import {
   CreditCard, Banknote, DollarSign, Clock, CheckCircle2,
   ArrowDownCircle, History, Eye, ChevronRight, Smartphone,
   FileCheck, Loader2, AlertCircle, RefreshCw, Calendar,
-  Shield, Send, CheckCircle, X, CircleDollarSign, XCircle, Trash2
+  Shield, Send, CheckCircle, X, CircleDollarSign, XCircle, Trash2, Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSettings } from '../contexts/SettingsContext';
@@ -31,6 +31,8 @@ import { useSettingsQuery } from '../hooks/useSettings';
 import { useCurrentShift, useCanOperate } from '../hooks/useShifts';
 import { SkeletonTable, SkeletonStatsCard } from '../components/ui/skeleton-shimmer';
 import { useAuth } from '../contexts/AuthContext';
+import { printDebtPaymentReceipt } from '../lib/receipt';
+import api from '../services/api';
 
 const Debts = () => {
   const { formatAmount } = useSettings();
@@ -38,6 +40,7 @@ const Debts = () => {
   
   // Récupérer l'utilisateur courant pour vérifier le rôle
   const { user } = useAuth();
+  const [receiptPayment, setReceiptPayment] = useState(null); // remboursement à proposer à l'impression
   const isAdminUser = user?.role === 'admin';
   
   // Vérifier si un shift est ouvert (requis pour les opérations financières)
@@ -368,6 +371,11 @@ const Debts = () => {
           resetPaymentDetails();
           resetOtpState();
           refreshAllData();
+          if (settings?.receipt_print_prompt === false) {
+            handlePrintDebtReceipt(data);
+          } else {
+            setReceiptPayment(data);
+          }
         },
         onError: (error) => {
           toast.error(error.response?.data?.detail || 'Erreur lors du remboursement');
@@ -376,6 +384,38 @@ const Debts = () => {
     );
   };
   
+  const handlePrintDebtReceipt = (payment, { duplicate = false } = {}) => {
+    const ok = printDebtPaymentReceipt({
+      payment,
+      settings,
+      agentName: user?.first_name || user?.name || user?.employee_code,
+      formatAmount,
+      duplicate,
+    });
+    if (!ok) toast.error('Fenêtre d\'impression bloquée : autorisez les pop-ups pour ce site');
+    setReceiptPayment(null);
+  };
+
+  // Réimpression depuis l'historique : solde = dette actuelle du client
+  const handleReprintHistoryPayment = async (payment) => {
+    let currentDebt = 0;
+    try {
+      const res = await api.get(`/debts/customer/${payment.customer_id}/available-credit`);
+      currentDebt = res.data?.current_debt || 0;
+    } catch { /* solde inconnu : 0 */ }
+    handlePrintDebtReceipt({
+      receipt_number: `RBT-${String(payment.id || '').replace(/-/g, '').substring(0, 8).toUpperCase()}`,
+      created_at: payment.created_at,
+      created_by: payment.created_by_name,
+      customer_name: payment.customer_name,
+      payment_method: payment.payment_method,
+      total_applied: payment.amount,
+      debts_updated: [{ debt_id: payment.debt_id, amount_applied: payment.amount }],
+      customer_remaining_debt: currentDebt,
+      balance_label: 'SOLDE ACTUEL',
+    }, { duplicate: true });
+  };
+
   // Ouvrir le modal d'abandon de dette
   const handleOpenWriteOff = (customer) => {
     setSelectedDebtForWriteOff(customer);
@@ -1155,7 +1195,14 @@ const Debts = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-slate-600">
-                            {payment.created_by_name || '-'}
+                            <span className="inline-flex items-center gap-2">
+                              {payment.created_by_name || '-'}
+                              {!isWriteOff && (
+                                <Button variant="ghost" size="sm" className="h-7 px-2" title="Réimprimer le reçu" onClick={() => handleReprintHistoryPayment(payment)} data-testid={`reprint-debt-payment-${payment.id}`}>
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </span>
                           </td>
                         </tr>
                       );
@@ -1648,6 +1695,22 @@ const Debts = () => {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Popup impression du reçu de remboursement */}
+      <Dialog open={!!receiptPayment} onOpenChange={(o) => !o && setReceiptPayment(null)}>
+        <DialogContent className="max-w-sm" data-testid="debt-receipt-prompt-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Printer className="w-5 h-5 text-teal-700" /> Imprimer le reçu de remboursement ?</DialogTitle>
+            <DialogDescription>
+              {receiptPayment?.customer_name} — payé <strong>{formatAmount(receiptPayment?.total_applied || 0)}</strong>, solde restant <strong>{formatAmount(receiptPayment?.customer_remaining_debt || 0)}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setReceiptPayment(null)} data-testid="debt-receipt-prompt-no">Non</Button>
+            <Button className="bg-teal-700 hover:bg-teal-800" onClick={() => handlePrintDebtReceipt(receiptPayment)} data-testid="debt-receipt-prompt-print"><Printer className="w-4 h-4 mr-1" /> Imprimer</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>

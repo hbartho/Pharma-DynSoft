@@ -7,6 +7,23 @@ const PAYMENT_LABELS = {
   mobile_money: 'Mobile Money', check: 'Chèque', debt: 'Crédit', credit: 'Crédit', transfer: 'Virement',
 };
 
+const RECEIPT_CSS = `
+  @page { size: 80mm auto; margin: 3mm; }
+  * { box-sizing: border-box; }
+  body { width: 72mm; margin: 0 auto; font-family: "Courier New", monospace; font-size: 11px; color: #000; }
+  .c { text-align: center; } .r { text-align: right; } .b { font-weight: 700; }
+  h1 { font-size: 15px; margin: 0 0 2px; }
+  .muted { font-size: 10px; }
+  hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1px 0; vertical-align: top; }
+  td.n { font-weight: 600; } td.q { padding-left: 6px; font-size: 10px; }
+  .tot td { font-size: 13px; font-weight: 700; padding-top: 3px; }
+  .bc { margin: 6px 0 2px; } .bc svg { width: 100%; height: 38px; }
+  .foot { margin-top: 6px; font-size: 10px; }
+  .pw { margin-top: 8px; font-size: 9px; color: #444; }
+`;
+
 const barcodeSvg = (text) => {
   try {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -42,22 +59,7 @@ export const buildReceiptHtml = ({ sale, settings = {}, agentName, customerName,
   }).join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Reçu ${esc(saleNumber)}</title>
-<style>
-  @page { size: 80mm auto; margin: 3mm; }
-  * { box-sizing: border-box; }
-  body { width: 72mm; margin: 0 auto; font-family: "Courier New", monospace; font-size: 11px; color: #000; }
-  .c { text-align: center; } .r { text-align: right; } .b { font-weight: 700; }
-  h1 { font-size: 15px; margin: 0 0 2px; }
-  .muted { font-size: 10px; }
-  hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
-  table { width: 100%; border-collapse: collapse; }
-  td { padding: 1px 0; vertical-align: top; }
-  td.n { font-weight: 600; } td.q { padding-left: 6px; font-size: 10px; }
-  .tot td { font-size: 13px; font-weight: 700; padding-top: 3px; }
-  .bc { margin: 6px 0 2px; } .bc svg { width: 100%; height: 38px; }
-  .foot { margin-top: 6px; font-size: 10px; }
-  .pw { margin-top: 8px; font-size: 9px; color: #444; }
-</style></head><body>
+<style>${RECEIPT_CSS}</style></head><body>
 <div class="c">
   <h1>${esc(settings.pharmacy_name || 'DynSoft Pharma')}</h1>
   ${settings.pharmacy_address ? `<div class="muted">${esc(settings.pharmacy_address)}</div>` : ''}
@@ -93,8 +95,7 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div><hr/>' : ''}
 };
 
 /** Ouvre le ticket dans une fenêtre d'impression (imprimante par défaut / kiosk-printing = sans dialogue). */
-export const printReceipt = (args) => {
-  const html = buildReceiptHtml(args);
+const openPrintWindow = (html) => {
   const win = window.open('', '_blank', 'width=420,height=640');
   if (!win) return false;
   win.document.open();
@@ -102,3 +103,48 @@ export const printReceipt = (args) => {
   win.document.close();
   return true;
 };
+
+export const printReceipt = (args) => openPrintWindow(buildReceiptHtml(args));
+
+/** Ticket de remboursement de dette : payment = réponse de POST /debts/payment/bulk */
+export const buildDebtPaymentReceiptHtml = ({ payment, settings = {}, agentName, formatAmount, duplicate = false }) => {
+  const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
+  const number = payment.receipt_number || '';
+  const date = new Date(payment.created_at || Date.now()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  const before = (payment.customer_remaining_debt || 0) + (payment.total_applied || 0);
+  const rows = (payment.debts_updated || []).map((d) => `<tr><td class="q">Dette ${esc(String(d.debt_id || '').substring(0, 8).toUpperCase())}</td><td></td><td class="r">${fmt(d.amount_applied)}</td></tr>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Reçu ${esc(number)}</title>
+<style>${RECEIPT_CSS}</style></head><body>
+<div class="c">
+  <h1>${esc(settings.pharmacy_name || 'DynSoft Pharma')}</h1>
+  ${settings.pharmacy_address ? `<div class="muted">${esc(settings.pharmacy_address)}</div>` : ''}
+  ${settings.pharmacy_phone ? `<div class="muted">Tél : ${esc(settings.pharmacy_phone)}</div>` : ''}
+</div>
+<hr/>
+<div class="c b">REÇU DE REMBOURSEMENT</div>
+${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
+<hr/>
+<table>
+  <tr><td>N° reçu</td><td class="r b" colspan="2">${esc(number)}</td></tr>
+  <tr><td>Date</td><td class="r" colspan="2">${esc(date)}</td></tr>
+  <tr><td>Agent</td><td class="r" colspan="2">${esc(agentName || payment.created_by || '')}</td></tr>
+  <tr><td>Client</td><td class="r b" colspan="2">${esc(payment.customer_name || '')}</td></tr>
+  ${payment.customer_phone ? `<tr><td>Téléphone</td><td class="r" colspan="2">${esc(payment.customer_phone)}</td></tr>` : ''}
+</table>
+<hr/>
+<table>
+  <tr><td>Dette avant paiement</td><td></td><td class="r">${fmt(before)}</td></tr>
+  ${rows}
+  <tr class="tot"><td>MONTANT PAYÉ</td><td></td><td class="r">${fmt(payment.total_applied)}</td></tr>
+  <tr><td>Mode</td><td></td><td class="r">${esc(PAYMENT_LABELS[payment.payment_method] || payment.payment_method || '')}</td></tr>
+  <tr class="tot"><td>${esc(payment.balance_label || 'SOLDE RESTANT')}</td><td></td><td class="r">${fmt(payment.customer_remaining_debt)}</td></tr>
+</table>
+<div class="c bc">${barcodeSvg(number)}<div class="muted">${esc(number)}</div></div>
+<hr/>
+<div class="c foot">${esc(settings.receipt_footer || 'Merci de votre visite')}</div>
+<div class="c pw">Produit par DynSoft Pharma</div>
+<script>window.onload=function(){window.focus();window.print();setTimeout(function(){window.close()},800);};</script>
+</body></html>`;
+};
+
+export const printDebtPaymentReceipt = (args) => openPrintWindow(buildDebtPaymentReceiptHtml(args));
