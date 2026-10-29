@@ -141,7 +141,7 @@ const Customers = () => {
     if (editingCustomer) {
       const { max_debt_limit, ...rest } = formData;
       updateCustomer.mutate(
-        { customerId: editingCustomer.id, data: isAdmin ? formData : rest },
+        { ...(isAdmin ? formData : rest), id: editingCustomer.id },
         {
           onSuccess: () => {
             setShowDialog(false);

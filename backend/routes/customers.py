@@ -18,8 +18,8 @@ if DATABASE_TYPE == "postgresql":
     # ============ PostgreSQL Implementation ============
     from database.repositories import CustomerRepository
     from database.config import db_manager, USE_SUPABASE
-    from database.models_tenant import Customer as CustomerModel
-    from sqlalchemy import or_, desc
+    from database.models_tenant import Customer as CustomerModel, Debt as DebtModel, DebtStatus
+    from sqlalchemy import or_, desc, func
     
     def get_session():
         if USE_SUPABASE:
@@ -61,6 +61,16 @@ if DATABASE_TYPE == "postgresql":
             offset = (page - 1) * limit
             customers_orm = query.offset(offset).limit(limit).all()
             
+            # Dette en cours par client (une seule requête)
+            ids = [c.id for c in customers_orm]
+            debts = {}
+            if ids:
+                rows = session.query(DebtModel.customer_id, func.sum(DebtModel.remaining_amount)).filter(
+                    DebtModel.customer_id.in_(ids),
+                    DebtModel.status.in_([DebtStatus.PENDING, DebtStatus.PARTIAL])
+                ).group_by(DebtModel.customer_id).all()
+                debts = {cid: float(total or 0) for cid, total in rows}
+            
             customers = []
             for c in customers_orm:
                 customers.append({
@@ -71,6 +81,8 @@ if DATABASE_TYPE == "postgresql":
                     "address": c.address,
                     "notes": c.notes,
                     "is_active": c.is_active if c.is_active is not None else True,
+                    "max_debt_limit": float(c.max_debt_limit or 0),
+                    "current_debt": debts.get(c.id, 0.0),
                     "created_at": c.created_at.isoformat() if c.created_at else None,
                 })
             

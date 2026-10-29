@@ -1,0 +1,38 @@
+{
+  "summary": "Customer credit-limit (max_debt_limit) admin-only feature. BACKEND OK (403 for pharmacien on max_debt_limit, admin 200 + persisted, pharmacien phone-only 200, pharmacien POST forced to 0). FRONTEND BROKEN: E1's 'fix' in Customers.js handleSubmit introduced a regression — the page uses useOfflineMutation('customers','update') (services/offlineMutations.js), which expects {...data, id} and calls PUT /customers/${data.id}. Sending {customerId, data} produces PUT /api/customers/undefined -> 404 'Customer not found' for EVERY customer edit (admin verified in UI). The real cause of the original 'admin cannot change threshold' report is that GET /api/customers/paginated (used by the list) does not return max_debt_limit / current_debt, so the edit form always opens with 0 and the card always shows 'Crédit dispo: 0 GNF' (customer 95972c73 has 123456 in DB but UI shows 0). Pharmacien UI: disabled field + lock + hint text verified in the 'Nouveau client' dialog; the edit flow could not be tested because the pharmacien is not scheduled today (2026-10-29) -> 'Accès restreint - Hors horaires de travail', so the list/edit buttons are hidden.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/customers/paginated", "issue": "Items do not include max_debt_limit or current_debt (only id,name,phone,email,address,notes,is_active,created_at). The Customers page builds its cards and edit form from this list, so the threshold is always shown as 0 and any admin save resets it to 0. This is the real root cause of the user's bug report."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Customers.js handleSubmit (line ~141-145)", "issue": "REGRESSION: updateCustomer comes from useOfflineMutation('customers','update'), not useUpdateCustomer. Its mutationFn does api.put(`/customers/${data.id}`, data). The new payload {customerId, data} -> PUT /api/customers/undefined -> 404, toast 'Erreur: Client / Customer not found', dialog stays open. Every customer edit is broken for all roles. Fix: updateCustomer.mutate({ ...(isAdmin ? formData : rest), id: editingCustomer.id }, ...) (keep stripping max_debt_limit for non-admin).", "selector": "[data-testid='customer-submit-button']", "priority": "CRITICAL"},
+      {"component": "Customers.js handleEdit / customer cards", "issue": "The form shows max_debt_limit=0 and the card shows 'Crédit dispo: 0 GNF' (yellow) because the paginated items lack max_debt_limit. Admin saving any field silently resets the threshold to 0 (data loss).", "selector": "[data-testid='customer-debt-limit-input']", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin edit customer threshold to 250000 + phone", "issue": "PUT goes to /api/customers/undefined (404, retried twice); nothing is saved; the card does not update", "affected_selectors": ["[data-testid^='edit-customer-']", "[data-testid='customer-submit-button']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_customer_debt_limit.py", "/app/test_reports/pytest/pytest_customer_debt_limit.xml"],
+  "action_items": [
+    "CRITICAL: In Customers.js handleSubmit, revert the payload to the format useOfflineMutation expects: updateCustomer.mutate({ ...(isAdmin ? formData : rest), id: editingCustomer.id }, {...}). Do NOT use {customerId, data} (that is the useUpdateCustomer format, and this hook is not used here).",
+    "HIGH: Add max_debt_limit (and current_debt if available) to the items returned by GET /api/customers/paginated so the card and edit form show the real threshold. Otherwise admin saves overwrite it with 0.",
+    "Retest: admin edit to 250000 -> card shows the new value -> reopen form shows 250000; pharmacien edit phone (needs a shift schedule for today or an admin-side bypass to reach the list)"
+  ],
+  "critical_code_review_comments": [
+    "Customers.js imports useUpdateCustomer-style semantics but uses useOfflineMutation: two update hooks with different signatures cause confusion. Pick one.",
+    "handleEdit uses customer.max_debt_limit || 0 from a list item that never contains the field.",
+    "Backend update_customer: the non-admin check works, but a non-admin sending max_debt_limit equal to the current value also gets 403. The frontend strips the field, so this is acceptable."
+  ],
+  "updated_files": ["/app/backend/tests/test_customer_debt_limit.py"],
+  "success_rate": {"backend": "83% (5/6; paginated missing field)", "frontend": "33% (pharmacien disabled field OK; admin edit FAIL; pharmacien edit not testable due to schedule)"},
+  "test_credentials": "admin@pharmaflow.com/admin123, pharmacien@pharmaflow.com/Pharma#2026 (both work)",
+  "seed_data_creation": "Temp customer TEST_seuil_client created then deleted. A pharmacien shift was opened via API for the create test, then closed (closing 0). Customer 95972c73 restored to phone '+224 624 44 44 44', max_debt_limit 123456 (its original value).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_customer_debt_limit.py (opens a pharmacien shift; close it afterwards via POST /api/shifts/close {actual_closing_amount:0}). The pharmacien is blocked from the customer list by shift-schedule eligibility on 2026-10-29: create a schedule for today in /shift-schedules to test the pharmacien edit flow.",
+  "rca of the issue": "Original bug: /customers/paginated omits max_debt_limit, so the admin form always loads 0 and the card never reflects the saved threshold (the PUT itself worked with {...formData, id}). E1 misdiagnosed it as a payload format problem and changed the payload to {customerId, data}. That matches useUpdateCustomer, not the useOfflineMutation actually used, so the URL is now /customers/undefined and every edit fails with 404. Reproduced via Playwright: REQ PUT /api/customers/undefined body {customerId:..., data:{...}} -> RESP 404."
+}
