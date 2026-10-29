@@ -806,3 +806,11 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - Cause réelle : `GET /api/customers/paginated` ne renvoyait pas `max_debt_limit` → formulaire toujours à 0 et sauvegarde écrasait le seuil. Ajout de `max_debt_limit` et `current_debt` (somme dettes pending/partial, 1 requête).
 - Frontend : champ seuil toujours visible, désactivé + cadenas pour non-admin ; mutation via useOfflineMutation format `{...data, id}` (une tentative `{customerId,data}` avait cassé l'édition — corrigée).
 - Backend : PUT non-admin avec max_debt_limit → 403 ; POST non-admin → seuil forcé à 0. Agent de test : backend 6/6, UI admin + pharmacien OK.
+
+
+## 2026-10-24 — Auto-déconnexion, reçu de caisse 80 mm, alerte seuil crédit (iteration_50)
+- `hooks/useAutoLogout.js` : 15 min d'inactivité, veille PC (écart d'horloge > 2 min, tick 20 s), fermeture d'onglet (session = sessionStorage uniquement ; IndexedDB ne restaure plus). Toast « Session fermée automatiquement ».
+- Reçu : `lib/receipt.js` (ticket 80 mm, en-tête pharmacie, agent, client, lignes, rabais, total, paiement, reçu/monnaie, code-barres CODE128 jsbarcode, pied paramétrable, « Produit par DynSoft Pharma », window.print) ; `ReceiptPromptDialog` après vente (montant reçu → monnaie) ; settings `pharmacy_address`, `pharmacy_phone`, `receipt_footer`, `receipt_print_prompt` (si false → impression directe). UI Paramètres.
+- `CreditLimitAlert` dans la vente : orange ≥ 80 %, rouge > seuil (dette actuelle + dette demandée).
+- Bug trouvé/corrigé : le mode de paiement « Crédit » (code `credit`) n'était pas traité comme dette (frontend `isDebtMethod`, backend `DEBT_METHODS`), y compris paiement mixte.
+- Agent de test : tout OK (backend + UI + auto-logout a/b/c). Ventes de test réglées, seuil client remis.
