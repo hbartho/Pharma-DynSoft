@@ -209,6 +209,7 @@ const Sales = () => {
   // Local state
   const [showDialog, setShowDialog] = useState(false);
   const [receiptSale, setReceiptSale] = useState(null); // vente à proposer à l'impression
+  const isDebtMethod = (m) => m === 'debt' || m === 'credit'; // « Crédit » = vente à crédit (dette)
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
@@ -1082,7 +1083,8 @@ const Sales = () => {
     }
     
     // Validation spéciale pour le paiement par dette
-    if (paymentMethod === 'debt' || useDebtPayment) {
+    const mixedDebt = useMixedPayment && isDebtMethod(secondPaymentMethod) ? (parseFloat(secondPaymentAmount) || 0) : 0;
+    if (isDebtMethod(paymentMethod) || useDebtPayment || mixedDebt > 0) {
       // Un client doit être sélectionné
       if (!selectedCustomer || selectedCustomer === 'none') {
         toast.error('Veuillez sélectionner un client pour une vente à crédit');
@@ -1100,7 +1102,7 @@ const Sales = () => {
         return;
       }
       
-      const requestedDebt = paymentMethod === 'debt' ? total : parseFloat(debtAmount) || 0;
+      const requestedDebt = isDebtMethod(paymentMethod) ? total : mixedDebt > 0 ? mixedDebt : parseFloat(debtAmount) || 0;
       
       if (requestedDebt > customerCredit.available_credit) {
         toast.error(`Crédit insuffisant. Disponible: ${formatAmount(customerCredit.available_credit)}`);
@@ -1150,7 +1152,7 @@ const Sales = () => {
     let amountPaid = total;
     let debtAmountValue = 0;
     
-    if (paymentMethod === 'debt') {
+    if (isDebtMethod(paymentMethod)) {
       // Tout en dette
       amountPaid = 0;
       debtAmountValue = total;
@@ -1264,7 +1266,7 @@ const Sales = () => {
       });
     } else {
       // Mode hors-ligne explicite
-      if (useMixedPayment || useDebtPayment || paymentMethod === 'debt') {
+      if (useMixedPayment || useDebtPayment || isDebtMethod(paymentMethod)) {
         toast.error('Les ventes à crédit et paiements mixtes ne sont pas disponibles hors-ligne');
         return;
       }
@@ -1955,7 +1957,7 @@ const Sales = () => {
                       <div className="mt-2">
                         <CreditLimitAlert
                           credit={customerCredit}
-                          requestedDebt={paymentMethod === 'debt' ? calculateTotal() : useDebtPayment ? (parseFloat(debtAmount) || 0) : 0}
+                          requestedDebt={isDebtMethod(paymentMethod) ? calculateTotal() : (useMixedPayment && isDebtMethod(secondPaymentMethod)) ? (parseFloat(secondPaymentAmount) || 0) : useDebtPayment ? (parseFloat(debtAmount) || 0) : 0}
                           formatAmount={formatAmount}
                         />
                       </div>
@@ -2100,7 +2102,7 @@ const Sales = () => {
                     {/* Champs Mobile Money supprimés - maintenant dans la section dynamique */}
 
                 {/* Section Paiement Mixte (2 modes de paiement) - visible si au moins 1 produit */}
-                {paymentMethod !== 'debt' && cart.length > 0 && (
+                {!isDebtMethod(paymentMethod) && cart.length > 0 && (
                   <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-indigo-700">
@@ -2298,7 +2300,7 @@ const Sales = () => {
                 )}
 
                 {/* Alerte si mode Dette sélectionné */}
-                {paymentMethod === 'debt' && (
+                {isDebtMethod(paymentMethod) && (
                   <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
                     <div className="flex items-center gap-2 text-red-700">
                       <Wallet className="w-4 h-4" />

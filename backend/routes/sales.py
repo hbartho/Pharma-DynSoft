@@ -14,6 +14,9 @@ DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "postgresql")
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
+DEBT_METHODS = {"debt", "credit"}  # le mode « Crédit » des modes de paiement = vente à crédit (dette)
+
+
 def generate_sale_number(tenant_id: str = None) -> str:
     """Générer un numéro de vente unique et lisible (ex: VNT-966AAFB0)
     Utilise les 8 premiers caractères de l'UUID pour garantir l'unicité
@@ -144,7 +147,7 @@ if DATABASE_TYPE == "postgresql":
             total_paid_in_split = 0
             
             for payment in sale_data.split_payments:
-                if payment.get('method') == 'debt':
+                if payment.get('method') in DEBT_METHODS:
                     total_debt_in_split += payment.get('amount', 0)
                 else:
                     total_paid_in_split += payment.get('amount', 0)
@@ -170,8 +173,8 @@ if DATABASE_TYPE == "postgresql":
                 amount_paid = total_paid_in_split
         
         # === GESTION DU PAIEMENT SIMPLE (SINGLE PAYMENT) ===
-        elif debt_amount > 0 or sale_data.payment_method == 'debt':
-            if sale_data.payment_method == 'debt' and debt_amount == 0:
+        elif debt_amount > 0 or sale_data.payment_method in DEBT_METHODS:
+            if sale_data.payment_method in DEBT_METHODS and debt_amount == 0:
                 debt_amount = sale_data.total
                 amount_paid = 0
             has_debt = True
