@@ -9,5 +9,6 @@ Tout est dans ce dossier. Lire **GUIDE_INSTALLATION_LOCALE.pdf** (ou .md).
 | `docker-compose.yml` | PostgreSQL 17 + backend FastAPI + frontend (nginx, port 80) |
 | `backup.bat` / `backup.sh` | Sauvegarde `pg_dump` dans `backups/` |
 | `restore.bat` / `restore.sh` | Restauration d'une sauvegarde |
-| `migrer-depuis-supabase.bat` / `.sh` | Copie cloud → local (une fois, avec Internet) |
+| `importer-depuis-cloud.bat` | Copie cloud → local de la pharmacie via le jeton de synchro (`CLOUD_SYNC_*`), sans accès direct à la base cloud |
+| `migrer-depuis-supabase.bat` / `.sh` | Copie cloud → local par pg_dump (ancienne méthode, URL base requise) |
 | `build_guide_pdf.py` | Régénère le PDF depuis le Markdown (`python build_guide_pdf.py`) |

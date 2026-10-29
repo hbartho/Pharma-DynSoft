@@ -24,6 +24,7 @@ if not exist .env (
     echo CLOUD_SYNC_SLUG=
     echo CLOUD_SYNC_TOKEN=
     echo CLOUD_SYNC_HOUR=2
+    echo CLOUD_IMPORT_ON_START=0
   ) > .env
   echo Fichier de configuration .env cree dans %CD%
   echo ^>^>^> Ouvrez-le avec le Bloc-notes, remplacez toutes les valeurs CHANGEZ_MOI, puis relancez install.bat

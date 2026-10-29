@@ -838,3 +838,12 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - Filtres dates déplacés côté serveur (`date_from`/`date_to` sur /stock/movements/paginated) : s'appliquent à tout l'historique, plus seulement aux pages chargées.
 - Reçu PDF (A4, bouton PDF historique ventes) : logo en haut à gauche (même logo que le ticket), adresse/tél, agent (code), pied configurable + « Produit par DynSoft Pharma » ; impression lancée après chargement du logo.
 - Login : l'intercepteur 401 global rechargeait /login même sur un échec de connexion (toast effacé). Exclusion de /auth/login + message inline rouge sous le mot de passe (« Email ou mot de passe incorrect », compte désactivé, pharmacie désactivée, serveur injoignable).
+
+
+## 2026-06 — Installateur Windows (.exe) + import initial depuis le cloud
+- Cloud : `GET /api/cloud-sync/{slug}/export` (header X-Sync-Token) streame en NDJSON la fiche pharmacie (public.tenants, settings sync retirés), l'annuaire des comptes (user_directory du tenant) et toutes les tables du schéma t_<slug>.
+- Local : `services/cloud_import.py` + `scripts/import_from_cloud.py [--if-empty|--force]` : import dans un schéma staging puis bascule atomique, upsert tenants/user_directory, sync_state initialisé (cursor = date export), migrations stampées. `CLOUD_IMPORT_ON_START=1` → import auto au démarrage si schéma vide (docker-entrypoint). `deploy/local/importer-depuis-cloud.bat` pour forcer.
+- `/api/health` ajouté (sonde de l'installateur via nginx).
+- `deploy/windows/DynSoftPharma.iss` (Inno Setup) : assistant (pharmacie+slug, super-admin, URL cloud+jeton+heure, port), génération .env (secrets aléatoires), copie backend/frontend/deploy, post-install.bat (docker compose up --build + attente API), raccourcis, mise à jour (.env conservé), désinstallation (purge/keep). Icône `dynsoft.ico`.
+- `.github/workflows/build-installer.yml` : compile le .exe sur windows-latest à chaque tag `v*` (release) ou manuellement.
+- Testé : export noormin (3431 lignes) + import dans un schéma de test ; le .iss n'a pas pu être compilé ici (pas de Windows) → à valider via le workflow GitHub.

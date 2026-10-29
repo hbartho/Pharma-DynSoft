@@ -22,4 +22,8 @@ fi
 
 python scripts/init_local_db.py
 
+if [ "${CLOUD_IMPORT_ON_START:-0}" = "1" ] && [ -n "$CLOUD_SYNC_TOKEN" ]; then
+  python scripts/import_from_cloud.py --if-empty
+fi
+
 exec uvicorn server:app --host 0.0.0.0 --port 8001 --workers "${UVICORN_WORKERS:-2}"

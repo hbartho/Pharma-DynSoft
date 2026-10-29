@@ -184,6 +184,40 @@ def cloud_finish(slug: str, schema: str, session_id: str, cursor: Optional[str],
 
 
 # ======================================================================
+# EXPORT COMPLET (côté cloud) : pharmacie (public.tenants / user_directory) + toutes les tables du schéma
+# ======================================================================
+def serialize_obj(obj) -> Dict[str, Any]:
+    return {c.name: serialize_value(getattr(obj, c.name)) for c in obj.__table__.columns}
+
+
+def iter_export(slug: str, schema: str):
+    """Générateur NDJSON : une ligne JSON par lot de lignes. Utilisé pour l'installation initiale d'un serveur local."""
+    import json
+    from database.models_master import Tenant, UserDirectory
+    yield json.dumps({"meta": {"slug": slug, "schema": schema, "exported_at": datetime.now(timezone.utc).isoformat()}}) + "\n"
+    with db_manager.get_master_session() as session:
+        tenant = session.query(Tenant).filter(Tenant.slug == slug).first()
+        tenant_row = serialize_obj(tenant) if tenant else None
+        if tenant_row:
+            tenant_row["settings"] = {k: v for k, v in (tenant_row.get("settings") or {}).items() if k not in ("sync_mode", "sync_token_hash")}
+        directory = [serialize_obj(d) for d in session.query(UserDirectory).filter(UserDirectory.tenant_slug == slug, UserDirectory.is_super_admin.is_(False)).all()]
+    yield json.dumps({"master": "tenants", "rows": [tenant_row] if tenant_row else []}) + "\n"
+    yield json.dumps({"master": "user_directory", "rows": directory}) + "\n"
+    counts: Dict[str, int] = {}
+    engine = db_manager.schema_engine(schema)
+    for table in tenant_tables():
+        with engine.connect() as conn:
+            result = conn.execution_options(stream_results=True).execute(select(table))
+            while True:
+                chunk = result.fetchmany(CHUNK)
+                if not chunk:
+                    break
+                counts[table.name] = counts.get(table.name, 0) + len(chunk)
+                yield json.dumps({"table": table.name, "rows": [serialize_row(r) for r in chunk]}) + "\n"
+    yield json.dumps({"done": True, "counts": counts, "rows": sum(counts.values())}) + "\n"
+
+
+# ======================================================================
 # CÔTÉ LOCAL (émetteur)
 # ======================================================================
 class CloudSyncClient:

@@ -201,3 +201,21 @@ changé ; une copie complète est refaite toutes les semaines (rattrapage des su
 Si Internet est absent à l'heure prévue, une nouvelle tentative a lieu toutes les 15 minutes.
 Le super-admin voit sur `/platform` la date de dernière réception de chaque pharmacie.
 Pour revenir à un fonctionnement 100 % cloud : `/platform` → nuage → **Désactiver la synchro**.
+
+## Import initial depuis le cloud (pharmacie déjà créée en ligne)
+
+Quand la pharmacie existe déjà sur le cloud (produits, utilisateurs, règles…), le serveur local
+peut en récupérer une copie **avec le seul jeton de synchronisation** (aucun accès direct à la
+base cloud n'est nécessaire). Seuls le schéma `t_<slug>` de la pharmacie, sa fiche et l'annuaire
+de ses comptes sont copiés — jamais les autres pharmacies du schéma `public`.
+
+- Automatique : `CLOUD_IMPORT_ON_START=1` dans `.env` → au démarrage, si le schéma local est vide,
+  le backend importe la pharmacie (c'est ce que fait l'installateur Windows `.exe`).
+- Manuel / remplacement : `importer-depuis-cloud.bat` (les données locales sont remplacées).
+
+## Installateur Windows (.exe)
+
+`deploy/windows/` contient un script Inno Setup qui produit `Setup-DynSoftPharma-<version>.exe`
+(assistant : pharmacie, super-admin, jeton cloud, port ; génération du `.env` ; `docker compose up`
+; import cloud ; raccourcis ; mise à jour et désinstallation). Il est compilé automatiquement par
+GitHub Actions à chaque tag `v*` (voir `deploy/windows/README.md`). Docker Desktop reste le seul prérequis.

@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from auth import require_admin
@@ -81,6 +82,12 @@ def verify_sync_token(slug: str, x_sync_token: str = Header(default="")) -> Tena
 @router.get("/{slug}/state")
 def cloud_state(slug: str, tenant: Tenant = Depends(verify_sync_token)):
     return cloud_sync.get_state(slug)
+
+
+@router.get("/{slug}/export")
+def cloud_export(slug: str, tenant: Tenant = Depends(verify_sync_token)):
+    """Export complet (NDJSON) de la pharmacie pour initialiser un serveur local."""
+    return StreamingResponse(cloud_sync.iter_export(slug, tenant_schema_name(slug)), media_type="application/x-ndjson")
 
 
 @router.post("/{slug}/begin")

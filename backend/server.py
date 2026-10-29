@@ -136,6 +136,7 @@ async def root():
     return {"message": "DynSoft Pharma API", "version": "1.0.0"}
 
 @app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
