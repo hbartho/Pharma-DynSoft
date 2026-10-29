@@ -46,3 +46,4 @@ class SettingsUpdate(BaseModel):
     pharmacy_phone: Optional[str] = None
     receipt_footer: Optional[str] = None
     receipt_print_prompt: Optional[bool] = None
+    receipt_logo: Optional[str] = None  # data URL réduite, vide = logo par défaut

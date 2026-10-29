@@ -388,7 +388,7 @@ const Debts = () => {
     const ok = printDebtPaymentReceipt({
       payment,
       settings,
-      agentName: user?.first_name || user?.name || user?.employee_code,
+      agentCode: user?.employee_code,
       formatAmount,
       duplicate,
     });
@@ -406,7 +406,7 @@ const Debts = () => {
     handlePrintDebtReceipt({
       receipt_number: `RBT-${String(payment.id || '').replace(/-/g, '').substring(0, 8).toUpperCase()}`,
       created_at: payment.created_at,
-      created_by: payment.created_by_name,
+      created_by: payment.created_by_code,
       customer_name: payment.customer_name,
       payment_method: payment.payment_method,
       total_applied: payment.amount,

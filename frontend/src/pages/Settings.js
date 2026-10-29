@@ -44,6 +44,7 @@ const Settings = () => {
     pharmacy_phone: '',
     receipt_footer: 'Merci de votre visite',
     receipt_print_prompt: true,
+    receipt_logo: '',
   });
   
   const [offlineStats, setOfflineStats] = useState(null);
@@ -72,6 +73,7 @@ const Settings = () => {
         pharmacy_phone: settingsData.pharmacy_phone || '',
         receipt_footer: settingsData.receipt_footer ?? 'Merci de votre visite',
         receipt_print_prompt: settingsData.receipt_print_prompt !== false,
+        receipt_logo: settingsData.receipt_logo || '',
       });
     }
   }, [settingsData]);
@@ -143,6 +145,28 @@ const Settings = () => {
       }
     }
   };
+
+  // Logo du reçu : redimensionné à 160px et stocké en data URL (léger)
+  const handleLogoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      const size = 160;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.min(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      setLocalSettings((prev) => ({ ...prev, receipt_logo: canvas.toDataURL('image/png') }));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => toast.error('Image illisible');
+    img.src = URL.createObjectURL(file);
+    e.target.value = '';
+  };
+
 
   const handleSave = () => {
     updateSettings.mutate(localSettings, {
@@ -278,6 +302,20 @@ const Settings = () => {
                 />
               </div>
 
+              <div>
+                <Label>Logo du reçu (haut à gauche du ticket)</Label>
+                <div className="mt-1 flex items-center gap-3">
+                  <img src={localSettings.receipt_logo || '/images/receipt-logo.png'} alt="Logo reçu" className="h-14 w-14 rounded border border-slate-200 object-contain bg-white" data-testid="settings-receipt-logo-preview" />
+                  <div className="flex flex-col gap-1">
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoChange} className="text-xs" data-testid="settings-receipt-logo-input" />
+                    {localSettings.receipt_logo ? (
+                      <button type="button" className="text-left text-xs text-red-600 hover:underline" onClick={() => setLocalSettings({ ...localSettings, receipt_logo: '' })} data-testid="settings-receipt-logo-reset">Revenir au logo par défaut</button>
+                    ) : (
+                      <span className="text-xs text-slate-500">Logo par défaut (croix verte). PNG/JPEG, redimensionné automatiquement</span>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div>
                 <Label htmlFor="pharmacy_address">Adresse (imprimée sur le reçu)</Label>
                 <Input id="pharmacy_address" value={localSettings.pharmacy_address} onChange={(e) => setLocalSettings({ ...localSettings, pharmacy_address: e.target.value })} placeholder="Quartier, commune, ville" className="mt-1" data-testid="settings-pharmacy-address" />

@@ -742,10 +742,12 @@ if DATABASE_TYPE == "postgresql":
                     if created_by_id:
                         user = users.get(str(created_by_id)) or next((u for u in users.values() if u.get('employee_code') == created_by_id), {})
                         payment_copy['created_by_name'] = user.get('name') or f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or agent_code or str(created_by_id)
+                        payment_copy['created_by_code'] = user.get('employee_code') or agent_code or str(created_by_id)
                     elif agent_code:
                         # Chercher l'utilisateur par employee_code
                         user_by_code = next((u for u in users.values() if u.get('employee_code') == agent_code), None)
                         payment_copy['created_by_name'] = user_by_code.get('name', agent_code) if user_by_code else agent_code
+                        payment_copy['created_by_code'] = agent_code
                     else:
                         payment_copy['created_by_name'] = '-'
                     

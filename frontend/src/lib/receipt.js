@@ -22,7 +22,21 @@ const RECEIPT_CSS = `
   .bc { margin: 6px 0 2px; } .bc svg { width: 100%; height: 38px; }
   .foot { margin-top: 6px; font-size: 10px; }
   .pw { margin-top: 8px; font-size: 9px; color: #444; }
+  .hd { display: flex; align-items: center; gap: 6px; }
+  .hd img { width: 16mm; height: 16mm; object-fit: contain; flex: 0 0 auto; }
+  .hd .ht { flex: 1; text-align: center; }
 `;
+
+const DEFAULT_LOGO = `${window.location.origin}/images/receipt-logo.png`;
+
+const headerHtml = (settings) => `<div class="hd">
+  <img src="${esc(settings.receipt_logo || DEFAULT_LOGO)}" alt="" />
+  <div class="ht">
+    <h1>${esc(settings.pharmacy_name || 'DynSoft Pharma')}</h1>
+    ${settings.pharmacy_address ? `<div class="muted">${esc(settings.pharmacy_address)}</div>` : ''}
+    ${settings.pharmacy_phone ? `<div class="muted">Tél : ${esc(settings.pharmacy_phone)}</div>` : ''}
+  </div>
+</div>`;
 
 const barcodeSvg = (text) => {
   try {
@@ -33,7 +47,7 @@ const barcodeSvg = (text) => {
 };
 
 /** Construit le HTML d'un ticket 80 mm pour une vente. */
-export const buildReceiptHtml = ({ sale, settings = {}, agentName, customerName, formatAmount, duplicate = false }) => {
+export const buildReceiptHtml = ({ sale, settings = {}, agentCode, customerName, formatAmount, duplicate = false }) => {
   const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
   const saleNumber = sale.sale_number || sale.id?.substring(0, 8).toUpperCase() || '';
   const date = new Date(sale.created_at || Date.now()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -60,17 +74,13 @@ export const buildReceiptHtml = ({ sale, settings = {}, agentName, customerName,
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Reçu ${esc(saleNumber)}</title>
 <style>${RECEIPT_CSS}</style></head><body>
-<div class="c">
-  <h1>${esc(settings.pharmacy_name || 'DynSoft Pharma')}</h1>
-  ${settings.pharmacy_address ? `<div class="muted">${esc(settings.pharmacy_address)}</div>` : ''}
-  ${settings.pharmacy_phone ? `<div class="muted">Tél : ${esc(settings.pharmacy_phone)}</div>` : ''}
-</div>
+${headerHtml(settings)}
 <hr/>
 ${duplicate ? '<div class="c b">*** DUPLICATA ***</div><hr/>' : ''}
 <table>
   <tr><td>N° vente</td><td class="r b" colspan="2">${esc(saleNumber)}</td></tr>
   <tr><td>Date</td><td class="r" colspan="2">${esc(date)}</td></tr>
-  <tr><td>Agent</td><td class="r" colspan="2">${esc(agentName || sale.employee_code || '')}</td></tr>
+  <tr><td>Agent</td><td class="r" colspan="2">${esc(sale.employee_code || agentCode || '')}</td></tr>
   ${customerName ? `<tr><td>Client</td><td class="r" colspan="2">${esc(customerName)}</td></tr>` : ''}
 </table>
 <hr/>
@@ -107,7 +117,7 @@ const openPrintWindow = (html) => {
 export const printReceipt = (args) => openPrintWindow(buildReceiptHtml(args));
 
 /** Ticket de remboursement de dette : payment = réponse de POST /debts/payment/bulk */
-export const buildDebtPaymentReceiptHtml = ({ payment, settings = {}, agentName, formatAmount, duplicate = false }) => {
+export const buildDebtPaymentReceiptHtml = ({ payment, settings = {}, agentCode, formatAmount, duplicate = false }) => {
   const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
   const number = payment.receipt_number || '';
   const date = new Date(payment.created_at || Date.now()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -115,11 +125,7 @@ export const buildDebtPaymentReceiptHtml = ({ payment, settings = {}, agentName,
   const rows = (payment.debts_updated || []).map((d) => `<tr><td class="q">Dette ${esc(String(d.debt_id || '').substring(0, 8).toUpperCase())}</td><td></td><td class="r">${fmt(d.amount_applied)}</td></tr>`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><title>Reçu ${esc(number)}</title>
 <style>${RECEIPT_CSS}</style></head><body>
-<div class="c">
-  <h1>${esc(settings.pharmacy_name || 'DynSoft Pharma')}</h1>
-  ${settings.pharmacy_address ? `<div class="muted">${esc(settings.pharmacy_address)}</div>` : ''}
-  ${settings.pharmacy_phone ? `<div class="muted">Tél : ${esc(settings.pharmacy_phone)}</div>` : ''}
-</div>
+${headerHtml(settings)}
 <hr/>
 <div class="c b">REÇU DE REMBOURSEMENT</div>
 ${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
@@ -127,7 +133,7 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
 <table>
   <tr><td>N° reçu</td><td class="r b" colspan="2">${esc(number)}</td></tr>
   <tr><td>Date</td><td class="r" colspan="2">${esc(date)}</td></tr>
-  <tr><td>Agent</td><td class="r" colspan="2">${esc(agentName || payment.created_by || '')}</td></tr>
+  <tr><td>Agent</td><td class="r" colspan="2">${esc(payment.created_by || agentCode || '')}</td></tr>
   <tr><td>Client</td><td class="r b" colspan="2">${esc(payment.customer_name || '')}</td></tr>
   ${payment.customer_phone ? `<tr><td>Téléphone</td><td class="r" colspan="2">${esc(payment.customer_phone)}</td></tr>` : ''}
 </table>

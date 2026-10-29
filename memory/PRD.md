@@ -828,3 +828,7 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 ## 2026-10-29 — Reçu de remboursement de dette
 - `POST /api/debts/payment/bulk` renvoie receipt_number, client, solde restant, agent. `lib/receipt.js buildDebtPaymentReceiptHtml` (ticket 80 mm : dette avant, montant payé, mode, SOLDE RESTANT, code-barres). Popup « Imprimer le reçu de remboursement ? » dans Dettes (impression directe si receipt_print_prompt=false) ; bouton réimpression dans l'historique (DUPLICATA, « SOLDE ACTUEL » du client). Fix : nom de l'agent dans l'historique (lookup par employee_code).
 - Vérifié UI : popup, ticket imprimé, réimpression. Dettes de test soldées.
+
+## 2026-06 — Reçus : logo + ID agent
+- Logo en haut à gauche de tous les tickets (vente, remboursement dette) : croix verte par défaut (`/images/receipt-logo.png`), remplaçable par pharmacie dans Paramètres (`receipt_logo`, data URL 160px).
+- Ligne « Agent » des tickets = code employé (ex. ADM-001) au lieu du prénom ; historique paiements dette renvoie `created_by_code`.

@@ -1305,7 +1305,7 @@ const Sales = () => {
       duplicate,
       sale: cashReceived != null ? { ...sale, cash_received: cashReceived } : sale,
       settings: appSettings,
-      agentName: user?.first_name || user?.name || user?.employee_code,
+      agentCode: user?.employee_code,
       customerName: sale.customer_id ? getCustomerName(sale.customer_id) : '',
       formatAmount,
     });
