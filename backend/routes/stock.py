@@ -132,11 +132,25 @@ if DATABASE_TYPE == "postgresql":
         search: str = Query(default=""),
         movement_type: Optional[str] = Query(default=None, description="all, IN, OUT, ADJUSTMENT, LOSS, RETURN"),
         product_id: Optional[str] = Query(default=None),
+        date_from: Optional[str] = Query(default=None, description="YYYY-MM-DD"),
+        date_to: Optional[str] = Query(default=None, description="YYYY-MM-DD"),
         current_user: dict = Depends(get_current_user)
     ):
         """Récupérer les mouvements de stock avec pagination pour infinite scroll"""
         with get_session() as session:
             query = session.query(StockMovementModel).outerjoin(Product, StockMovementModel.product_id == Product.id)
+            
+            for raw, is_from in ((date_from, True), (date_to, False)):
+                if not raw:
+                    continue
+                try:
+                    d = datetime.strptime(raw, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    continue
+                if is_from:
+                    query = query.filter(StockMovementModel.created_at >= d)
+                else:
+                    query = query.filter(StockMovementModel.created_at < d + timedelta(days=1))
             
             if search:
                 search_term = f"%{search}%"

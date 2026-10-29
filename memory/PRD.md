@@ -832,3 +832,7 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 ## 2026-06 — Reçus : logo + ID agent
 - Logo en haut à gauche de tous les tickets (vente, remboursement dette) : croix verte par défaut (`/images/receipt-logo.png`), remplaçable par pharmacie dans Paramètres (`receipt_logo`, data URL 160px).
 - Ligne « Agent » des tickets = code employé (ex. ADM-001) au lieu du prénom ; historique paiements dette renvoie `created_by_code`.
+
+## 2026-06 — Historique des mouvements (bug)
+- La validation d'un appro crée désormais un mouvement « Entrée » (IN) par ligne (réf. supply, lot, agent). Migration tenant `0002_supply_in_mvts` reconstitue les entrées des appros déjà validés (reason « historique reconstitué »), appliquée à tous les schémas au démarrage.
+- Filtres dates déplacés côté serveur (`date_from`/`date_to` sur /stock/movements/paginated) : s'appliquent à tout l'historique, plus seulement aux pages chargées.

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/supplies", tags=["Supplies"])
 if DATABASE_TYPE == "postgresql":
     # ============ PostgreSQL Implementation ============
     from database.config import db_manager, USE_SUPABASE
-    from database.models_tenant import Supply as SupplyModel, SupplyItem as SupplyItemModel, Product, Category, Supplier
+    from database.models_tenant import Supply as SupplyModel, SupplyItem as SupplyItemModel, Product, Category, Supplier, StockMovement, StockMovementType
     ProductModel = Product
     from services.price_history import record_price_change
     from services.pricing import default_selling_price
@@ -733,6 +733,14 @@ if DATABASE_TYPE == "postgresql":
                 session.query(ProductModel).filter(ProductModel.id == item.product_id).update(
                     update_data, synchronize_session=False
                 )
+                stock_after = session.query(ProductModel.stock).filter(ProductModel.id == item.product_id).scalar() or 0
+                session.add(StockMovement(
+                    id=uuid.uuid4(), product_id=item.product_id,
+                    movement_type=StockMovementType.IN, quantity=int(item.quantity), stock_after=stock_after,
+                    reference_type="supply", reference_id=supply.id, agent_code=employee_code,
+                    reason=f"Appro {supply.supply_number or ''}".strip() + (f" - Lot {item.lot_number}" if item.lot_number else ""),
+                    validation_status="validated", validated_by=employee_code, validated_at=datetime.now(timezone.utc),
+                ))
             
             # Marquer comme validé
             supply.is_validated = True

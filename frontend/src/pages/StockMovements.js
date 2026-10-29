@@ -85,6 +85,8 @@ const useStockMovementsInfinite = (filters) => {
         params.append('movement_type', filters.movementType);
       }
       if (filters.search) params.append('search', filters.search);
+      if (filters.dateFrom) params.append('date_from', filters.dateFrom);
+      if (filters.dateTo) params.append('date_to', filters.dateTo);
       
       const response = await api.get(`/stock/movements/paginated?${params.toString()}`);
       return response.data;
@@ -137,6 +139,8 @@ const StockMovements = () => {
     productId: selectedProduct,
     movementType: selectedType,
     search: debouncedSearch,
+    dateFrom,
+    dateTo,
   });
   
   const movements = movementsData?.pages?.flatMap(page => page.items) || [];
@@ -157,23 +161,8 @@ const StockMovements = () => {
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   
-  // Filtered movements (local filtering for date only, rest is server-side)
-  const filteredMovements = useMemo(() => {
-    let filtered = [...movements];
-    
-    // Date filters (local)
-    if (dateFrom) {
-      const from = new Date(dateFrom);
-      filtered = filtered.filter(m => new Date(m.created_at) >= from);
-    }
-    if (dateTo) {
-      const to = new Date(dateTo);
-      to.setHours(23, 59, 59);
-      filtered = filtered.filter(m => new Date(m.created_at) <= to);
-    }
-    
-    return filtered;
-  }, [movements, searchTerm, dateFrom, dateTo]);
+  // Filtres (produit, type, recherche, dates) appliqués côté serveur
+  const filteredMovements = movements;
   
   // Helper pour obtenir la quantité avec le bon signe
   const getSignedQuantity = (movement) => {
