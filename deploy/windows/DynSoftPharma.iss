@@ -111,7 +111,6 @@ function InitializeSetup: Boolean;
 var
   ResultCode: Integer;
 begin
-  Randomize;
   HasDocker := Exec(ExpandConstant('{cmd}'), '/c docker --version', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
   Result := True;
   if not HasDocker then
