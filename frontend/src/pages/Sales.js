@@ -29,6 +29,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ReceiptPromptDialog } from '../components/ReceiptPromptDialog';
 import { CreditLimitAlert } from '../components/CreditLimitAlert';
 import { printReceipt } from '../lib/receipt';
+import { searchProducts } from '../lib/productSearch';
 
 // Composant pour le formulaire de rabais par produit
 const ProductDiscountForm = ({ item, onApply, onCancel }) => {
@@ -1773,14 +1774,7 @@ const Sales = () => {
   };
 
   // Filtrer les produits : uniquement actifs et correspondant à la recherche
-  const filteredProducts = products.filter((p) => {
-    // Exclure les produits désactivés
-    if (p.is_active === false) return false;
-    
-    const searchLower = productSearch.toLowerCase();
-    return p.name?.toLowerCase().includes(searchLower) || 
-           p.barcode?.toLowerCase().includes(searchLower);
-  });
+  const filteredProducts = searchProducts(products, productSearch);
 
   // Handle barcode scan
   const handleBarcodeScan = (barcode) => {

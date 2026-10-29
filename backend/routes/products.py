@@ -19,6 +19,7 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import ProductRepository, SettingsRepository, CategoryRepository
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import Product as ProductModel
+    from services.text import normalize_product_name
     from sqlalchemy import desc, or_
     
     def get_session():
@@ -188,6 +189,7 @@ if DATABASE_TYPE == "postgresql":
     def create_product(product_data: ProductCreate, current_user: dict = Depends(require_role(["admin", "pharmacien"]))):
         """Créer un nouveau produit"""
         repo = ProductRepository()
+        product_data.name = normalize_product_name(product_data.name)
         
         # Vérifier si un produit avec le même nom existe
         existing = repo.get_by_name(product_data.name)
@@ -329,6 +331,7 @@ if DATABASE_TYPE == "postgresql":
         
         # Vérifier nom unique
         if product_data.name:
+            product_data.name = normalize_product_name(product_data.name)
             existing_name = repo.get_by_name(product_data.name)
             if existing_name and existing_name['id'] != product_id:
                 raise HTTPException(status_code=400, detail=f"Un autre produit avec le nom '{product_data.name}' existe déjà")

@@ -814,3 +814,8 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - `CreditLimitAlert` dans la vente : orange ≥ 80 %, rouge > seuil (dette actuelle + dette demandée).
 - Bug trouvé/corrigé : le mode de paiement « Crédit » (code `credit`) n'était pas traité comme dette (frontend `isDebtMethod`, backend `DEBT_METHODS`), y compris paiement mixte.
 - Agent de test : tout OK (backend + UI + auto-logout a/b/c). Ventes de test réglées, seuil client remis.
+
+
+## 2026-10-29 — Noms produits MAJUSCULES sans accent + recherche classée
+- `services/text.py normalize_product_name` appliqué à POST/PUT /api/products ; script `scripts/normalize_product_names.py` exécuté sur public et t_noormin (111 + 108 renommés, 1 doublon ACEWEL ignoré par schéma).
+- `lib/productSearch.js searchProducts` (sans accents/casse ; ordre : commence par → mot commence par → contient → code ; en stock d'abord) utilisé dans Ventes et Approvisionnements. Vérifié : « para » → PARACETAMOL/PARA DENK avant DIPARA ; « paracé » trouve PARACETAMOL.

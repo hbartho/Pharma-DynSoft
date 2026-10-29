@@ -47,6 +47,7 @@ import { SkeletonSuppliesPage } from '../components/ui/skeleton-shimmer';
 import { useCurrentShift, useCanOperate } from '../hooks/useShifts';
 import { useShiftEligibility } from '../hooks/useShiftSchedules';
 import { markupOf } from '../lib/pricing';
+import { searchProducts } from '../lib/productSearch';
 
 const Supplies = () => {
   const { user } = useAuth();
@@ -799,13 +800,7 @@ const Supplies = () => {
   const pendingCount = supplies.filter(s => s.is_validated === false).length;
   const validatedCount = supplies.filter(s => s.is_validated === true).length;
 
-  const filteredProducts = products.filter(p => 
-    productSearch && (
-      p.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.internal_reference?.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.barcode?.toLowerCase().includes(productSearch.toLowerCase())
-    )
-  );
+  const filteredProducts = productSearch ? searchProducts(products, productSearch, { includeInactive: true }) : [];
 
   // Loading state avec skeleton shimmer
   if (suppliesLoading && supplies.length === 0) {
