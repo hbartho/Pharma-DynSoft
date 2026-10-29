@@ -16,7 +16,7 @@ const barcodeSvg = (text) => {
 };
 
 /** Construit le HTML d'un ticket 80 mm pour une vente. */
-export const buildReceiptHtml = ({ sale, settings = {}, agentName, customerName, formatAmount }) => {
+export const buildReceiptHtml = ({ sale, settings = {}, agentName, customerName, formatAmount, duplicate = false }) => {
   const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
   const saleNumber = sale.sale_number || sale.id?.substring(0, 8).toUpperCase() || '';
   const date = new Date(sale.created_at || Date.now()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -64,6 +64,7 @@ export const buildReceiptHtml = ({ sale, settings = {}, agentName, customerName,
   ${settings.pharmacy_phone ? `<div class="muted">Tél : ${esc(settings.pharmacy_phone)}</div>` : ''}
 </div>
 <hr/>
+${duplicate ? '<div class="c b">*** DUPLICATA ***</div><hr/>' : ''}
 <table>
   <tr><td>N° vente</td><td class="r b" colspan="2">${esc(saleNumber)}</td></tr>
   <tr><td>Date</td><td class="r" colspan="2">${esc(date)}</td></tr>

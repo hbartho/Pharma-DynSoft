@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText, RotateCcw, History, Filter, Calendar, ScanLine, WifiOff, CloudOff, Loader2, Smartphone, Percent, DollarSign, CircleDollarSign, Wallet, Send, CheckCircle, RefreshCw, Shield, Clock, LogOut, Pause, Play, Trash2, AlertCircle, CalendarX, Timer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Tag, Zap, Gift } from 'lucide-react';
+import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText, RotateCcw, History, Filter, Calendar, ScanLine, WifiOff, CloudOff, Loader2, Smartphone, Percent, DollarSign, CircleDollarSign, Wallet, Send, CheckCircle, RefreshCw, Shield, Clock, LogOut, Pause, Play, Trash2, AlertCircle, CalendarX, Timer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Tag, Zap, Gift, Printer } from 'lucide-react';
 import { addItem, getAllItems, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import api from '../services/api';
@@ -1300,8 +1300,9 @@ const Sales = () => {
     }
   };
 
-  const handlePrintReceipt = (sale, cashReceived) => {
+  const handlePrintReceipt = (sale, cashReceived, { duplicate = false } = {}) => {
     const ok = printReceipt({
+      duplicate,
       sale: cashReceived != null ? { ...sale, cash_received: cashReceived } : sale,
       settings: appSettings,
       agentName: user?.first_name || user?.name || user?.employee_code,
@@ -2878,6 +2879,16 @@ const Sales = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handlePrintReceipt(sale, undefined, { duplicate: true })}
+                          data-testid={`receipt-sale-${sale.id}`}
+                          className="text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                          title="Réimprimer le reçu de caisse (ticket)"
+                        >
+                          <Printer className="w-4 h-4" strokeWidth={1.5} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => generateSalePDF(sale)}
                           data-testid={`pdf-sale-${sale.id}`}
                           className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
@@ -3057,6 +3068,14 @@ const Sales = () => {
                   </div>
                 </div>
               )}
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="outline" onClick={() => handlePrintReceipt(selectedSale, undefined, { duplicate: true })} data-testid="detail-print-receipt">
+                  <Printer className="w-4 h-4 mr-2" strokeWidth={1.5} /> Réimprimer le reçu
+                </Button>
+                <Button variant="outline" onClick={() => generateSalePDF(selectedSale)} data-testid="detail-download-pdf">
+                  <FileText className="w-4 h-4 mr-2" strokeWidth={1.5} /> PDF
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
