@@ -90,24 +90,19 @@ Si vous migrez une pharmacie existante depuis le cloud, passez directement à la
 5. Windows : si la page ne s'ouvre pas depuis les autres postes, autoriser Docker Desktop
    dans le pare-feu ou ouvrir le port 80 (réseau privé).
 
-## 8. Migrer les données depuis Supabase (cloud → local)
+## 8. Récupérer la pharmacie depuis le cloud (cloud → local)
 
-À faire une seule fois, avec Internet, depuis le PC serveur :
+À faire une seule fois, avec Internet, depuis le PC serveur. Aucun accès direct à la base
+cloud n'est nécessaire : seul le **jeton de synchronisation** de la pharmacie est utilisé.
 
-1. Dans Supabase : **Project Settings → Database → Connection string**, mode
-   **Session pooler** (port 5432), copier l'URL `postgresql://...`.
-   Si le mot de passe contient `#`, le remplacer par `%23` dans l'URL (`@` → `%40`, `/` → `%2F`).
-2. Lancer `migrer-depuis-supabase.bat` / `./migrer-depuis-supabase.sh` et coller l'URL
-   (elle n'est pas enregistrée).
-3. Le script exporte le schéma `public` et tous les schémas `t_*` (une pharmacie = un schéma)
-   avec `pg_dump`, puis propose l'import local avec `pg_restore`.
-4. Après l'import, tous les comptes (super admin, admins, employés) fonctionnent avec
-   leurs mots de passe habituels.
+1. Sur le cloud, le super-admin génère le jeton (`/platform` → nuage → **Générer le jeton**).
+2. Dans `deploy/local/.env` : `TENANT_SCHEMA=t_<slug>`, `CLOUD_SYNC_URL`, `CLOUD_SYNC_SLUG`,
+   `CLOUD_SYNC_TOKEN` et `CLOUD_IMPORT_ON_START=1`, puis `docker compose up -d`.
+3. Au démarrage, si le schéma local est vide, le backend importe la pharmacie : fiche, comptes
+   des employés et toutes ses données (produits, ventes, dettes…). Les autres pharmacies ne sont pas copiées.
+4. Pour remplacer plus tard les données locales par celles du cloud : `importer-depuis-cloud.bat`.
 
-Des messages d'avertissement `pg_restore` sur des objets déjà existants sont normaux.
-
-Pour ne garder qu'une seule pharmacie en local, le super admin peut supprimer les autres
-depuis `/platform` après la migration.
+Après l'import, les employés se connectent avec leurs mots de passe habituels.
 
 ## 9. Dédier le serveur à une seule pharmacie (`TENANT_SCHEMA`)
 

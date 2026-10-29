@@ -847,3 +847,7 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 - `deploy/windows/DynSoftPharma.iss` (Inno Setup) : assistant (pharmacie+slug, super-admin, URL cloud+jeton+heure, port), génération .env (secrets aléatoires), copie backend/frontend/deploy, post-install.bat (docker compose up --build + attente API), raccourcis, mise à jour (.env conservé), désinstallation (purge/keep). Icône `dynsoft.ico`.
 - `.github/workflows/build-installer.yml` : compile le .exe sur windows-latest à chaque tag `v*` (release) ou manuellement.
 - Testé : export noormin (3431 lignes) + import dans un schéma de test ; le .iss n'a pas pu être compilé ici (pas de Windows) → à valider via le workflow GitHub.
+
+## 2026-06 — Nettoyage du dépôt
+- Supprimés : anciens guides/scripts d'installation Windows native (racine, backend/*.bat, frontend/*.bat, requirements-windows), tests (tests/, backend/tests/, backend_test*.py, test_reports/), scripts one-shot (add_permissions_column, backfill_directory, create_indexes, generate/regenerate_test_data, reset_stock, seed_super_admin, setup_postgresql.sh, update_category_coefficients, audit_async_handlers), database/init_db.py & init_supabase.py, migrer-depuis-supabase (remplacé par l'import cloud), frontend/src/stores (zustand non utilisé), InfiniteScrollLoader, ui/toaster + use-toast, offlineDataService, useOfflineData, images dupliquées, lockfiles vides à la racine, backups vides.
+- README racine réécrit ; guide local §8 réécrit (import via jeton). `test_result.md` conservé (fichier de protocole de la plateforme).
