@@ -809,7 +809,7 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 
 ## 2026-10-24 — Auto-déconnexion, reçu de caisse 80 mm, alerte seuil crédit (iteration_50)
-- `hooks/useAutoLogout.js` : 15 min d'inactivité, veille PC (écart d'horloge > 2 min, tick 20 s), fermeture d'onglet (session = sessionStorage uniquement ; IndexedDB ne restaure plus). Toast « Session fermée automatiquement ».
+- `hooks/useAutoLogout.js` : veille PC uniquement (délai 15 min d'inactivité retiré le 2026-06) (écart d'horloge > 2 min, tick 20 s), fermeture d'onglet (session = sessionStorage uniquement ; IndexedDB ne restaure plus). Toast « Session fermée automatiquement ».
 - Reçu : `lib/receipt.js` (ticket 80 mm, en-tête pharmacie, agent, client, lignes, rabais, total, paiement, reçu/monnaie, code-barres CODE128 jsbarcode, pied paramétrable, « Produit par DynSoft Pharma », window.print) ; `ReceiptPromptDialog` après vente (montant reçu → monnaie) ; settings `pharmacy_address`, `pharmacy_phone`, `receipt_footer`, `receipt_print_prompt` (si false → impression directe). UI Paramètres.
 - `CreditLimitAlert` dans la vente : orange ≥ 80 %, rouge > seuil (dette actuelle + dette demandée).
 - Bug trouvé/corrigé : le mode de paiement « Crédit » (code `credit`) n'était pas traité comme dette (frontend `isDebtMethod`, backend `DEBT_METHODS`), y compris paiement mixte.

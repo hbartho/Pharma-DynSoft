@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Déconnexion auto : 15 min d'inactivité, mise en veille du PC
+  // Déconnexion auto : mise en veille du PC (fermeture d'onglet = session vidée)
   useAutoLogout(!!user, logout);
 
   const value = {
