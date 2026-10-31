@@ -60,7 +60,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\ouvrir.bat"; IconFilename: "{
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Run]
-Filename: "{app}\post-install.bat"; StatusMsg: "Construction et démarrage des conteneurs Docker (5 à 15 min la première fois)..."; Flags: runhidden waituntilterminated; Check: DockerAvailable
+Filename: "{app}\post-install.bat"; Parameters: "{code:InstallMode}"; StatusMsg: "Construction et démarrage des conteneurs Docker (5 à 15 min la première fois)..."; Flags: runhidden waituntilterminated; Check: DockerAvailable
 Filename: "{app}\ouvrir.bat"; Description: "Ouvrir {#AppName} dans le navigateur"; Flags: postinstall nowait skipifsilent; Check: DockerAvailable
 
 [UninstallRun]
@@ -68,17 +68,26 @@ Filename: "{app}\desinstaller.bat"; Parameters: "{code:UninstallMode}"; Flags: r
 
 [Code]
 var
+  ModePage: TInputOptionWizardPage;
   PharmacyPage: TInputQueryWizardPage;
   AdminPage: TInputQueryWizardPage;
   CloudPage: TInputQueryWizardPage;
-  ImportCheck: TNewCheckBox;
   PortPage: TInputQueryWizardPage;
   HasDocker: Boolean;
-  EnvExists: Boolean;
 
 function DockerAvailable: Boolean;
 begin
   Result := HasDocker;
+end;
+
+function IsUpdate: Boolean;
+begin
+  Result := (ModePage <> nil) and ModePage.Values[1];
+end;
+
+function InstallMode(Param: String): String;
+begin
+  if IsUpdate then Result := 'update' else Result := 'install';
 end;
 
 function EnvPath: String;
@@ -121,6 +130,16 @@ end;
 
 procedure InitializeWizard;
 begin
+  ModePage := CreateInputOptionPage(wpWelcome, 'Type d''opération',
+    'Première installation ou mise à jour ?',
+    'Choisissez « Première installation » sur un PC où DynSoft Pharma n''a jamais été installé : la pharmacie est configurée ' +
+    'puis ses données sont importées automatiquement depuis le cloud au premier démarrage.' + #13#10#13#10 +
+    'Choisissez « Mise à jour » pour installer une nouvelle version sur un serveur déjà en service : la configuration et la base ' +
+    'de données locales sont conservées, aucune donnée n''est réimportée.', True, False);
+  ModePage.Add('Première installation (nouveau serveur de pharmacie)');
+  ModePage.Add('Mise à jour d''une installation existante');
+  ModePage.Values[0] := True;
+
   PharmacyPage := CreateInputQueryPage(wpSelectDir, 'Pharmacie',
     'Identification de la pharmacie installée sur ce PC',
     'L''identifiant (slug) est celui attribué par DynSoft sur la plateforme cloud (ex. noormin). ' +
@@ -131,7 +150,7 @@ begin
   AdminPage := CreateInputQueryPage(PharmacyPage.ID, 'Compte super-administrateur local',
     'Compte DynSoft de supervision du serveur local',
     'Ce compte permet d''accéder à la page /platform du serveur local. ' +
-    'Les comptes des employés de la pharmacie sont récupérés depuis le cloud.');
+    'Les comptes des employés de la pharmacie sont importés depuis le cloud.');
   AdminPage.Add('Email :', False);
   AdminPage.Add('Mot de passe (8 caractères minimum) :', True);
   AdminPage.Values[0] := 'admin@dynsoft.local';
@@ -141,17 +160,10 @@ begin
     'Le jeton est généré par DynSoft sur la plateforme cloud (/platform > pharmacie > jeton de synchronisation). ' +
     'Il sert à importer la pharmacie au premier démarrage et à remonter les ventes chaque nuit.');
   CloudPage.Add('URL du cloud :', False);
-  CloudPage.Add('Jeton de synchronisation :', False);
+  CloudPage.Add('Jeton de synchronisation (obligatoire) :', False);
   CloudPage.Add('Heure de la remontée nocturne (0-23) :', False);
   CloudPage.Values[0] := '{#AppURL}';
   CloudPage.Values[2] := '2';
-  ImportCheck := TNewCheckBox.Create(CloudPage);
-  ImportCheck.Parent := CloudPage.Surface;
-  ImportCheck.Top := CloudPage.Edits[2].Top + CloudPage.Edits[2].Height + ScaleY(16);
-  ImportCheck.Left := CloudPage.Edits[2].Left;
-  ImportCheck.Width := CloudPage.SurfaceWidth;
-  ImportCheck.Caption := 'Importer les données de la pharmacie depuis le cloud au premier démarrage';
-  ImportCheck.Checked := True;
 
   PortPage := CreateInputQueryPage(CloudPage.ID, 'Accès réseau',
     'Port d''accès à l''application',
@@ -163,8 +175,8 @@ end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
-  { Mise à jour : .env déjà présent dans le dossier choisi, on ne redemande pas la configuration }
-  Result := EnvExists and ((PageID = PharmacyPage.ID) or (PageID = AdminPage.ID) or (PageID = CloudPage.ID) or (PageID = PortPage.ID));
+  { Mise à jour : configuration conservée, pages de saisie ignorées }
+  Result := IsUpdate and ((PageID = PharmacyPage.ID) or (PageID = AdminPage.ID) or (PageID = CloudPage.ID) or (PageID = PortPage.ID));
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -172,8 +184,19 @@ var
   Port: Integer;
 begin
   Result := True;
-  if CurPageID = wpSelectDir then
-    EnvExists := FileExists(EnvPath)
+  if CurPageID = wpSelectDir then begin
+    if IsUpdate and (not FileExists(EnvPath)) then begin
+      MsgBox('Aucune installation de DynSoft Pharma n''a été trouvée dans ce dossier (fichier deploy\local\.env absent).' + #13#10#13#10 +
+             'Choisissez le dossier de l''installation existante, ou revenez en arrière et sélectionnez « Première installation ».', mbError, MB_OK);
+      Result := False;
+    end
+    else if (not IsUpdate) and FileExists(EnvPath) then begin
+      MsgBox('Une installation de DynSoft Pharma existe déjà dans ce dossier.' + #13#10#13#10 +
+             'Pour ne pas écraser sa configuration ni ses données, revenez en arrière et sélectionnez « Mise à jour », ' +
+             'ou choisissez un autre dossier.', mbError, MB_OK);
+      Result := False;
+    end;
+  end
   else if CurPageID = PharmacyPage.ID then begin
     PharmacyPage.Values[1] := Lowercase(Trim(PharmacyPage.Values[1]));
     if Trim(PharmacyPage.Values[0]) = '' then begin MsgBox('Indiquez le nom de la pharmacie.', mbError, MB_OK); Result := False; end
@@ -184,9 +207,12 @@ begin
     else if Length(AdminPage.Values[1]) < 8 then begin MsgBox('Le mot de passe doit contenir au moins 8 caractères.', mbError, MB_OK); Result := False; end;
   end
   else if CurPageID = CloudPage.ID then begin
-    if (Trim(CloudPage.Values[1]) = '') and ImportCheck.Checked then begin
-      MsgBox('Le jeton de synchronisation est requis pour importer la pharmacie depuis le cloud. ' +
-             'Collez-le, ou décochez l''import (installation vide).', mbError, MB_OK);
+    if Pos('http', Lowercase(Trim(CloudPage.Values[0]))) <> 1 then begin
+      MsgBox('URL du cloud invalide (elle doit commencer par https://).', mbError, MB_OK); Result := False;
+    end
+    else if Length(Trim(CloudPage.Values[1])) < 20 then begin
+      MsgBox('Le jeton de synchronisation est obligatoire : il permet d''importer la pharmacie depuis le cloud au premier démarrage.' + #13#10 +
+             'Il se génère sur la plateforme cloud : /platform > pharmacie > jeton de synchronisation.', mbError, MB_OK);
       Result := False;
     end
     else if (StrToIntDef(Trim(CloudPage.Values[2]), -1) < 0) or (StrToIntDef(Trim(CloudPage.Values[2]), -1) > 23) then begin
@@ -199,14 +225,24 @@ begin
   end;
 end;
 
+function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoTypeInfo, MemoComponentsInfo, MemoGroupInfo, MemoTasksInfo: String): String;
+begin
+  if IsUpdate then
+    Result := 'Opération : MISE À JOUR (configuration et données conservées, pas de réimport)' + NewLine + NewLine
+  else
+    Result := 'Opération : PREMIÈRE INSTALLATION' + NewLine +
+              Space + 'Pharmacie : ' + PharmacyPage.Values[0] + ' (t_' + PharmacyPage.Values[1] + ')' + NewLine +
+              Space + 'Import des données depuis ' + CloudPage.Values[0] + ' au premier démarrage' + NewLine +
+              Space + 'Port : ' + PortPage.Values[0] + NewLine + NewLine;
+  Result := Result + MemoDirInfo;
+end;
+
 procedure WriteEnv;
 var
   L: TStringList;
-  Slug, Token, Import: String;
+  Slug: String;
 begin
   Slug := PharmacyPage.Values[1];
-  Token := Trim(CloudPage.Values[1]);
-  if ImportCheck.Checked and (Token <> '') then Import := '1' else Import := '0';
   L := TStringList.Create;
   try
     L.Add('POSTGRES_USER=dynpharma');
@@ -220,9 +256,29 @@ begin
     L.Add('TENANT_SCHEMA=t_' + Slug);
     L.Add('CLOUD_SYNC_URL=' + Trim(CloudPage.Values[0]));
     L.Add('CLOUD_SYNC_SLUG=' + Slug);
-    L.Add('CLOUD_SYNC_TOKEN=' + Token);
+    L.Add('CLOUD_SYNC_TOKEN=' + Trim(CloudPage.Values[1]));
     L.Add('CLOUD_SYNC_HOUR=' + Trim(CloudPage.Values[2]));
-    L.Add('CLOUD_IMPORT_ON_START=' + Import);
+    L.Add('CLOUD_IMPORT_ON_START=1');
+    L.SaveToFile(EnvPath);
+  finally
+    L.Free;
+  end;
+end;
+
+{ Mise à jour : l'import automatique est désactivé dans le .env existant }
+procedure DisableAutoImport;
+var
+  L: TStringList;
+  I: Integer;
+  Found: Boolean;
+begin
+  L := TStringList.Create;
+  try
+    L.LoadFromFile(EnvPath);
+    Found := False;
+    for I := 0 to L.Count - 1 do
+      if Pos('CLOUD_IMPORT_ON_START=', L[I]) = 1 then begin L[I] := 'CLOUD_IMPORT_ON_START=0'; Found := True; end;
+    if not Found then L.Add('CLOUD_IMPORT_ON_START=0');
     L.SaveToFile(EnvPath);
   finally
     L.Free;
@@ -230,9 +286,16 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Status: AnsiString;
 begin
-  if (CurStep = ssPostInstall) and (not EnvExists) then
-    WriteEnv;
+  if CurStep = ssPostInstall then begin
+    if IsUpdate then DisableAutoImport else WriteEnv;
+  end
+  else if (CurStep = ssDone) and HasDocker then begin
+    if LoadStringFromFile(ExpandConstant('{app}\import-status.txt'), Status) and (Trim(Status) <> '') then
+      MsgBox(Trim(Status), mbInformation, MB_OK);
+  end;
 end;
 
 function UninstallMode(Param: String): String;

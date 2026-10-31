@@ -103,6 +103,7 @@ def import_from_cloud(force: bool = False) -> Dict[str, Any]:
         tenants = master_rows.get("tenants") or []
         for t in tenants:
             t["database_name"] = schema
+            t["is_active"] = True
         _upsert_master(conn, Tenant.__table__, tenants, "slug")
         _upsert_master(conn, UserDirectory.__table__, master_rows.get("user_directory") or [], "email")
 

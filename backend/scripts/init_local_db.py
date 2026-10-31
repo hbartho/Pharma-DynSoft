@@ -48,6 +48,13 @@ def main():
     if FORCED_SCHEMA and FORCED_SCHEMA != "public":
         ensure_tenant_schema(FORCED_SCHEMA)
         print(f"Serveur dédié : schéma {FORCED_SCHEMA} OK")
+        from database.models_master import Tenant
+        with db_manager.get_master_session() as session:
+            tenant = session.query(Tenant).filter(Tenant.database_name == FORCED_SCHEMA).first()
+            if tenant and not tenant.is_active:
+                tenant.is_active = True
+                session.commit()
+                print(f"Pharmacie {tenant.slug} réactivée (serveur dédié)")
 
     with db_manager.get_master_session() as session:
         has_super_admin = session.query(UserDirectory).filter(
