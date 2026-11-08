@@ -12,11 +12,13 @@ import { formatCurrency } from '../services/currencyService';
 import { preloadDataForOffline, getOfflineStats } from '../services/offlineOperations';
 import { getStoreCounts, clearLocalChanges } from '../services/indexedDB';
 import { toast } from 'sonner';
+import { useConfirm } from '../components/ConfirmDialog';
 import OfflineIndicator from '../components/OfflineIndicator';
 import SyncQueuePanel from '../components/SyncQueuePanel';
 import { CloudSyncCard } from '../components/CloudSyncCard';
 
 const Settings = () => {
+  const confirm = useConfirm();
   const { refreshSettings } = useSettings();
   const { isOnline, isSyncing, performSync, forceFullSync, pendingChangesCount, lastSyncTime, getTimeSinceLastSync } = useOffline();
   
@@ -135,7 +137,7 @@ const Settings = () => {
   };
 
   const handleClearPendingChanges = async () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer toutes les modifications en attente ? Cette action est irréversible.')) {
+    if (await confirm({ title: 'Supprimer les modifications en attente ?', description: 'Toutes les opérations non synchronisées seront perdues. Cette action est irréversible.', confirmLabel: 'Supprimer', destructive: true })) {
       try {
         await clearLocalChanges();
         toast.success('Modifications en attente supprimées');

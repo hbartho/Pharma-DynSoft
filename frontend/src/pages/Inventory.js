@@ -16,6 +16,7 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useCategories } from '../hooks/useCategories';
+import { useConfirm } from '../components/ConfirmDialog';
 
 // Hook pour l'inventaire avec rafraîchissement intelligent
 const useCurrentInventory = (options = {}) => {
@@ -146,6 +147,7 @@ const useRefreshTheoretical = () => {
 };
 
 const Inventory = () => {
+  const confirm = useConfirm();
   const { user } = useAuth();
   const { formatAmount } = useSettings();
   const queryClient = useQueryClient();
@@ -464,9 +466,9 @@ const Inventory = () => {
     });
   };
   
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!currentSession) return;
-    if (window.confirm('Êtes-vous sûr de vouloir annuler cet inventaire ? Toutes les données seront perdues.')) {
+    if (await confirm({ title: 'Annuler cet inventaire ?', description: 'Toutes les quantités saisies seront perdues. Cette action est irréversible.', confirmLabel: "Annuler l'inventaire", cancelLabel: 'Continuer', destructive: true })) {
       cancelInventory.mutate(currentSession.id);
     }
   };

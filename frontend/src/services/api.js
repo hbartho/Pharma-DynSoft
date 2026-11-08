@@ -47,8 +47,8 @@ api.interceptors.response.use(
         await clearUserData();
         
         // Afficher un message et rediriger
-        alert('Votre session a été invalidée car vous vous êtes connecté depuis un autre appareil.');
-        window.location.href = '/login';
+        toast.error('Session fermée', { description: 'Vous vous êtes connecté depuis un autre appareil.' });
+        setTimeout(() => { window.location.href = '/login'; }, 1200);
       } else {
         // Token expiré ou invalide - rediriger simplement
         await clearUserData();

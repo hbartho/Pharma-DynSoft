@@ -29,6 +29,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ReceiptPromptDialog } from '../components/ReceiptPromptDialog';
 import { CreditLimitAlert } from '../components/CreditLimitAlert';
 import { printReceipt, receiptLogoSrc } from '../lib/receipt';
+import { useConfirm } from '../components/ConfirmDialog';
 import { searchProducts } from '../lib/productSearch';
 
 // Composant pour le formulaire de rabais par produit
@@ -105,6 +106,7 @@ const ProductDiscountForm = ({ item, onApply, onCancel }) => {
 };
 
 const Sales = () => {
+  const confirm = useConfirm();
   const { isOnline } = useOffline();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -1005,8 +1007,8 @@ const Sales = () => {
   };
   
   // Annuler une vente en attente
-  const handleCancelPendingSale = (pendingSale) => {
-    if (window.confirm(`Annuler la vente en attente ${pendingSale.reference} ?`)) {
+  const handleCancelPendingSale = async (pendingSale) => {
+    if (await confirm({ title: 'Annuler la vente en attente ?', description: `La vente ${pendingSale.reference} sera supprimée et les articles remis en stock.`, confirmLabel: 'Annuler la vente', cancelLabel: 'Retour', destructive: true })) {
       cancelPendingSale.mutate(pendingSale.id, {
         onSuccess: () => {
           toast.success(`Vente ${pendingSale.reference} annulée`);

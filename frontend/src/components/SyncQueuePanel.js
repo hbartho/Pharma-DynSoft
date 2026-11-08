@@ -27,6 +27,7 @@ import { useOffline } from '../contexts/OfflineContext';
 import { getLocalChanges, clearLocalChanges, updateChangeStatus } from '../services/indexedDB';
 import { syncAllPendingOperations } from '../services/offlineService';
 import { toast } from 'sonner';
+import { useConfirm } from './ConfirmDialog';
 
 const ENTITY_ICONS = {
   products: Package,
@@ -54,6 +55,7 @@ const STATUS_COLORS = {
 };
 
 const SyncQueuePanel = ({ className = '' }) => {
+  const confirm = useConfirm();
   const { isOnline, isSyncing, performSync, pendingChangesCount, lastSyncTime, getTimeSinceLastSync } = useOffline();
   const [expanded, setExpanded] = useState(false);
   const [changes, setChanges] = useState([]);
@@ -97,7 +99,7 @@ const SyncQueuePanel = ({ className = '' }) => {
 
   // Supprimer tous les changements en attente
   const handleClearAll = async () => {
-    if (window.confirm('Supprimer toutes les modifications en attente ? Cette action est irréversible.')) {
+    if (await confirm({ title: 'Supprimer les modifications en attente ?', description: 'Toutes les opérations non synchronisées seront perdues. Cette action est irréversible.', confirmLabel: 'Supprimer', destructive: true })) {
       try {
         await clearLocalChanges();
         setChanges([]);

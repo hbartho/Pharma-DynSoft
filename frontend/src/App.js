@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ConfirmProvider } from './components/ConfirmDialog';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { Toaster } from './components/ui/sonner';
@@ -316,9 +317,11 @@ function App() {
         <SettingsProvider>
           <OfflineProvider>
             <BrowserRouter>
-              <AppRoutes />
-              <Toaster position="top-right" richColors />
-              <PWAInstallPrompt />
+              <ConfirmProvider>
+                <AppRoutes />
+                <Toaster position="top-right" richColors />
+                <PWAInstallPrompt />
+              </ConfirmProvider>
             </BrowserRouter>
           </OfflineProvider>
         </SettingsProvider>

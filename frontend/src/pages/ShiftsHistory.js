@@ -29,8 +29,10 @@ import { useShiftsHistory, useShiftsStats, useShiftDetails, useActiveShifts, use
 import { useShiftsInfinite } from '../hooks/useInfiniteScroll';
 import { useUsers } from '../hooks/useUsers';
 import { SkeletonTable } from '../components/ui/skeleton-shimmer';
+import { useConfirm } from '../components/ConfirmDialog';
 
 const ShiftsHistory = () => {
+  const confirm = useConfirm();
   const loadMoreRef = useRef(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -81,8 +83,8 @@ const ShiftsHistory = () => {
   const extendShift = useExtendShift();
   const deleteShift = useDeleteShift();
 
-  const handleDeleteShift = (shiftId) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce shift ? Cette action est irréversible.')) {
+  const handleDeleteShift = async (shiftId) => {
+    if (await confirm({ title: 'Supprimer ce shift ?', description: 'Cette action est irréversible.', confirmLabel: 'Supprimer', destructive: true })) {
       deleteShift.mutate(shiftId, {
         onSuccess: () => {
           setShowDetailDialog(false);
