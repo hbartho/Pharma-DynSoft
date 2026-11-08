@@ -29,7 +29,7 @@ PAYMENT_METHOD_LABELS = {
 if DATABASE_TYPE == "postgresql":
     # ============ PostgreSQL Implementation ============
     from database.config import db_manager, USE_SUPABASE
-    from database.models_tenant import Sale, SaleStatus, PaymentMethod, Product, Prescription, PrescriptionStatus, Setting
+    from database.models_tenant import Sale, SaleStatus, PaymentMethod, Product, Prescription, PrescriptionStatus, Setting, SaleReturn
     from sqlalchemy import func, and_
     
     def get_session():
@@ -50,7 +50,14 @@ if DATABASE_TYPE == "postgresql":
                 Sale.status != SaleStatus.CANCELLED
             ).all()
             
-            today_revenue = sum(s.total or 0 for s in today_sales)
+            today_gross = sum(s.total or 0 for s in today_sales)
+            today_returns = session.query(SaleReturn).filter(
+                SaleReturn.created_at >= day_start,
+                SaleReturn.created_at < day_end,
+                SaleReturn.status == "completed",
+            ).all()
+            today_returns_total = sum(r.total_refund or 0 for r in today_returns)
+            today_revenue = today_gross - today_returns_total
             
             # Produits
             products = session.query(Product).filter(Product.is_active == True).all()
@@ -71,6 +78,9 @@ if DATABASE_TYPE == "postgresql":
             return {
                 "today_sales_count": len(today_sales),
                 "today_revenue": today_revenue,
+                "today_gross_revenue": today_gross,
+                "today_returns_total": today_returns_total,
+                "today_returns_count": len(today_returns),
                 "total_products": len(products),
                 "low_stock_count": low_stock_count,
                 "pending_prescriptions": pending_prescriptions,
@@ -149,11 +159,20 @@ if DATABASE_TYPE == "postgresql":
                     add_to_payment(method, sale.total or 0, is_partial=False)
             
             total_revenue = sum(s.total or 0 for s in sales)
+            day_returns = session.query(SaleReturn).filter(
+                SaleReturn.created_at >= day_start,
+                SaleReturn.created_at < day_end,
+                SaleReturn.status == "completed",
+            ).all()
+            returns_total = sum(r.total_refund or 0 for r in day_returns)
             
             return {
                 "date": local_date.isoformat(),
                 "total_sales": len(sales),
                 "total_revenue": total_revenue,
+                "returns_total": returns_total,
+                "returns_count": len(day_returns),
+                "net_revenue": total_revenue - returns_total,
                 "by_payment_method": list(by_payment.values()),
                 "discount_info": {
                     "total_discount": total_discount,

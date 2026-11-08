@@ -357,6 +357,9 @@ export const useDashboardData = (salesDate = null) => {
     date: rawSalesByPayment.date || todayInTz(getAppTimezone()),
     total_count: rawSalesByPayment.total_sales || 0,
     total_revenue: rawSalesByPayment.total_revenue || 0,
+    returns_total: rawSalesByPayment.returns_total || 0,
+    returns_count: rawSalesByPayment.returns_count || 0,
+    net_revenue: rawSalesByPayment.net_revenue ?? rawSalesByPayment.total_revenue ?? 0,
     by_payment: rawSalesByPayment.by_payment_method || [],
     discount_info: rawSalesByPayment.discount_info || { total_discount: 0, discount_count: 0 }
   };

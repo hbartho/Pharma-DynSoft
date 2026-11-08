@@ -118,6 +118,7 @@ const Dashboard = () => {
             value={formatAmount(stats.today_revenue)}
             icon={DollarSign}
             color="emerald"
+            subtitle={stats.today_returns_total > 0 ? `net de ${stats.today_returns_count} retour${stats.today_returns_count > 1 ? 's' : ''} (-${formatAmount(stats.today_returns_total)})` : undefined}
           />
           <StatsCard
             title="Valeur du stock"
@@ -325,9 +326,21 @@ const Dashboard = () => {
                 {isSalesByPaymentLoading ? (
                   <Loader2 className="w-6 h-6 animate-spin inline" />
                 ) : (
-                  formatAmount(salesByPayment.total_revenue)
+                  formatAmount(salesByPayment.net_revenue ?? salesByPayment.total_revenue)
                 )}
               </p>
+              {/* Retours du jour */}
+              {!isSalesByPaymentLoading && salesByPayment.returns_total > 0 && (
+                <div className="flex items-center justify-end gap-1.5 mt-1" data-testid="dashboard-returns-line">
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="text-sm text-amber-600 font-medium">
+                    Retours: -{formatAmount(salesByPayment.returns_total)}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    (brut {formatAmount(salesByPayment.total_revenue)})
+                  </span>
+                </div>
+              )}
               {/* Affichage des rabais */}
               {!isSalesByPaymentLoading && salesByPayment.discount_info?.total_discount > 0 && (
                 <div className="flex items-center justify-end gap-1.5 mt-1">
