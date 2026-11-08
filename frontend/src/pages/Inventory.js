@@ -156,7 +156,7 @@ const Inventory = () => {
   const [showValidateDialog, setShowValidateDialog] = useState(false);
   const [showHistoryDetailDialog, setShowHistoryDetailDialog] = useState(false);
   const [selectedHistorySession, setSelectedHistorySession] = useState(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [sessionName, setSessionName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState('all'); // all, uncounted, discrepancy
@@ -422,14 +422,18 @@ const Inventory = () => {
   const handleCreateSession = () => {
     createInventory.mutate({
       name: sessionName || null,
-      category_id: selectedCategoryId || null,
+      category_ids: selectedCategoryIds.length ? selectedCategoryIds : null,
     }, {
       onSuccess: () => {
         setShowCreateDialog(false);
         setSessionName('');
-        setSelectedCategoryId('');
+        setSelectedCategoryIds([]);
       }
     });
+  };
+
+  const toggleCategory = (id) => {
+    setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
   
   const handleCountItem = (itemId, value, note = null) => {
@@ -814,19 +818,38 @@ const Inventory = () => {
               </div>
               
               <div>
-                <Label>Catégorie (optionnel)</Label>
-                <select
-                  value={selectedCategoryId}
-                  onChange={(e) => setSelectedCategoryId(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg"
-                >
-                  <option value="">Tous les produits</option>
+                <div className="flex items-center justify-between">
+                  <Label>Catégories à inventorier</Label>
+                  <span className="text-xs text-slate-500" data-testid="inventory-categories-count">
+                    {selectedCategoryIds.length === 0 ? 'Tous les produits' : `${selectedCategoryIds.length} catégorie${selectedCategoryIds.length > 1 ? 's' : ''}`}
+                  </span>
+                </div>
+                <div className="mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100" data-testid="inventory-categories-list">
+                  <label className="flex items-center gap-3 px-3 py-2 text-sm font-medium cursor-pointer hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-teal-600"
+                      checked={selectedCategoryIds.length === 0}
+                      onChange={() => setSelectedCategoryIds([])}
+                      data-testid="inventory-category-all"
+                    />
+                    Tous les produits
+                  </label>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <label key={cat.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-teal-600"
+                        checked={selectedCategoryIds.includes(cat.id)}
+                        onChange={() => toggleCategory(cat.id)}
+                        data-testid={`inventory-category-${cat.id}`}
+                      />
+                      {cat.name}
+                    </label>
                   ))}
-                </select>
+                </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Filtrer par catégorie pour un inventaire partiel
+                  Cochez une ou plusieurs catégories pour un inventaire partiel ; aucune coche = tous les produits
                 </p>
               </div>
             </div>

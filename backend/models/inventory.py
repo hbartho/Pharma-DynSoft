@@ -23,7 +23,8 @@ class InventoryItem(BaseModel):
 class InventorySessionCreate(BaseModel):
     """Données pour créer une session d'inventaire"""
     name: Optional[str] = None  # Nom optionnel (ex: "Inventaire Janvier 2026")
-    category_id: Optional[str] = None  # Filtrer par catégorie (None = tous)
+    category_id: Optional[str] = None  # Filtrer par catégorie (None = tous) — compat
+    category_ids: Optional[List[str]] = None  # Plusieurs catégories (vide/None = tous)
     notes: Optional[str] = None
 
 

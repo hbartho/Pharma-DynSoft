@@ -268,9 +268,12 @@ def create_inventory_session(
         # Récupérer les produits à inventorier
         products = product_repo.get_all()
         
-        # Filtrer par catégorie si spécifié
+        # Filtrer par catégorie(s) si spécifié
+        wanted = set(session_data.category_ids or [])
         if session_data.category_id:
-            products = [p for p in products if p.get('category_id') == session_data.category_id]
+            wanted.add(session_data.category_id)
+        if wanted:
+            products = [p for p in products if p.get('category_id') in wanted]
         
         if not products:
             raise HTTPException(status_code=400, detail="Aucun produit à inventorier")
