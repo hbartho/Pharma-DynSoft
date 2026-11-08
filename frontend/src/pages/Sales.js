@@ -113,7 +113,7 @@ const Sales = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [salesViewFilter, setSalesViewFilter] = useState('completed'); // 'completed', 'credit', 'partial', 'all'
+  const [salesViewFilter, setSalesViewFilter] = useState('all'); // 'all', 'completed', 'credit', 'partial', 'cancelled'
   
   // Ref pour l'intersection observer (infinite scroll)
   const loadMoreRef = useRef(null);
@@ -2718,10 +2718,23 @@ const Sales = () => {
               disabled={!isWithinScheduledHours}
             />
           </div>
-          {(searchQuery || searchDate) && (
+          <select
+            value={salesViewFilter}
+            onChange={(e) => setSalesViewFilter(e.target.value)}
+            disabled={!isWithinScheduledHours}
+            data-testid="sales-status-filter"
+            className="h-10 w-full sm:w-44 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="all">Toutes les ventes</option>
+            <option value="completed">Payées</option>
+            <option value="credit">À crédit</option>
+            <option value="partial">Partiellement payées</option>
+            <option value="cancelled">Annulées</option>
+          </select>
+          {(searchQuery || searchDate || salesViewFilter !== 'all') && (
             <Button 
               variant="outline" 
-              onClick={() => { setSearchQuery(''); setSearchDate(''); }}
+              onClick={() => { setSearchQuery(''); setSearchDate(''); setSalesViewFilter('all'); }}
               className="whitespace-nowrap"
             >
               <X className="w-4 h-4 mr-1" />
