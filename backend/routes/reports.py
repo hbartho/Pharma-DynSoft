@@ -501,21 +501,47 @@ if DATABASE_TYPE == "postgresql":
                         m = str(p.get("payment_method") or "cash")
                         debt_payments_by_method[m] = debt_payments_by_method.get(m, 0.0) + amt
             
-            # Solde fournisseurs (état courant) + avoirs de la période
-            debts = session.query(SupplierDebt).all()
+            # Fournisseurs : solde courant + mouvements de la période (paiements décaissés, avoirs, abandons)
+            from database.models_tenant import Supplier as SupplierModel
+            sup_rows = session.query(SupplierDebt, SupplierModel.name).outerjoin(
+                SupplierModel, SupplierModel.id == SupplierDebt.supplier_id
+            ).all()
             outstanding = sum(
-                d.remaining_amount or 0 for d in debts
+                d.remaining_amount or 0 for d, _n in sup_rows
                 if (d.status.value if hasattr(d.status, 'value') else str(d.status)).lower() not in ('paid', 'cancelled')
             )
-            avoirs_period = 0.0
-            avoirs_count = 0
-            for d in debts:
+            def _in_period(p):
+                try:
+                    at = datetime.fromisoformat(str(p.get("date") or p.get("created_at") or "").replace("Z", "+00:00"))
+                except ValueError:
+                    return False
+                if at.tzinfo is None:
+                    at = at.replace(tzinfo=timezone.utc)
+                return start <= at < end
+            sup_payments_total, sup_payments_count, sup_payments_by_method = 0.0, 0, {}
+            avoirs_period, avoirs_count, avoirs_items = 0.0, 0, []
+            sup_write_offs_total, sup_write_offs_items = 0.0, []
+            for d, supplier_name in sup_rows:
                 for p in (d.payments or []):
-                    if p.get("type") == "credit":
-                        p_date = (p.get("date") or "")[:10]
-                        if sd.isoformat() <= p_date <= ed.isoformat():
-                            avoirs_period += p.get("amount") or 0
-                            avoirs_count += 1
+                    if not _in_period(p):
+                        continue
+                    amt = float(p.get("amount") or 0)
+                    base = {"date": p.get("date"), "supplier_name": supplier_name or "Fournisseur inconnu",
+                            "debt_id": str(d.id), "amount": amt, "reason": p.get("reason") or "",
+                            "notes": p.get("notes") or "", "recorded_by": p.get("recorded_by") or ""}
+                    kind = p.get("type")
+                    if kind == "credit":
+                        avoirs_period += amt
+                        avoirs_count += 1
+                        avoirs_items.append(base)
+                    elif kind == "write_off":
+                        sup_write_offs_total += amt
+                        sup_write_offs_items.append(base)
+                    else:
+                        sup_payments_total += amt
+                        sup_payments_count += 1
+                        m = str(p.get("method") or "cash")
+                        sup_payments_by_method[m] = sup_payments_by_method.get(m, 0.0) + amt
             
             return {
                 "start_date": sd.isoformat(),
@@ -548,7 +574,15 @@ if DATABASE_TYPE == "postgresql":
                     "outstanding_debts": round(outstanding, 2),
                     "credits_period": round(avoirs_period, 2),
                     "credits_count": avoirs_count,
+                    "credits_items": avoirs_items,
+                    "payments_period": round(sup_payments_total, 2),
+                    "payments_count": sup_payments_count,
+                    "payments_by_method": {k: round(v, 2) for k, v in sup_payments_by_method.items()},
+                    "write_offs_period": round(sup_write_offs_total, 2),
+                    "write_offs_count": len(sup_write_offs_items),
+                    "write_offs_items": sup_write_offs_items,
                 },
+                "net_cash_flow": round(net_sales - credit_part + debt_payments_total - returns_total - sup_payments_total, 2),
             }
 
     @router.get("/accounting-summary")
@@ -600,8 +634,21 @@ if DATABASE_TYPE == "postgresql":
         rows.append(("", f"Casses/pertes validées ({data['losses']['validated_quantity']} unité(s), coût d'achat)", fmt(data['losses']['validated_value'])))
         if data['losses']['pending_count'] > 0:
             rows.append(("", "Pertes en attente de validation", str(data['losses']['pending_count'])))
-        rows.append(("", f"Avoirs fournisseurs sur la période ({data['suppliers']['credits_count']})", fmt(data['suppliers']['credits_period'])))
         rows.append(("", "Dettes fournisseurs en cours", fmt(data['suppliers']['outstanding_debts'])))
+        sup = data['suppliers']
+        rows.append(("FOURNISSEURS — MOUVEMENTS DE LA PÉRIODE", "", ""))
+        rows.append(("", f"Paiements fournisseurs décaissés ({sup['payments_count']})", f"- {fmt(sup['payments_period'])}"))
+        for m, v in sup['payments_by_method'].items():
+            rows.append(("", f"    {PAYMENT_LABELS.get(m, m)}", fmt(v)))
+        rows.append(("", f"Avoirs fournisseurs obtenus ({sup['credits_count']})", fmt(sup['credits_period'])))
+        for w in sup['credits_items']:
+            motif = f" — {w['reason']}" if w['reason'] else ""
+            rows.append(("", f"    {str(w['date'])[:10]} · {w['supplier_name']}{motif}", fmt(w['amount'])))
+        rows.append(("", f"Dettes fournisseurs abandonnées par le fournisseur ({sup['write_offs_count']})", fmt(sup['write_offs_period'])))
+        for w in sup['write_offs_items']:
+            motif = f" — {w['reason']}" if w['reason'] else ""
+            rows.append(("", f"    {str(w['date'])[:10]} · {w['supplier_name']}{motif}", fmt(w['amount'])))
+        rows.append(("", "FLUX NET DE TRÉSORERIE (encaissé − paiements fournisseurs)", fmt(data['net_cash_flow'])))
         return rows
 
     @router.get("/accounting-summary/export")

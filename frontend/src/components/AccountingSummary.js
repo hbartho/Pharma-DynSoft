@@ -136,7 +136,6 @@ export const AccountingSummary = ({ formatAmount, range }) => {
             {data.losses.pending_count > 0 && (
               <Row indent label="⚠ Pertes en attente de validation" value={`${data.losses.pending_count}`} />
             )}
-            <Row label="Avoirs fournisseurs (période)" value={formatAmount(data.suppliers.credits_period)} badge={`${data.suppliers.credits_count}`} />
             <Row label="Dettes fournisseurs en cours" value={formatAmount(data.suppliers.outstanding_debts)} bold />
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1 mt-4">Trésorerie encaissée</p>
             <Row label="CA net encaissé" value={formatAmount(data.net_collected)} />
@@ -146,6 +145,27 @@ export const AccountingSummary = ({ formatAmount, range }) => {
               <Row key={m} indent label={PAYMENT_LABELS[m] || m} value={formatAmount(v)} />
             ))}
             <Row label="Total réellement encaissé" value={formatAmount(data.cash_collected)} bold />
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1 mt-4">Fournisseurs — mouvements de la période</p>
+            <Row label="Paiements fournisseurs décaissés" value={formatAmount(data.suppliers.payments_period)} negative badge={`${data.suppliers.payments_count ?? 0}`} />
+            {Object.entries(data.suppliers.payments_by_method || {}).map(([m, v]) => (
+              <Row key={m} indent label={PAYMENT_LABELS[m] || m} value={formatAmount(v)} negative />
+            ))}
+            <Row label="Avoirs fournisseurs obtenus" value={formatAmount(data.suppliers.credits_period)} badge={`${data.suppliers.credits_count}`} />
+            <Row label="Dettes abandonnées par les fournisseurs" value={formatAmount(data.suppliers.write_offs_period)} badge={`${data.suppliers.write_offs_count ?? 0}`} />
+            {((data.suppliers.credits_items?.length || 0) + (data.suppliers.write_offs_items?.length || 0)) > 0 && (
+              <details className="mt-1" data-testid="supplier-moves-details">
+                <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">Détail avoirs / abandons fournisseurs</summary>
+                <ul className="mt-1 space-y-1">
+                  {[...(data.suppliers.credits_items || []).map((w) => ({ ...w, kind: 'Avoir' })), ...(data.suppliers.write_offs_items || []).map((w) => ({ ...w, kind: 'Abandon' }))].map((w, i) => (
+                    <li key={w.debt_id + i} className="flex justify-between gap-2 text-xs text-slate-600">
+                      <span className="truncate">{new Date(w.date).toLocaleDateString('fr-FR')} · {w.kind} · {w.supplier_name}{w.reason ? ` — ${w.reason}` : ''} <span className="text-slate-400">({w.recorded_by})</span></span>
+                      <span className="text-emerald-700 whitespace-nowrap">{formatAmount(w.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            <Row label="Flux net de trésorerie" value={formatAmount(data.net_cash_flow)} bold />
             <p className="text-[11px] text-slate-400 mt-3">
               Période : {data.start_date} → {data.end_date} · Chaque rabais, retour, casse et abandon de créance est tracé individuellement (historique des rabais, retours, mouvements de stock, historique des dettes).
             </p>
