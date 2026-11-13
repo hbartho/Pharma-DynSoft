@@ -147,7 +147,10 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def require_open_shift(current_user: dict = Depends(get_current_user)):
-    """Dependency to require an open shift for operations (Admins exempt, but their open shift is still attached)."""
+    """Dependency to require an open shift for operations (Admins exempt : leurs ventes ne sont rattachées à aucun shift)."""
+    if current_user.get('role') == 'admin':
+        return current_user
+
     from database.repositories_extended import ShiftRepository
     repo = ShiftRepository()
     
@@ -155,8 +158,6 @@ async def require_open_shift(current_user: dict = Depends(get_current_user)):
     open_shift = await run_in_threadpool(repo.get_active_by_user_str, user_id)
     
     if not open_shift:
-        if current_user.get('role') == 'admin':
-            return current_user
         raise HTTPException(
             status_code=403,
             detail="SHIFT_REQUIRED: Vous devez ouvrir un shift de caisse avant de pouvoir effectuer cette opération."

@@ -21,6 +21,7 @@ def upgrade():
         JOIN users u ON u.id = sh.user_id
         WHERE s.shift_id IS NULL
           AND s.agent_code = u.employee_code
+          AND u.role::text <> 'ADMIN'
           AND s.created_at >= sh.started_at
           AND s.created_at <= COALESCE(sh.ended_at, NOW())
     """))
