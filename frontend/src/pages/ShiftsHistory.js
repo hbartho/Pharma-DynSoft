@@ -23,16 +23,23 @@ import {
   Timer,
   Plus,
   Loader2,
-  Trash2
+  Trash2,
+  Printer
 } from 'lucide-react';
 import { useShiftsHistory, useShiftsStats, useShiftDetails, useActiveShifts, useExtendShift, useDeleteShift } from '../hooks/useShifts';
 import { useShiftsInfinite } from '../hooks/useInfiniteScroll';
 import { useUsers } from '../hooks/useUsers';
 import { SkeletonTable } from '../components/ui/skeleton-shimmer';
 import { useConfirm } from '../components/ConfirmDialog';
+import { useSettingsQuery } from '../hooks/useSettings';
+import { usePaymentMethods } from '../hooks/usePaymentMethods';
+import { printShiftReceipt } from '../lib/receipt';
 
 const ShiftsHistory = () => {
   const confirm = useConfirm();
+  const { data: appSettings } = useSettingsQuery();
+  const { data: paymentMethods = [] } = usePaymentMethods();
+  const paymentLabel = (code) => paymentMethods.find((m) => m.code === code)?.name;
   const loadMoreRef = useRef(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -723,6 +730,17 @@ const ShiftsHistory = () => {
                 >
                   Fermer
                 </Button>
+                {!shiftDetails.is_active && (
+                  <Button
+                    variant="outline"
+                    onClick={() => printShiftReceipt({ shift: shiftDetails, settings: appSettings, formatAmount, paymentLabel, duplicate: true })}
+                    className="border-teal-300 text-teal-700 hover:bg-teal-50"
+                    data-testid="shift-print-receipt"
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Ticket
+                  </Button>
+                )}
                 {!shiftDetails.is_active && (
                   <Button
                     variant="destructive"

@@ -10,6 +10,9 @@ import { useSettingsQuery } from '../hooks/useSettings';
 import { useAuth } from '../contexts/AuthContext';
 import { nowTimeInTz, tzTimeToUtcDate, formatTimeInTz, DEFAULT_TZ } from '../utils/timezoneUtils';
 import api from '../services/api';
+import { usePaymentMethods } from '../hooks/usePaymentMethods';
+import { printShiftReceipt } from '../lib/receipt';
+import { Printer, X } from 'lucide-react';
 
 // Modal d'ouverture de shift
 export function OpenShiftModal({ isOpen, onClose, onSuccess }) {
@@ -269,7 +272,14 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
   const [closingNotes, setClosingNotes] = useState('');
   const [expectedData, setExpectedData] = useState(null);
   const [loadingExpected, setLoadingExpected] = useState(false);
+  const [closedShift, setClosedShift] = useState(null);
   const closeShift = useCloseShift();
+  const { data: appSettings } = useSettingsQuery();
+  const { data: paymentMethods = [] } = usePaymentMethods();
+  const paymentLabel = (code) => paymentMethods.find((m) => m.code === code)?.name;
+  const formatAmount = (n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`;
+
+  const printClosed = (shift) => printShiftReceipt({ shift, settings: appSettings, formatAmount, paymentLabel });
 
   // Charger les données attendues à l'ouverture de la modal
   useEffect(() => {
@@ -299,15 +309,38 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
       actual_closing_amount: amount,
       closing_notes: closingNotes || null
     }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         setActualAmount('');
         setClosingNotes('');
         setExpectedData(null);
         onSuccess?.();
         onClose();
+        if (appSettings?.receipt_print_prompt === false) printClosed(data);
+        else setClosedShift(data);
       }
     });
   };
+
+  if (closedShift) {
+    return (
+      <Dialog open onOpenChange={(o) => !o && setClosedShift(null)}>
+        <DialogContent className="max-w-sm z-[70]" data-testid="shift-receipt-prompt">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Printer className="w-5 h-5 text-teal-700" /> Imprimer le ticket de clôture ?</DialogTitle>
+            <DialogDescription>
+              Caisse clôturée — attendu <strong>{formatAmount(closedShift.expected_amount)}</strong>, compté <strong>{formatAmount(closedShift.closing_amount ?? closedShift.actual_closing_amount)}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setClosedShift(null)} data-testid="shift-receipt-no"><X className="w-4 h-4 mr-1" /> Non</Button>
+            <Button className="bg-teal-700 hover:bg-teal-800" onClick={() => { printClosed(closedShift); setClosedShift(null); }} data-testid="shift-receipt-print">
+              <Printer className="w-4 h-4 mr-1" /> Imprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const calculateDifference = () => {
     if (!expectedData) return 0;
@@ -317,10 +350,6 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
 
   const difference = calculateDifference();
   const hasDifference = Math.abs(difference) > 0.01;
-
-  const formatAmount = (amount) => {
-    return (amount || 0).toLocaleString('fr-FR') + ' GNF';
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

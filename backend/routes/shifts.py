@@ -44,15 +44,30 @@ if DATABASE_TYPE == "postgresql":
         ).all()
         total_sales = sum(float(s.total or 0) for s in sales)
         sale_ids = [s.id for s in sales]
-        credit_part = 0.0
+        debt_by_sale: dict = {}
         if sale_ids:
-            credit_part = float(session.query(func.coalesce(func.sum(DebtModel.original_amount), 0)).filter(
-                DebtModel.sale_id.in_(sale_ids)
-            ).scalar() or 0)
+            for sid, amt in session.query(DebtModel.sale_id, DebtModel.original_amount).filter(DebtModel.sale_id.in_(sale_ids)).all():
+                debt_by_sale[sid] = debt_by_sale.get(sid, 0.0) + float(amt or 0)
+        credit_part = sum(debt_by_sale.values())
         cash_in_sales = total_sales - credit_part
+
+        # Détail encaissé par mode de paiement (part crédit exclue)
+        by_method: dict = {}
+        def _add(method, amount):
+            m = (method.value if hasattr(method, 'value') else str(method or 'cash')).lower()
+            if m in ('credit', 'debt') or amount <= 0:
+                return
+            by_method[m] = by_method.get(m, 0.0) + float(amount)
+        for s in sales:
+            if s.is_split_payment and s.split_payments:
+                for p in s.split_payments:
+                    _add(p.get('method'), float(p.get('amount') or 0))
+            else:
+                _add(s.payment_method, float(s.total or 0) - debt_by_sale.get(s.id, 0.0))
 
         debt_payments = 0.0
         debt_payments_count = 0
+        debt_by_method: dict = {}
         if agent_code and started_at:
             for (payments,) in session.query(DebtModel.payments).filter(DebtModel.payments != None).all():
                 for p in payments or []:
@@ -65,8 +80,11 @@ if DATABASE_TYPE == "postgresql":
                     if at.tzinfo is None:
                         at = at.replace(tzinfo=timezone.utc)
                     if started_at <= at <= end:
-                        debt_payments += float(p.get('amount') or 0)
+                        amt = float(p.get('amount') or 0)
+                        debt_payments += amt
                         debt_payments_count += 1
+                        m = str(p.get('payment_method') or 'cash').lower()
+                        debt_by_method[m] = debt_by_method.get(m, 0.0) + amt
 
         returns_q = session.query(SaleReturn).filter(SaleReturn.status == "completed")
         if started_at:
@@ -82,6 +100,8 @@ if DATABASE_TYPE == "postgresql":
             "total_sales_amount": total_sales,
             "total_credit_sales": credit_part,
             "total_cash_sales": cash_in_sales,
+            "sales_by_method": [{"method": k, "amount": v} for k, v in sorted(by_method.items(), key=lambda x: -x[1])],
+            "debt_payments_by_method": [{"method": k, "amount": v} for k, v in sorted(debt_by_method.items(), key=lambda x: -x[1])],
             "debt_payments_amount": debt_payments,
             "debt_payments_count": debt_payments_count,
             "returns_refunds_amount": returns_refunds,
@@ -317,7 +337,11 @@ if DATABASE_TYPE == "postgresql":
         
         return {
             **result,
+            **totals,
             "status": "closed",
+            "closing_notes": data.closing_notes,
+            "employee_code": current_user.get('employee_code'),
+            "user_name": current_user.get('name'),
             "expected_amount": expected_amount,
             "difference": difference,
             "difference_percentage": round((difference / expected_amount * 100), 2) if expected_amount else 0,

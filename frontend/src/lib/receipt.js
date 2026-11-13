@@ -155,3 +155,54 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
 };
 
 export const printDebtPaymentReceipt = (args) => openPrintWindow(buildDebtPaymentReceiptHtml(args));
+
+/** Ticket de clôture de caisse : shift = réponse de POST /shifts/close ou GET /shifts/details/:id */
+export const buildShiftReceiptHtml = ({ shift, settings = {}, formatAmount, paymentLabel, duplicate = false }) => {
+  const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
+  const label = (m) => (paymentLabel && paymentLabel(m)) || PAYMENT_LABELS[m] || m || '';
+  const dt = (v) => (v ? new Date(v).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '-');
+  const opened = shift.opened_at || shift.started_at;
+  const closed = shift.closed_at || shift.ended_at;
+  const expected = shift.expected_closing_amount ?? shift.expected_amount ?? 0;
+  const counted = shift.actual_closing_amount ?? shift.closing_amount ?? 0;
+  const diff = shift.difference ?? (counted - expected);
+  const rows = (list) => (list || []).map((e) => `<tr><td class="q">${esc(label(e.method))}</td><td></td><td class="r">${fmt(e.amount)}</td></tr>`).join('');
+  const ref = String(shift.id || '').substring(0, 8).toUpperCase();
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Clôture ${esc(ref)}</title>
+<style>${RECEIPT_CSS}</style></head><body>
+${headerHtml(settings)}
+<hr/>
+<div class="c b">CLÔTURE DE CAISSE</div>
+${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
+<hr/>
+<table>
+  <tr><td>Shift</td><td class="r b" colspan="2">${esc(ref)}</td></tr>
+  <tr><td>Caissier</td><td class="r" colspan="2">${esc(shift.employee_code || '')}</td></tr>
+  <tr><td>Ouverture</td><td class="r" colspan="2">${esc(dt(opened))}</td></tr>
+  <tr><td>Clôture</td><td class="r" colspan="2">${esc(dt(closed))}</td></tr>
+</table>
+<hr/>
+<table>
+  <tr><td>Fond de caisse</td><td></td><td class="r">${fmt(shift.opening_amount)}</td></tr>
+  <tr class="tot"><td>ENCAISSEMENTS VENTES (${shift.total_sales_count ?? 0})</td><td></td><td class="r">${fmt(shift.total_cash_sales)}</td></tr>
+  ${rows(shift.sales_by_method)}
+  ${shift.total_credit_sales > 0 ? `<tr><td class="q muted">Vendu à crédit (non encaissé)</td><td></td><td class="r muted">${fmt(shift.total_credit_sales)}</td></tr>` : ''}
+  ${shift.debt_payments_amount > 0 ? `<tr class="tot"><td>REMBOURSEMENTS DETTES (${shift.debt_payments_count ?? 0})</td><td></td><td class="r">${fmt(shift.debt_payments_amount)}</td></tr>${rows(shift.debt_payments_by_method)}` : ''}
+  ${shift.returns_refunds_amount > 0 ? `<tr class="tot"><td>RETOURS REMBOURSÉS (${shift.returns_count ?? 0})</td><td></td><td class="r">-${fmt(shift.returns_refunds_amount)}</td></tr>` : ''}
+</table>
+<hr/>
+<table>
+  <tr class="tot"><td>ATTENDU EN CAISSE</td><td></td><td class="r">${fmt(expected)}</td></tr>
+  <tr class="tot"><td>COMPTÉ</td><td></td><td class="r">${fmt(counted)}</td></tr>
+  <tr class="tot"><td>ÉCART</td><td></td><td class="r">${diff > 0 ? '+' : ''}${fmt(diff)}</td></tr>
+</table>
+${shift.closing_notes ? `<div class="muted">Note : ${esc(shift.closing_notes)}</div>` : ''}
+<hr/>
+<div class="c muted">Signature caissier : ________________</div>
+<div class="c foot">${esc(settings.receipt_footer || 'Merci de votre visite')}</div>
+<div class="c pw">Produit par DynSoft Pharma</div>
+<script>window.onload=function(){window.focus();window.print();setTimeout(function(){window.close()},800);};</script>
+</body></html>`;
+};
+
+export const printShiftReceipt = (args) => openPrintWindow(buildShiftReceiptHtml(args));
