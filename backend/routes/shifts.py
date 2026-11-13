@@ -21,12 +21,73 @@ if DATABASE_TYPE == "postgresql":
     from database.repositories import SettingsRepository, UserRepository
     from database.config import db_manager, USE_SUPABASE
     from database.models_tenant import Shift as ShiftModel
-    from sqlalchemy import desc, or_
+    from sqlalchemy import desc, func
     
     def get_session():
-        if USE_SUPABASE:
-            return db_manager.get_tenant_session(get_current_tenant())
         return db_manager.get_tenant_session(get_current_tenant())
+
+    def compute_shift_totals(session, shift: dict) -> dict:
+        """Mouvements de caisse d'un shift : ventes encaissées (hors part crédit), remboursements de dettes, retours."""
+        from database.models_tenant import Sale as SaleModel, SaleStatus, SaleReturn, Debt as DebtModel
+        started_at = shift.get('started_at')
+        ended_at = shift.get('ended_at')
+        if isinstance(started_at, str):
+            started_at = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
+        if isinstance(ended_at, str):
+            ended_at = datetime.fromisoformat(ended_at.replace('Z', '+00:00'))
+        end = ended_at or datetime.now(timezone.utc)
+        shift_uuid = uuid.UUID(str(shift['id']))
+        agent_code = shift.get('employee_code')
+
+        sales = session.query(SaleModel).filter(
+            SaleModel.shift_id == shift_uuid, SaleModel.status != SaleStatus.CANCELLED
+        ).all()
+        total_sales = sum(float(s.total or 0) for s in sales)
+        sale_ids = [s.id for s in sales]
+        credit_part = 0.0
+        if sale_ids:
+            credit_part = float(session.query(func.coalesce(func.sum(DebtModel.original_amount), 0)).filter(
+                DebtModel.sale_id.in_(sale_ids)
+            ).scalar() or 0)
+        cash_in_sales = total_sales - credit_part
+
+        debt_payments = 0.0
+        debt_payments_count = 0
+        if agent_code and started_at:
+            for (payments,) in session.query(DebtModel.payments).filter(DebtModel.payments != None).all():
+                for p in payments or []:
+                    if p.get('created_by') != agent_code or not p.get('created_at'):
+                        continue
+                    try:
+                        at = datetime.fromisoformat(str(p['created_at']).replace('Z', '+00:00'))
+                    except ValueError:
+                        continue
+                    if at.tzinfo is None:
+                        at = at.replace(tzinfo=timezone.utc)
+                    if started_at <= at <= end:
+                        debt_payments += float(p.get('amount') or 0)
+                        debt_payments_count += 1
+
+        returns_q = session.query(SaleReturn).filter(SaleReturn.status == "completed")
+        if started_at:
+            returns_q = returns_q.filter(SaleReturn.created_at >= started_at, SaleReturn.created_at <= end)
+        if agent_code:
+            returns_q = returns_q.filter(SaleReturn.agent_code == agent_code)
+        returns = returns_q.all()
+        returns_refunds = sum(float(r.total_refund or 0) for r in returns)
+
+        opening = float(shift.get('opening_amount') or 0)
+        return {
+            "total_sales_count": len(sales),
+            "total_sales_amount": total_sales,
+            "total_credit_sales": credit_part,
+            "total_cash_sales": cash_in_sales,
+            "debt_payments_amount": debt_payments,
+            "debt_payments_count": debt_payments_count,
+            "returns_refunds_amount": returns_refunds,
+            "returns_count": len(returns),
+            "expected_closing_amount": opening + cash_in_sales + debt_payments - returns_refunds,
+        }
     
     @router.get("/paginated")
     def get_shifts_paginated(
@@ -93,41 +154,50 @@ if DATABASE_TYPE == "postgresql":
             users = {str(u['id']): u for u in user_repo.get_all()}
             
             shifts = []
-            for s in shifts_orm:
-                user = users.get(str(s.user_id), {})
-                # Calculer la différence si le shift est fermé
-                difference = None
-                if s.closing_amount is not None and s.expected_amount is not None:
-                    difference = s.closing_amount - s.expected_amount
-                
-                # Calculer la durée du shift
-                duration_minutes = None
-                if s.started_at and s.ended_at:
-                    duration_minutes = int((s.ended_at - s.started_at).total_seconds() / 60)
-                elif s.started_at and s.is_active:
-                    duration_minutes = int((datetime.now(timezone.utc) - s.started_at).total_seconds() / 60)
-                
-                shifts.append({
-                    "id": str(s.id),
-                    "user_id": str(s.user_id) if s.user_id else None,
-                    "user_name": user.get('name', 'Utilisateur inconnu'),
-                    "employee_code": user.get('employee_code', 'N/A'),
-                    "opening_amount": float(s.opening_amount or 0),
-                    "closing_amount": float(s.closing_amount or 0) if s.closing_amount else None,
-                    "expected_amount": float(s.expected_amount or 0) if s.expected_amount else None,
-                    "difference": difference,
-                    "started_at": s.started_at.isoformat() if s.started_at else None,
-                    "ended_at": s.ended_at.isoformat() if s.ended_at else None,
-                    "expires_at": s.expires_at.isoformat() if s.expires_at else None,
-                    # Alias pour le frontend
-                    "closed_at": s.ended_at.isoformat() if s.ended_at else None,
-                    "expected_end_time": s.expires_at.isoformat() if s.expires_at else None,
-                    "opened_at": s.started_at.isoformat() if s.started_at else None,
-                    "duration_minutes": duration_minutes,
-                    "is_active": s.is_active,
-                    "status": 'open' if s.is_active else 'closed',
-                    "tenant_id": get_current_tenant(),
-                })
+            with get_session() as sess:
+                for s in shifts_orm:
+                    user = users.get(str(s.user_id), {})
+                    totals = compute_shift_totals(sess, {
+                        "id": s.id, "started_at": s.started_at, "ended_at": s.ended_at,
+                        "opening_amount": s.opening_amount, "employee_code": user.get('employee_code'),
+                    })
+                    # Calculer la différence si le shift est fermé
+                    difference = None
+                    if s.closing_amount is not None and s.expected_amount is not None:
+                        difference = s.closing_amount - s.expected_amount
+                    
+                    # Calculer la durée du shift
+                    duration_minutes = None
+                    if s.started_at and s.ended_at:
+                        duration_minutes = int((s.ended_at - s.started_at).total_seconds() / 60)
+                    elif s.started_at and s.is_active:
+                        duration_minutes = int((datetime.now(timezone.utc) - s.started_at).total_seconds() / 60)
+                    
+                    shifts.append({
+                        **totals,
+                        "expected_closing_amount": float(s.expected_amount) if s.expected_amount is not None else totals["expected_closing_amount"],
+                        "actual_closing_amount": float(s.closing_amount) if s.closing_amount is not None else None,
+                        "has_discrepancy": difference is not None and abs(difference) > 0.01,
+                        "id": str(s.id),
+                        "user_id": str(s.user_id) if s.user_id else None,
+                        "user_name": user.get('name', 'Utilisateur inconnu'),
+                        "employee_code": user.get('employee_code', 'N/A'),
+                        "opening_amount": float(s.opening_amount or 0),
+                        "closing_amount": float(s.closing_amount or 0) if s.closing_amount else None,
+                        "expected_amount": float(s.expected_amount or 0) if s.expected_amount else None,
+                        "difference": difference,
+                        "started_at": s.started_at.isoformat() if s.started_at else None,
+                        "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+                        "expires_at": s.expires_at.isoformat() if s.expires_at else None,
+                        # Alias pour le frontend
+                        "closed_at": s.ended_at.isoformat() if s.ended_at else None,
+                        "expected_end_time": s.expires_at.isoformat() if s.expires_at else None,
+                        "opened_at": s.started_at.isoformat() if s.started_at else None,
+                        "duration_minutes": duration_minutes,
+                        "is_active": s.is_active,
+                        "status": 'open' if s.is_active else 'closed',
+                        "tenant_id": get_current_tenant(),
+                    })
             
             pages = (total + limit - 1) // limit if total > 0 else 1
             
@@ -224,48 +294,13 @@ if DATABASE_TYPE == "postgresql":
         if not shift:
             raise HTTPException(status_code=404, detail="Aucun shift ouvert trouvé")
         
-        # Calculer le montant attendu en utilisant l'endpoint calculate-expected
+        # Montant attendu = fond de caisse + ventes encaissées (hors crédit) + remboursements dettes - retours
         opening_amount = float(shift.get('opening_amount', 0))
-        
-        # Calculer les ventes espèces du shift
-        total_cash_sales = 0
-        shift_id = shift.get('id')
-        
-        try:
-            with get_session() as session:
-                from database.models_tenant import Sale as SaleModel
-                
-                # Essayer de filtrer par shift_id
-                sales = session.query(SaleModel).filter(
-                    SaleModel.shift_id == int(shift_id) if str(shift_id).isdigit() else SaleModel.shift_id == shift_id
-                ).all()
-                
-                for sale in sales:
-                    if hasattr(sale, 'payment_method') and sale.payment_method == 'cash':
-                        total_cash_sales += float(sale.total or 0)
-        except Exception as e:
-            print(f"Erreur calcul ventes: {e}")
-            # Fallback: utiliser les dates
-            try:
-                started_at = shift.get('started_at')
-                if started_at:
-                    if isinstance(started_at, str):
-                        started_at = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
-                    
-                    with get_session() as session:
-                        from database.models_tenant import Sale as SaleModel
-                        
-                        sales = session.query(SaleModel).filter(
-                            SaleModel.created_at >= started_at
-                        ).all()
-                        
-                        for sale in sales:
-                            if hasattr(sale, 'payment_method') and sale.payment_method == 'cash':
-                                total_cash_sales += float(sale.total or 0)
-            except Exception as e2:
-                print(f"Erreur fallback: {e2}")
-        
-        expected_amount = opening_amount + total_cash_sales
+        shift_for_totals = {**shift, "employee_code": current_user.get('employee_code')}
+        with get_session() as session:
+            totals = compute_shift_totals(session, shift_for_totals)
+        total_cash_sales = totals["total_cash_sales"]
+        expected_amount = totals["expected_closing_amount"]
         
         closing_data = {
             "closing_amount": data.actual_closing_amount,
@@ -390,30 +425,17 @@ if DATABASE_TYPE == "postgresql":
         user_name = user.get('name', 'Inconnu') if user else 'Inconnu'
         employee_code = user.get('employee_code', 'N/A') if user else 'N/A'
         
-        # Calculer les ventes en espèces pour ce shift
-        total_cash_sales = 0
-        total_sales_count = 0
-        
         with get_session() as session:
-            from database.models_tenant import Sale as SaleModel
-            
-            sales = session.query(SaleModel).filter(
-                SaleModel.shift_id == uuid.UUID(shift_id)
-            ).all()
-            
-            for sale in sales:
-                total_sales_count += 1
-                payments = sale.payment_details or []
-                for payment in payments:
-                    if payment.get('method') == 'cash':
-                        total_cash_sales += payment.get('amount', 0)
+            totals = compute_shift_totals(session, {**shift, "employee_code": employee_code})
+        total_cash_sales = totals["total_cash_sales"]
+        total_sales_count = totals["total_sales_count"]
         
         # Calculer les montants
         opening_amount = float(shift.get('opening_amount', 0))
         closing_amount = float(shift.get('closing_amount') or 0) if shift.get('closing_amount') else None
         expected_amount = float(shift.get('expected_amount') or 0) if shift.get('expected_amount') else None
         
-        expected_closing_amount = opening_amount + total_cash_sales
+        expected_closing_amount = totals["expected_closing_amount"]
         actual_closing_amount = closing_amount
         
         # Calculer l'écart
@@ -434,8 +456,7 @@ if DATABASE_TYPE == "postgresql":
             "opening_amount": opening_amount,
             "closing_amount": closing_amount,
             "expected_amount": expected_amount,
-            "total_cash_sales": total_cash_sales,
-            "total_sales_count": total_sales_count,
+            **totals,
             "expected_closing_amount": expected_closing_amount,
             "actual_closing_amount": actual_closing_amount,
             "difference": difference,
@@ -488,8 +509,6 @@ if DATABASE_TYPE == "postgresql":
     @router.get("/calculate-expected")
     def calculate_expected_closing(current_user: dict = Depends(get_current_user)):
         """Calculer le montant attendu en caisse pour la clôture du shift."""
-        from database.repositories_extended import SaleRepository
-        
         repo = ShiftRepository()
         user_id = current_user['user_id']
         
@@ -498,63 +517,15 @@ if DATABASE_TYPE == "postgresql":
         if not shift:
             raise HTTPException(status_code=404, detail="Aucun shift ouvert trouvé")
         
-        # Récupérer les ventes du shift
-        sale_repo = SaleRepository()
         shift_id = shift.get('id')
         opening_amount = float(shift.get('opening_amount', 0))
-        
-        # Calculer les ventes espèces et le total
-        total_cash_sales = 0
-        total_sales_count = 0
-        
-        try:
-            # Obtenir les ventes liées au shift
-            with get_session() as session:
-                from database.models_tenant import Sale as SaleModel
-                
-                sales = session.query(SaleModel).filter(
-                    SaleModel.shift_id == int(shift_id) if str(shift_id).isdigit() else SaleModel.shift_id == shift_id
-                ).all()
-                
-                for sale in sales:
-                    total_sales_count += 1
-                    # Calculer les ventes espèces
-                    if hasattr(sale, 'payments') and sale.payments:
-                        for payment in sale.payments:
-                            if hasattr(payment, 'method') and payment.method == 'cash':
-                                total_cash_sales += float(payment.amount or 0)
-                    elif hasattr(sale, 'payment_method'):
-                        if sale.payment_method == 'cash':
-                            total_cash_sales += float(sale.total or 0)
-        except Exception as e:
-            print(f"Erreur lors du calcul des ventes: {e}")
-            # Essayer avec les dates du shift comme fallback
-            try:
-                started_at = shift.get('started_at')
-                if started_at:
-                    if isinstance(started_at, str):
-                        started_at = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
-                    
-                    with get_session() as session:
-                        from database.models_tenant import Sale as SaleModel
-                        
-                        sales = session.query(SaleModel).filter(
-                            SaleModel.created_at >= started_at
-                        ).all()
-                        
-                        for sale in sales:
-                            total_sales_count += 1
-                            if hasattr(sale, 'payment_method') and sale.payment_method == 'cash':
-                                total_cash_sales += float(sale.total or 0)
-            except Exception as e2:
-                print(f"Erreur fallback: {e2}")
-        
-        expected_closing_amount = opening_amount + total_cash_sales
+        with get_session() as session:
+            totals = compute_shift_totals(session, {**shift, "employee_code": current_user.get('employee_code')})
+        expected_closing_amount = totals["expected_closing_amount"]
         
         return {
             "opening_amount": opening_amount,
-            "total_cash_sales": total_cash_sales,
-            "total_sales_count": total_sales_count,
+            **totals,
             "expected_closing_amount": expected_closing_amount,
             "shift_id": str(shift_id),
             "shift_started_at": shift.get('started_at')

@@ -658,9 +658,27 @@ const ShiftsHistory = () => {
                   <span className="font-semibold">{formatAmount(shiftDetails.opening_amount)}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-teal-50 rounded-lg">
-                  <span className="text-teal-700">Ventes espèces ({shiftDetails.total_sales_count})</span>
+                  <span className="text-teal-700">Ventes encaissées ({shiftDetails.total_sales_count})</span>
                   <span className="font-semibold text-teal-800">+ {formatAmount(shiftDetails.total_cash_sales)}</span>
                 </div>
+                {shiftDetails.total_credit_sales > 0 && (
+                  <div className="flex justify-between items-center px-3 py-2 text-sm text-slate-500" data-testid="shift-credit-line">
+                    <span>dont vendu à crédit (non encaissé)</span>
+                    <span>{formatAmount(shiftDetails.total_credit_sales)}</span>
+                  </div>
+                )}
+                {shiftDetails.debt_payments_amount > 0 && (
+                  <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg" data-testid="shift-debt-payments-line">
+                    <span className="text-emerald-700">Remboursements de dettes ({shiftDetails.debt_payments_count})</span>
+                    <span className="font-semibold text-emerald-800">+ {formatAmount(shiftDetails.debt_payments_amount)}</span>
+                  </div>
+                )}
+                {shiftDetails.returns_refunds_amount > 0 && (
+                  <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg" data-testid="shift-returns-line">
+                    <span className="text-amber-700">Retours remboursés ({shiftDetails.returns_count})</span>
+                    <span className="font-semibold text-amber-800">- {formatAmount(shiftDetails.returns_refunds_amount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center p-3 bg-slate-100 rounded-lg border-2 border-slate-300">
                   <span className="font-medium text-slate-700">Montant attendu</span>
                   <span className="font-bold text-lg">{formatAmount(shiftDetails.expected_closing_amount)}</span>

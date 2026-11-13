@@ -351,14 +351,27 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
                   <p className="font-semibold text-slate-800">{formatAmount(expectedData.opening_amount)}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500">Ventes espèces</p>
+                  <p className="text-slate-500">Ventes encaissées (hors crédit)</p>
                   <p className="font-semibold text-teal-700">+ {formatAmount(expectedData.total_cash_sales)}</p>
+                  {expectedData.total_credit_sales > 0 && (
+                    <p className="text-xs text-slate-400">dont à crédit : {formatAmount(expectedData.total_credit_sales)}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-slate-500">Nombre de ventes</p>
                   <p className="font-semibold text-slate-800">{expectedData.total_sales_count}</p>
                 </div>
-                <div className="bg-teal-100 p-2 rounded-lg -m-1">
+                {(expectedData.debt_payments_amount > 0 || expectedData.returns_refunds_amount > 0) && (
+                  <div className="col-span-2 flex flex-wrap gap-x-4 text-xs">
+                    {expectedData.debt_payments_amount > 0 && (
+                      <span className="text-emerald-700">Remb. dettes : + {formatAmount(expectedData.debt_payments_amount)}</span>
+                    )}
+                    {expectedData.returns_refunds_amount > 0 && (
+                      <span className="text-amber-700">Retours : - {formatAmount(expectedData.returns_refunds_amount)}</span>
+                    )}
+                  </div>
+                )}
+                <div className="bg-teal-100 p-2 rounded-lg -m-1 col-span-2">
                   <p className="text-teal-700 text-xs">Montant attendu</p>
                   <p className="font-bold text-teal-800 text-lg">{formatAmount(expectedData.expected_closing_amount)}</p>
                 </div>
