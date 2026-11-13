@@ -58,6 +58,22 @@ if DATABASE_TYPE == "postgresql":
             ).all()
             today_returns_total = sum(r.total_refund or 0 for r in today_returns)
             today_revenue = today_gross - today_returns_total
+            from database.models_tenant import Debt as CustomerDebt
+            today_write_offs_total = 0.0
+            today_write_offs_count = 0
+            for (payments,) in session.query(CustomerDebt.payments).filter(CustomerDebt.payments != None).all():
+                for p in payments or []:
+                    if p.get("type") != "write_off":
+                        continue
+                    try:
+                        at = datetime.fromisoformat(str(p.get("created_at", "")).replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                    if at.tzinfo is None:
+                        at = at.replace(tzinfo=timezone.utc)
+                    if day_start <= at < day_end:
+                        today_write_offs_total += float(p.get("amount") or 0)
+                        today_write_offs_count += 1
             
             # Produits
             products = session.query(Product).filter(Product.is_active == True).all()
@@ -81,6 +97,8 @@ if DATABASE_TYPE == "postgresql":
                 "today_gross_revenue": today_gross,
                 "today_returns_total": today_returns_total,
                 "today_returns_count": len(today_returns),
+                "today_write_offs_total": today_write_offs_total,
+                "today_write_offs_count": today_write_offs_count,
                 "total_products": len(products),
                 "low_stock_count": low_stock_count,
                 "pending_prescriptions": pending_prescriptions,
@@ -427,6 +445,35 @@ if DATABASE_TYPE == "postgresql":
                 SM.movement_type == SMT.LOSS,
             ).filter((SM.validation_status == 'pending') | (SM.validation_status.is_(None))).count()
             
+            # Créances clients abandonnées sur la période (perte sur créances irrécouvrables)
+            from database.models_tenant import Debt as CustomerDebt, Customer as CustomerModel
+            write_offs = []
+            wo_rows = session.query(CustomerDebt, CustomerModel.name).outerjoin(
+                CustomerModel, CustomerModel.id == CustomerDebt.customer_id
+            ).filter(CustomerDebt.payments != None).all()
+            for debt, customer_name in wo_rows:
+                for p in (debt.payments or []):
+                    if p.get("type") != "write_off":
+                        continue
+                    try:
+                        at = datetime.fromisoformat(str(p.get("created_at", "")).replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                    if at.tzinfo is None:
+                        at = at.replace(tzinfo=timezone.utc)
+                    if start <= at < end:
+                        write_offs.append({
+                            "date": at.isoformat(),
+                            "customer_name": customer_name or "Client inconnu",
+                            "debt_id": str(debt.id),
+                            "sale_id": str(debt.sale_id) if debt.sale_id else None,
+                            "amount": float(p.get("amount") or 0),
+                            "reason": p.get("reason") or "",
+                            "created_by": p.get("created_by") or "",
+                        })
+            write_offs.sort(key=lambda w: w["date"])
+            write_offs_total = sum(w["amount"] for w in write_offs)
+            
             # Solde fournisseurs (état courant) + avoirs de la période
             debts = session.query(SupplierDebt).all()
             outstanding = sum(
@@ -454,7 +501,9 @@ if DATABASE_TYPE == "postgresql":
                 },
                 "discounts_by_source": by_source,
                 "returns": {"count": len(returns), "total_refunded": round(returns_total, 2)},
+                "write_offs": {"count": len(write_offs), "total": round(write_offs_total, 2), "items": write_offs},
                 "net_collected": round(net_sales - returns_total, 2),
+                "net_result": round(net_sales - returns_total - write_offs_total, 2),
                 "losses": {
                     "validated_count": len(losses),
                     "validated_quantity": losses_qty,
@@ -493,6 +542,14 @@ if DATABASE_TYPE == "postgresql":
             rows.append(("", f"    {SOURCE_LABELS.get(src, src)} ({v['count']})", f"- {fmt(v['amount'])}"))
         rows.append(("", f"Retours remboursés ({data['returns']['count']})", f"- {fmt(data['returns']['total_refunded'])}"))
         rows.append(("", "CA NET ENCAISSÉ", fmt(data['net_collected'])))
+        rows.append(("", f"Créances clients abandonnées ({data['write_offs']['count']})", f"- {fmt(data['write_offs']['total'])}"))
+        rows.append(("", "RÉSULTAT NET (après créances abandonnées)", fmt(data['net_result'])))
+        if data['write_offs']['items']:
+            rows.append(("DÉTAIL DES CRÉANCES ABANDONNÉES", "", ""))
+            for w in data['write_offs']['items']:
+                when = w['date'][:10]
+                motif = f" — {w['reason']}" if w['reason'] else ""
+                rows.append(("", f"    {when} · {w['customer_name']} · {w['created_by']}{motif}", f"- {fmt(w['amount'])}"))
         rows.append(("JUSTIFICATIFS & ENGAGEMENTS", "", ""))
         rows.append(("", f"Casses/pertes validées ({data['losses']['validated_quantity']} unité(s), coût d'achat)", fmt(data['losses']['validated_value'])))
         if data['losses']['pending_count'] > 0:

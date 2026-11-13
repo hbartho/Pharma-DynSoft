@@ -107,6 +107,21 @@ export const AccountingSummary = ({ formatAmount, range }) => {
             ))}
             <Row label="Retours remboursés" value={formatAmount(data.returns.total_refunded)} negative badge={`${data.returns.count}`} />
             <Row label="CA net encaissé" value={formatAmount(data.net_collected)} bold />
+            <Row label="Créances clients abandonnées" value={formatAmount(data.write_offs?.total)} negative badge={`${data.write_offs?.count ?? 0}`} />
+            <Row label="Résultat net (après créances abandonnées)" value={formatAmount(data.net_result)} bold />
+            {data.write_offs?.items?.length > 0 && (
+              <details className="mt-2" data-testid="write-offs-details">
+                <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">Détail des créances abandonnées ({data.write_offs.count})</summary>
+                <ul className="mt-1 space-y-1">
+                  {data.write_offs.items.map((w) => (
+                    <li key={w.debt_id + w.date} className="flex justify-between gap-2 text-xs text-slate-600">
+                      <span className="truncate">{new Date(w.date).toLocaleDateString('fr-FR')} · {w.customer_name}{w.reason ? ` — ${w.reason}` : ''} <span className="text-slate-400">({w.created_by})</span></span>
+                      <span className="text-red-600 whitespace-nowrap">- {formatAmount(w.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
 
           {/* Colonne 2 : justificatifs */}
@@ -119,7 +134,7 @@ export const AccountingSummary = ({ formatAmount, range }) => {
             <Row label="Avoirs fournisseurs (période)" value={formatAmount(data.suppliers.credits_period)} badge={`${data.suppliers.credits_count}`} />
             <Row label="Dettes fournisseurs en cours" value={formatAmount(data.suppliers.outstanding_debts)} bold />
             <p className="text-[11px] text-slate-400 mt-3">
-              Période : {data.start_date} → {data.end_date} · Chaque rabais, retour et casse est tracé individuellement (historique des rabais, retours, mouvements de stock).
+              Période : {data.start_date} → {data.end_date} · Chaque rabais, retour, casse et abandon de créance est tracé individuellement (historique des rabais, retours, mouvements de stock, historique des dettes).
             </p>
           </div>
         </div>

@@ -118,7 +118,10 @@ const Dashboard = () => {
             value={formatAmount(stats.today_revenue)}
             icon={DollarSign}
             color="emerald"
-            subtitle={stats.today_returns_total > 0 ? `net de ${stats.today_returns_count} retour${stats.today_returns_count > 1 ? 's' : ''} (-${formatAmount(stats.today_returns_total)})` : undefined}
+            subtitle={[
+              stats.today_returns_total > 0 ? `net de ${stats.today_returns_count} retour${stats.today_returns_count > 1 ? 's' : ''} (-${formatAmount(stats.today_returns_total)})` : null,
+              stats.today_write_offs_total > 0 ? `${stats.today_write_offs_count} créance${stats.today_write_offs_count > 1 ? 's' : ''} abandonnée${stats.today_write_offs_count > 1 ? 's' : ''} (-${formatAmount(stats.today_write_offs_total)})` : null,
+            ].filter(Boolean).join(' · ') || undefined}
           />
           <StatsCard
             title="Valeur du stock"
