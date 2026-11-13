@@ -1,0 +1,33 @@
+{
+  "summary": "Tested the FIFO remaining-quantity fix for stock lots without changing any data (no sales, supplies or price saves). Backend: 7/7 pytest pass. GET /api/stock-lots returns initial_quantity, current_quantity and product_stock. For every product, current<=initial and the sum of current_quantity equals product_stock. PARACETAMOL 500MG: received 20 / remaining 18 / stock 18. IBUPROFENE 400MG: APP-ADB8B242-2 = 6 (received 12), IBU-B2 = 8, stock 14. /product/{id}/lots and /by-supply/{id} return the same values. PARACETAMOL movements sum to 18 (IN 20, OUT -1, OUT -1), matching products.stock. Frontend: the Gestion des prix column header reads 'Qté restante'. PARACETAMOL shows badge 18 with 'reçu 20'. IBUPROFENE shows 6 / reçu 12 and 8 (no 'reçu' line, as expected). The edit modal shows 'Quantité restante: 6 (reçu 12)' and closes with Escape without saving. In Nouvelle vente, searching 'para' shows PARACETAMOL 500MG with 'Stock: 18', the same value as Gestion des prix.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/stock-lots/{lot_id} and PUT /api/stock-lots/{lot_id}", "issue": "They do not call with_remaining. current_quantity is still item.quantity (the received quantity) and product_stock is missing, so they disagree with the list endpoints. Example: lot APP-ADB8B242-2 would return 12 instead of 6."},
+      {"endpoint": "GET /api/stock-lots", "issue": "The main query does not filter on Supply.is_validated, but with_remaining only counts validated supplies. Lots from non-validated supplies therefore appear with current_quantity 0. Consider filtering them out or flagging them as 'non validé'."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Ventes list", "issues": ["The date filter uses the browser's native date input, shown as 'mm/dd/yyyy' in English in a French app. Consider the shadcn Calendar date picker."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_stock_lots_remaining.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Apply with_remaining in GET /stock-lots/{lot_id} and PUT /stock-lots/{lot_id} so current_quantity and product_stock match the list endpoints",
+    "Optional: filter or flag lots from non-validated supplies in GET /stock-lots"
+  ],
+  "critical_code_review_comments": [
+    "stock_lots.py: lot_to_dict still sets current_quantity = item.quantity. Every endpoint that skips with_remaining (single GET, PUT) returns the received quantity.",
+    "with_remaining spreads products.stock across lots by expiry. This is an estimate, not real per-lot tracking. Acceptable, but it relies on sales not recording a lot ID.",
+    "Note: /api/stock/movements/paginated rejects limit > 100 with a 422."
+  ],
+  "updated_files": ["/app/backend/tests/test_stock_lots_remaining.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. Read-only testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login is admin@pharmaflow.com / admin123. Press Escape to dismiss the shift modal. Expected data: PARACETAMOL 500MG stock 18 (received 20); IBUPROFENE 400MG stock 14 (6+8). Regression test: tests/test_stock_lots_remaining.py, run with -p no:xdist and REACT_APP_BACKEND_URL exported."
+}
