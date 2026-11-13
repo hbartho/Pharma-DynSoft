@@ -75,6 +75,37 @@ if DATABASE_TYPE == "postgresql":
             "tenant_id": get_current_tenant()
         }
     
+    def with_remaining(lots: List[dict], session) -> List[dict]:
+        """Quantité restante estimée par lot (FIFO : les lots périmant le plus tôt / les plus anciens sont consommés d'abord),
+        répartie à partir du stock réel du produit sur TOUS ses lots validés."""
+        product_ids = {lot["product_id"] for lot in lots}
+        if not product_ids:
+            return lots
+        ids = [uuid.UUID(pid) for pid in product_ids]
+        stocks = {str(pid): int(stock or 0) for pid, stock in session.query(Product.id, Product.stock).filter(Product.id.in_(ids)).all()}
+        rows = session.query(SupplyItem.id, SupplyItem.product_id, SupplyItem.quantity, SupplyItem.expiration_date, Supply.supply_date).join(
+            Supply, Supply.id == SupplyItem.supply_id
+        ).filter(SupplyItem.product_id.in_(ids), Supply.is_validated == True).all()
+        remaining: dict = {}
+        by_product: dict = {}
+        for r in rows:
+            by_product.setdefault(str(r.product_id), []).append(r)
+        for pid, group in by_product.items():
+            group.sort(key=lambda r: (r.expiration_date or datetime.max.date(), r.supply_date or datetime.min.date()))
+            received = sum(int(r.quantity or 0) for r in group)
+            stock = stocks.get(pid, 0)
+            consumed = max(0, received - stock)
+            for r in group:
+                take = min(int(r.quantity or 0), consumed)
+                remaining[str(r.id)] = int(r.quantity or 0) - take
+                consumed -= take
+            if stock > received and group:  # ajustements / inventaire : surplus sur le lot le plus récent
+                remaining[str(group[-1].id)] += stock - received
+        for lot in lots:
+            lot["current_quantity"] = remaining.get(lot["id"], 0)
+            lot["product_stock"] = stocks.get(lot["product_id"], 0)
+        return lots
+
     @router.get("", response_model=List[dict])
     def get_stock_lots(
         product_id: Optional[str] = None,
@@ -104,7 +135,7 @@ if DATABASE_TYPE == "postgresql":
                 supplier = supply.supplier if supply else None
                 result.append(lot_to_dict(item, supply, product, supplier))
             
-            return result
+            return with_remaining(result, session)
     
     @router.get("/expiring", response_model=List[dict])
     def get_expiring_lots(
@@ -123,7 +154,7 @@ if DATABASE_TYPE == "postgresql":
                 SupplyItem.quantity > 0
             ).join(Supply).order_by(SupplyItem.expiration_date).all()
             
-            return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
+            return with_remaining([lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items], session)
 
     def _apply_lot_prices_to_product(session, item, selling_price, purchase_price, employee_code=None):
         """Le prix saisi dans Gestion des prix devient le prix courant du produit (utilisé par les ventes)."""
@@ -255,7 +286,7 @@ if DATABASE_TYPE == "postgresql":
             except ValueError:
                 return []
             
-            return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
+            return with_remaining([lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items], session)
 
     @router.get("/product/{product_id}/lots", response_model=List[dict])
     def get_product_lots(
@@ -271,5 +302,5 @@ if DATABASE_TYPE == "postgresql":
             except ValueError:
                 return []
             
-            return [lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items]
+            return with_remaining([lot_to_dict(item, item.supply, item.product, item.supply.supplier if item.supply else None) for item in items], session)
 

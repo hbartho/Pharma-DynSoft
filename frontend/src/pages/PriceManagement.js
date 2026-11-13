@@ -302,7 +302,7 @@ const PriceManagement = () => {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Produit</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fournisseur</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Qté</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Qté restante</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Prix Cession</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Prix Public</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Prix Modifié</th>
@@ -345,10 +345,13 @@ const PriceManagement = () => {
                         <td className="px-4 py-3 text-sm text-slate-600">
                           {lot.supplier_name || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge variant={lot.current_quantity <= 5 ? 'destructive' : 'secondary'}>
+                        <td className="px-4 py-3 text-center" data-testid={`lot-qty-${lot.id}`}>
+                          <Badge variant={lot.current_quantity <= 5 ? 'destructive' : 'secondary'} title="Quantité restante estimée de ce lot (FIFO), basée sur le stock réel du produit">
                             {lot.current_quantity}
                           </Badge>
+                          {lot.initial_quantity !== lot.current_quantity && (
+                            <div className="text-[11px] text-slate-400 mt-0.5">reçu {lot.initial_quantity}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <Input
@@ -535,7 +538,7 @@ const PriceManagement = () => {
                   </div>
                   <div className="mt-2 space-y-1 text-sm text-slate-500">
                     <p>
-                      Quantité restante: <span className="font-medium">{editingLot.current_quantity}</span>
+                      Quantité restante: <span className="font-medium">{editingLot.current_quantity}</span> <span className="text-slate-400">(reçu {editingLot.initial_quantity})</span>
                     </p>
                     {editingLot.supplier_name && (
                       <p>
