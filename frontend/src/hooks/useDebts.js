@@ -101,6 +101,7 @@ export const useCreateDebtPayment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['debt-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       queryClient.invalidateQueries({ queryKey: ['customers-debt-summary'] });
       queryClient.invalidateQueries({ queryKey: ['customer-debts'] });
       queryClient.invalidateQueries({ queryKey: ['customer-credit'] });
@@ -126,6 +127,7 @@ export const useCreateBulkPayment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['debt-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       queryClient.invalidateQueries({ queryKey: ['customers-debt-summary'] });
       queryClient.invalidateQueries({ queryKey: ['customer-debts'] });
       queryClient.invalidateQueries({ queryKey: ['customer-credit'] });
@@ -146,6 +148,7 @@ export const useWriteOffDebt = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['debt-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       queryClient.invalidateQueries({ queryKey: ['customers-debt-summary'] });
       queryClient.invalidateQueries({ queryKey: ['customer-debts'] });
       queryClient.invalidateQueries({ queryKey: ['customer-credit'] });

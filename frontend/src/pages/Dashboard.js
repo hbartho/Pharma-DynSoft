@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { todayInTz } from '../utils/timezoneUtils';
 import { getAppTimezone } from '../services/dateService';
+import { DailyCashCard } from '../components/DailyCashCard';
 
 const pharmacyToday = () => new Date(`${todayInTz(getAppTimezone())}T12:00:00`);
 
@@ -256,6 +257,9 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Trésorerie du jour — mêmes chiffres que la synthèse comptable */}
+        <DailyCashCard date={formattedDate} formatAmount={formatAmount} />
 
         {/* Ventes par Mode de Paiement avec sélecteur de date */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">

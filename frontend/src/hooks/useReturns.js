@@ -147,6 +147,7 @@ export const useCreateReturn = () => {
       // Invalider toutes les données liées
       queryClient.invalidateQueries({ queryKey: queryKeys.returns });
       queryClient.invalidateQueries({ queryKey: queryKeys.sales });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.salesHistory });
       queryClient.invalidateQueries({ queryKey: queryKeys.products });
       queryClient.invalidateQueries({ queryKey: queryKeys.productAlerts });

@@ -119,6 +119,7 @@ export default function SupplierDebts() {
     onSuccess: () => {
       toast.success('Paiement enregistré avec succès');
       queryClient.invalidateQueries({ queryKey: ['supplier-debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       setShowPaymentModal(false);
       setPaymentForm({ amount: '', method: 'cash', reference: '', notes: '' });
     },
@@ -136,6 +137,7 @@ export default function SupplierDebts() {
     onSuccess: () => {
       toast.success('Dette abandonnée');
       queryClient.invalidateQueries({ queryKey: ['supplier-debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       setShowWriteOffModal(false);
       setWriteOffForm({ reason: '', notes: '' });
     },
@@ -153,6 +155,7 @@ export default function SupplierDebts() {
     onSuccess: (data) => {
       toast.success(`Avoir de ${formatAmount(data.credit_amount)} créé avec succès`);
       queryClient.invalidateQueries({ queryKey: ['supplier-debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       setShowCreditModal(false);
       setCreditForm({ amount: '', reason: '', notes: '' });
     },

@@ -284,6 +284,7 @@ export const useCreateSale = () => {
     onSuccess: (newSale) => {
       // Invalider les queries liées
       queryClient.invalidateQueries({ queryKey: queryKeys.sales });
+      queryClient.invalidateQueries({ queryKey: ['accounting-summary'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.salesHistory });
       queryClient.invalidateQueries({ queryKey: queryKeys.products }); // Stock mis à jour
       queryClient.invalidateQueries({ queryKey: queryKeys.productAlerts });
