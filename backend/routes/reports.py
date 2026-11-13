@@ -474,6 +474,33 @@ if DATABASE_TYPE == "postgresql":
             write_offs.sort(key=lambda w: w["date"])
             write_offs_total = sum(w["amount"] for w in write_offs)
             
+            # Part des ventes de la période vendue à crédit (non encaissée) et remboursements de dettes encaissés
+            sale_ids = [s.id for s in sales]
+            credit_part = 0.0
+            if sale_ids:
+                credit_part = float(session.query(func.coalesce(func.sum(CustomerDebt.original_amount), 0)).filter(
+                    CustomerDebt.sale_id.in_(sale_ids)
+                ).scalar() or 0)
+            debt_payments_total = 0.0
+            debt_payments_count = 0
+            debt_payments_by_method = {}
+            for debt, _name in wo_rows:
+                for p in (debt.payments or []):
+                    if p.get("type") == "write_off":
+                        continue
+                    try:
+                        at = datetime.fromisoformat(str(p.get("created_at", "")).replace("Z", "+00:00"))
+                    except ValueError:
+                        continue
+                    if at.tzinfo is None:
+                        at = at.replace(tzinfo=timezone.utc)
+                    if start <= at < end:
+                        amt = float(p.get("amount") or 0)
+                        debt_payments_total += amt
+                        debt_payments_count += 1
+                        m = str(p.get("payment_method") or "cash")
+                        debt_payments_by_method[m] = debt_payments_by_method.get(m, 0.0) + amt
+            
             # Solde fournisseurs (état courant) + avoirs de la période
             debts = session.query(SupplierDebt).all()
             outstanding = sum(
@@ -502,7 +529,14 @@ if DATABASE_TYPE == "postgresql":
                 "discounts_by_source": by_source,
                 "returns": {"count": len(returns), "total_refunded": round(returns_total, 2)},
                 "write_offs": {"count": len(write_offs), "total": round(write_offs_total, 2), "items": write_offs},
+                "credit_sales": round(credit_part, 2),
+                "debt_payments": {
+                    "count": debt_payments_count,
+                    "total": round(debt_payments_total, 2),
+                    "by_method": {k: round(v, 2) for k, v in debt_payments_by_method.items()},
+                },
                 "net_collected": round(net_sales - returns_total, 2),
+                "cash_collected": round(net_sales - credit_part + debt_payments_total - returns_total, 2),
                 "net_result": round(net_sales - returns_total - write_offs_total, 2),
                 "losses": {
                     "validated_count": len(losses),
@@ -525,6 +559,11 @@ if DATABASE_TYPE == "postgresql":
     ):
         return _accounting_data(start_date, end_date)
 
+    PAYMENT_LABELS = {
+        "cash": "Espèces", "card": "Carte", "orange_money": "Orange Money", "mtn_money": "MTN Money",
+        "mobile_money": "Mobile Money", "check": "Chèque", "transfer": "Virement",
+    }
+
     SOURCE_LABELS = {
         "manual": "Rabais manuels",
         "promo_code": "Codes promo",
@@ -544,6 +583,13 @@ if DATABASE_TYPE == "postgresql":
         rows.append(("", "CA NET ENCAISSÉ", fmt(data['net_collected'])))
         rows.append(("", f"Créances clients abandonnées ({data['write_offs']['count']})", f"- {fmt(data['write_offs']['total'])}"))
         rows.append(("", "RÉSULTAT NET (après créances abandonnées)", fmt(data['net_result'])))
+        rows.append(("TRÉSORERIE ENCAISSÉE", "", ""))
+        rows.append(("", "CA net encaissé", fmt(data['net_collected'])))
+        rows.append(("", "Ventes à crédit de la période (non encaissées)", f"- {fmt(data['credit_sales'])}"))
+        rows.append(("", f"Remboursements de dettes clients encaissés ({data['debt_payments']['count']})", f"+ {fmt(data['debt_payments']['total'])}"))
+        for m, v in data['debt_payments']['by_method'].items():
+            rows.append(("", f"    {PAYMENT_LABELS.get(m, m)}", fmt(v)))
+        rows.append(("", "TOTAL RÉELLEMENT ENCAISSÉ", fmt(data['cash_collected'])))
         if data['write_offs']['items']:
             rows.append(("DÉTAIL DES CRÉANCES ABANDONNÉES", "", ""))
             for w in data['write_offs']['items']:

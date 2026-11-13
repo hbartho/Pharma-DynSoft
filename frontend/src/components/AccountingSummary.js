@@ -15,6 +15,11 @@ const Row = ({ label, value, bold, negative, indent, badge }) => (
   </div>
 );
 
+const PAYMENT_LABELS = {
+  cash: 'Espèces', card: 'Carte', orange_money: 'Orange Money', mtn_money: 'MTN Money',
+  mobile_money: 'Mobile Money', check: 'Chèque', transfer: 'Virement',
+};
+
 const SOURCE_LABELS = {
   manual: 'Rabais manuels',
   promo_code: 'Codes promo',
@@ -133,6 +138,14 @@ export const AccountingSummary = ({ formatAmount, range }) => {
             )}
             <Row label="Avoirs fournisseurs (période)" value={formatAmount(data.suppliers.credits_period)} badge={`${data.suppliers.credits_count}`} />
             <Row label="Dettes fournisseurs en cours" value={formatAmount(data.suppliers.outstanding_debts)} bold />
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1 mt-4">Trésorerie encaissée</p>
+            <Row label="CA net encaissé" value={formatAmount(data.net_collected)} />
+            <Row label="Ventes à crédit (non encaissées)" value={formatAmount(data.credit_sales)} negative />
+            <Row label="Remboursements de dettes clients" value={formatAmount(data.debt_payments?.total)} badge={`${data.debt_payments?.count ?? 0}`} />
+            {Object.entries(data.debt_payments?.by_method || {}).map(([m, v]) => (
+              <Row key={m} indent label={PAYMENT_LABELS[m] || m} value={formatAmount(v)} />
+            ))}
+            <Row label="Total réellement encaissé" value={formatAmount(data.cash_collected)} bold />
             <p className="text-[11px] text-slate-400 mt-3">
               Période : {data.start_date} → {data.end_date} · Chaque rabais, retour, casse et abandon de créance est tracé individuellement (historique des rabais, retours, mouvements de stock, historique des dettes).
             </p>

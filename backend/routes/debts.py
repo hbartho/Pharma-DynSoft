@@ -569,6 +569,11 @@ if DATABASE_TYPE == "postgresql":
             debt.status = DebtStatus.WRITTEN_OFF
             debt.remaining_amount = 0
             debt.updated_at = now
+            # Client non solvable : seuil de crédit remis à 0 (plus de vente à crédit sans décision admin)
+            customer = session.query(Customer).filter(Customer.id == debt.customer_id).first()
+            if customer:
+                customer.max_debt_limit = 0
+                customer.updated_at = now
             
             # Ajouter à l'historique
             payments = debt.payments or []
@@ -592,7 +597,8 @@ if DATABASE_TYPE == "postgresql":
                 "debt_id": debt_id,
                 "written_off_amount": remaining_amount,
                 "reason": request.reason,
-                "message": f"Dette de {remaining_amount} abandonnée avec succès."
+                "customer_limit_reset": True,
+                "message": f"Dette de {remaining_amount} abandonnée. Seuil de crédit du client remis à 0."
             }
     
     @router.post("/payment/bulk", response_model=dict)
