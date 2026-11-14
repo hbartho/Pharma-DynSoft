@@ -987,7 +987,7 @@ const Sales = () => {
         setCustomerSearch('');
         setDiscountType('percent');
         setDiscountValue('');
-        setShowDialog(false);
+        handleSaleDialogChange(false);
       },
       onError: (error) => {
         const detail = error.response?.data?.detail;
@@ -1284,7 +1284,7 @@ const Sales = () => {
           setPromoCodeError('');
           setAutomaticDiscounts([]);
           setShowProductDiscount(null);
-          setShowDialog(false);
+          handleSaleDialogChange(false);
           if (newSale.has_debt) {
             toast.success(`Vente enregistrée avec ${formatAmount(newSale.debt_amount)} en dette`);
           } else if (newSale.is_split_payment) {
@@ -1330,7 +1330,7 @@ const Sales = () => {
         resetSecondOtpState();
         resetOtpState();
         setProductSearch('');
-        setShowDialog(false);
+        handleSaleDialogChange(false);
       } catch (offlineError) {
         toast.error('Erreur lors de l\'enregistrement');
       }
@@ -2698,7 +2698,7 @@ const Sales = () => {
                 </div>
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                  <Button type="button" variant="outline" onClick={() => handleSaleDialogChange(false)}>
                     Annuler
                   </Button>
                   <Button 

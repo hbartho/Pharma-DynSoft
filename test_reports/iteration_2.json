@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend test of the Sales 'Nouvelle vente' reset fix (Sales.js resetSaleForm/handleSaleDialogChange). Closing with the X, Escape or a click outside the dialog now resets everything: cart empty, total 0 GNF, product search empty, customer empty, payment back to Espèces. Regression checks pass: add to cart, quantity 2 gives 4 000 GNF, 'Mettre en attente' works (toast shown, ATT-F4D), and 'Reprendre' loads the pending items (qty 2, 4 000 GNF); after closing, reopening gives an empty form. BUG: the dialog's 'Annuler' button calls setShowDialog(false) directly, so the reset never runs and the old cart, customer and search come back when the dialog reopens.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Sales.js New sale dialog - Annuler button (~line 2701)", "issue": "onClick={() => setShowDialog(false)} does not reset the form (Radix onOpenChange is not called when the controlled prop changes). Reproduced: add PARACETAMOL + customer 'TEST_client' + search 'para', click Annuler, reopen: cart_items=1, total=2 000 GNF, search='para', customer='TEST_client'.", "selector": "[data-testid=sale-form] button:has-text('Annuler')", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Reprendre pending sale then close", "issue": "handleResumePendingSale cancels the pending sale on the backend right away. Now that closing the dialog clears the cart, a user who clicks Reprendre and then closes without validating loses the pending sale for good: it is gone from the server and from the cart. Before the fix the cart stayed in memory, so this data loss is new. Suggestion: only cancel or convert the pending sale when the sale is validated or put back on hold, or put it back on hold automatically when the dialog closes with a resumed cart.", "affected_selectors": ["[data-testid=pending-sales-button]", "button:has-text('Reprendre')"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Change the Annuler button in the New sale dialog to onClick={() => handleSaleDialogChange(false)}",
+    "Fix the loss of a resumed pending sale when the dialog is closed without validating (do not cancel on resume, or put it back on hold on close)",
+    "Optional: handlePutOnHold onSuccess and the post-submit success paths reset state by hand; call resetSaleForm() there to avoid leftover state (e.g. paymentMethod, productSearch after hold)",
+    "Add data-testid to the pending-sale Reprendre and Delete buttons (e.g. resume-pending-{id}, cancel-pending-{id})"
+  ],
+  "critical_code_review_comments": [
+    "Sales.js is 3645 lines; it should be split (sale dialog, pending sales dialog, return dialog)",
+    "Form resets are duplicated in handleSubmit online/offline, handlePutOnHold and resetSaleForm; keep only resetSaleForm",
+    "EMPTY_PAYMENT_DETAILS is defined inside the component; move it to module scope"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "83% (5/6 close/regression scenarios pass; Annuler fails)"},
+  "seed_data_creation": "One pending sale (ATT-F4D, PARACETAMOL x2) was created and then consumed or cancelled by 'Reprendre'. No final sale was validated.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login admin@pharmaflow.com/admin123; an 'Ouverture de Caisse' modal appears and can be closed with Escape. Close the dialog with the X button: '[role=dialog] button:has(span.sr-only)'. Outside click: mouse.click(10,1070). Retest the Annuler button and the resume-then-close data loss."
+}
