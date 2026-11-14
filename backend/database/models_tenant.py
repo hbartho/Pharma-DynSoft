@@ -9,6 +9,7 @@ from sqlalchemy import (
     Column, String, Integer, Float, Boolean, Text, DateTime, Date, Time,
     ForeignKey, Enum, JSON, Index, UniqueConstraint
 )
+from sqlalchemy import text as sa_text
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from database.base import Base, UUIDMixin, TimestampMixin, SoftDeleteMixin
@@ -192,6 +193,7 @@ class Product(Base, UUIDMixin, TimestampMixin):
     
     __table_args__ = (
         Index("idx_product_name_barcode", "name", "barcode"),
+        Index("idx_product_category", "category_id"),
     )
     
     def __repr__(self):
@@ -283,6 +285,10 @@ class Sale(Base, UUIDMixin, TimestampMixin):
     
     __table_args__ = (
         Index("idx_sale_date", "created_at"),
+        Index("idx_sale_shift", "shift_id"),
+        Index("idx_sale_customer", "customer_id"),
+        Index("idx_sale_status_date", "status", "created_at"),
+        Index("idx_sale_agent", "agent_code"),
     )
     
     def __repr__(self):
@@ -293,6 +299,10 @@ class SaleItem(Base, UUIDMixin):
     """Lignes de vente (produits vendus)."""
     
     __tablename__ = "sale_items"
+    __table_args__ = (
+        Index("idx_sale_item_sale", "sale_id"),
+        Index("idx_sale_item_product", "product_id"),
+    )
     
     sale_id = Column(UUID(as_uuid=True), ForeignKey("sales.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
@@ -360,6 +370,11 @@ class SupplyItem(Base, UUIDMixin):
     """Lignes d'approvisionnement (produits achetés)."""
     
     __tablename__ = "supply_items"
+    __table_args__ = (
+        Index("idx_supply_item_supply", "supply_id"),
+        Index("idx_supply_item_product", "product_id"),
+        Index("idx_supply_item_expiration", "expiration_date"),
+    )
     
     supply_id = Column(UUID(as_uuid=True), ForeignKey("supplies.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
@@ -391,6 +406,11 @@ class Shift(Base, UUIDMixin, TimestampMixin):
     """Shifts (sessions de caisse)."""
     
     __tablename__ = "shifts"
+    __table_args__ = (
+        Index("idx_shift_user_started", "user_id", "started_at"),
+        # Un seul shift ouvert par utilisateur (garanti par la BD, même en cas d'ouvertures simultanées)
+        Index("uq_shift_active_user", "user_id", unique=True, postgresql_where=sa_text("is_active")),
+    )
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     
@@ -497,6 +517,10 @@ class Debt(Base, UUIDMixin, TimestampMixin):
     """Dettes clients."""
     
     __tablename__ = "debts"
+    __table_args__ = (
+        Index("idx_debt_customer_status", "customer_id", "status"),
+        Index("idx_debt_status_due", "status", "due_date"),
+    )
     
     customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
     sale_id = Column(UUID(as_uuid=True), ForeignKey("sales.id"), nullable=True, unique=True)
@@ -557,6 +581,7 @@ class SupplierDebt(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         Index("idx_supplier_debt_status", "status"),
         Index("idx_supplier_debt_due_date", "due_date"),
+        Index("idx_supplier_debt_supplier", "supplier_id"),
     )
     
     def __repr__(self):
@@ -622,6 +647,9 @@ class StockMovement(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         Index("idx_movement_date", "created_at"),
         Index("idx_movement_product", "product_id"),
+        Index("idx_movement_product_date", "product_id", "created_at"),
+        Index("idx_movement_reference", "reference_id"),
+        Index("idx_movement_type_status", "movement_type", "validation_status"),
     )
     
     def __repr__(self):
@@ -713,6 +741,9 @@ class InventoryItem(Base, UUIDMixin):
     """Items d'une session d'inventaire."""
     
     __tablename__ = "inventory_items"
+    __table_args__ = (
+        Index("idx_inventory_item_session", "session_id"),
+    )
     
     session_id = Column(UUID(as_uuid=True), ForeignKey("inventory_sessions.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)

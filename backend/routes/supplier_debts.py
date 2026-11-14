@@ -190,7 +190,7 @@ def record_payment(
     Admin uniquement.
     """
     with db_manager.get_tenant_session(get_current_tenant()) as session:
-        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
+        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).with_for_update().first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
         
@@ -246,7 +246,7 @@ def write_off_debt(
     Admin uniquement.
     """
     with db_manager.get_tenant_session(get_current_tenant()) as session:
-        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
+        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).with_for_update().first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
         
@@ -292,7 +292,7 @@ def create_credit(
     Admin uniquement.
     """
     with db_manager.get_tenant_session(get_current_tenant()) as session:
-        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).first()
+        debt = session.query(SupplierDebt).filter(SupplierDebt.id == uuid.UUID(debt_id)).with_for_update().first()
         if not debt:
             raise HTTPException(status_code=404, detail="Dette non trouvée")
         

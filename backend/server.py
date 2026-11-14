@@ -4,6 +4,8 @@ A modular FastAPI application for pharmacy management.
 PostgreSQL-only backend (MongoDB removed)
 """
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError, OperationalError
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -80,6 +82,23 @@ async def security_headers_middleware(request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
+
+# Erreurs de concurrence BD (verrou, interblocage, contrainte d'unicité) → réponse 409 lisible au lieu d'un 500
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request, exc):
+    logger.warning(f"IntegrityError {request.url.path}: {str(exc.orig)[:200]}")
+    msg = "Conflit de données : cette opération a déjà été enregistrée ou viole une contrainte d'unicité."
+    if "uq_shift_active_user" in str(exc.orig):
+        msg = "Vous avez déjà un shift ouvert"
+    return JSONResponse(status_code=409, content={"detail": msg})
+
+@app.exception_handler(OperationalError)
+async def operational_error_handler(request, exc):
+    logger.error(f"OperationalError {request.url.path}: {str(exc.orig)[:200]}")
+    text = str(exc.orig).lower()
+    if "deadlock" in text or "lock" in text or "serialize" in text or "could not serialize" in text:
+        return JSONResponse(status_code=409, content={"detail": "Opération simultanée sur les mêmes données, veuillez réessayer."})
+    return JSONResponse(status_code=503, content={"detail": "Base de données momentanément indisponible, veuillez réessayer."})
 
 # Include all routers with /api prefix
 app.include_router(auth_router, prefix="/api")

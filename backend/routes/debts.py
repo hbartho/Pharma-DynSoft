@@ -496,7 +496,7 @@ if DATABASE_TYPE == "postgresql":
     ):
         """Enregistrer un remboursement de dette"""
         with get_session() as session:
-            debt = session.query(DebtModel).filter(DebtModel.id == uuid.UUID(payment_data.debt_id)).first()
+            debt = session.query(DebtModel).filter(DebtModel.id == uuid.UUID(payment_data.debt_id)).with_for_update().first()
             
             if not debt:
                 raise HTTPException(status_code=404, detail="Dette non trouvée")
@@ -553,7 +553,7 @@ if DATABASE_TYPE == "postgresql":
             )
         
         with get_session() as session:
-            debt = session.query(DebtModel).filter(DebtModel.id == uuid.UUID(debt_id)).first()
+            debt = session.query(DebtModel).filter(DebtModel.id == uuid.UUID(debt_id)).with_for_update().first()
             
             if not debt:
                 raise HTTPException(status_code=404, detail="Dette non trouvée")
@@ -571,7 +571,7 @@ if DATABASE_TYPE == "postgresql":
             debt.remaining_amount = 0
             debt.updated_at = now
             # Client non solvable : seuil de crédit remis à 0 (plus de vente à crédit sans décision admin)
-            customer = session.query(Customer).filter(Customer.id == debt.customer_id).first()
+            customer = session.query(Customer).filter(Customer.id == debt.customer_id).with_for_update().first()
             if customer:
                 customer.max_debt_limit = 0
                 customer.updated_at = now
@@ -612,10 +612,17 @@ if DATABASE_TYPE == "postgresql":
             raise HTTPException(status_code=400, detail="Le montant doit être supérieur à 0")
         
         with get_session() as session:
+            try:
+                customer_uuid = uuid.UUID(request.customer_id)
+            except ValueError:
+                raise HTTPException(status_code=404, detail="Client non trouvé")
+            # Verrou client (même ordre que la vente à crédit) puis dettes : sérialise remboursements et ventes à crédit
+            if not session.query(Customer).filter(Customer.id == customer_uuid).with_for_update().first():
+                raise HTTPException(status_code=404, detail="Client non trouvé")
             debts = session.query(DebtModel).filter(
-                DebtModel.customer_id == uuid.UUID(request.customer_id),
+                DebtModel.customer_id == customer_uuid,
                 DebtModel.status.in_([DebtStatus.PENDING, DebtStatus.PARTIAL])
-            ).order_by(DebtModel.created_at).all()
+            ).order_by(DebtModel.created_at, DebtModel.id).with_for_update().all()
             
             if not debts:
                 raise HTTPException(status_code=404, detail="Aucune dette en cours pour ce client")

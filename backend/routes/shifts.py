@@ -330,7 +330,7 @@ if DATABASE_TYPE == "postgresql":
         
         result = repo.close_by_id_str(shift['id'], closing_data)
         if not result:
-            raise HTTPException(status_code=500, detail="Erreur lors de la fermeture du shift")
+            raise HTTPException(status_code=409, detail="Ce shift est déjà clôturé")
         
         # Calculer la différence
         difference = data.actual_closing_amount - expected_amount

@@ -115,9 +115,9 @@ class ShiftRepository(BaseRepository):
             return result
     
     def close(self, shift_id: uuid.UUID, closing_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Ferme un shift."""
+        """Ferme un shift (verrou ligne : une seule clôture possible)."""
         with self.get_session() as session:
-            shift = session.query(Shift).filter(Shift.id == shift_id).first()
+            shift = session.query(Shift).filter(Shift.id == shift_id, Shift.is_active == True).with_for_update().first()
             if not shift:
                 return None
             
