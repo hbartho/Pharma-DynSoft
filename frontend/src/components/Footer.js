@@ -3,6 +3,8 @@
  */
 
 import React from 'react';
+import pkg from '../../package.json';
+const version = pkg.version;
 
 const Footer = () => {
   return (
@@ -34,6 +36,7 @@ const Footer = () => {
         }}
       >
         Made by DynSoft Pharma
+        <span style={{ color: '#64748b', marginLeft: 8 }} data-testid="app-version">v{version}</span>
       </p>
     </div>
   );

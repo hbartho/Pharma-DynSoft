@@ -27,6 +27,11 @@ jobs:
           else V="0.0.${GITHUB_RUN_NUMBER}"; fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
 
+      - name: Version de l'application (pied de page)
+        shell: bash
+        run: |
+          cd frontend && node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${{ steps.ver.outputs.version }}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
       - name: Installer Inno Setup
         run: choco install innosetup --no-progress -y
 
