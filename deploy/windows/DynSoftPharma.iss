@@ -259,6 +259,7 @@ begin
     L.Add('CLOUD_SYNC_TOKEN=' + Trim(CloudPage.Values[1]));
     L.Add('CLOUD_SYNC_HOUR=' + Trim(CloudPage.Values[2]));
     L.Add('CLOUD_IMPORT_ON_START=1');
+    L.Add('GITHUB_REPO=hbartho/Pharma-DynSoft');
     L.SaveToFile(EnvPath);
   finally
     L.Free;

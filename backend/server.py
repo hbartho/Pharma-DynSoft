@@ -140,3 +140,30 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+
+_release_cache: dict = {"at": 0.0, "data": None}
+
+
+@app.get("/api/version")
+async def app_version():
+    """Version affichée : dernière release GitHub (cache 10 min), sinon version applicative."""
+    import time
+    import requests
+    from starlette.concurrency import run_in_threadpool
+    repo = os.environ.get("GITHUB_REPO")
+    now = time.time()
+    if repo and (now - _release_cache["at"] > 600 or _release_cache["data"] is None):
+        try:
+            r = await run_in_threadpool(
+                requests.get, f"https://api.github.com/repos/{repo}/releases/latest",
+                headers={"Accept": "application/vnd.github+json"}, timeout=5,
+            )
+            if r.status_code == 200:
+                d = r.json()
+                _release_cache["data"] = {"tag": d.get("tag_name"), "name": d.get("name"), "published_at": d.get("published_at"),
+                                          "url": d.get("html_url")}
+            _release_cache["at"] = now
+        except Exception:
+            _release_cache["at"] = now
+    return {"app_version": "1.0.0", "repo": repo, "release": _release_cache["data"]}

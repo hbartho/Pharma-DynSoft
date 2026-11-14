@@ -1,12 +1,25 @@
 /**
- * Composant Footer avec branding DynSoft Pharma
+ * Composant Footer avec branding DynSoft Pharma + version (dernière release GitHub, sinon version applicative)
  */
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
 import pkg from '../../package.json';
-const version = pkg.version;
 
 const Footer = () => {
+  const { data } = useQuery({
+    queryKey: ['app-version'],
+    queryFn: async () => (await api.get('/version')).data,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const release = data?.release;
+  const label = release?.tag || `v${data?.app_version || pkg.version}`;
+  const title = release?.published_at
+    ? `Release GitHub ${release.tag} publiée le ${new Date(release.published_at).toLocaleDateString('fr-FR')}`
+    : 'Version de l\'application';
+
   return (
     <div
       style={{
@@ -36,7 +49,11 @@ const Footer = () => {
         }}
       >
         Made by DynSoft Pharma
-        <span style={{ color: '#64748b', marginLeft: 8 }} data-testid="app-version">v{version}</span>
+        {release?.url ? (
+          <a href={release.url} target="_blank" rel="noreferrer" title={title} style={{ color: '#64748b', marginLeft: 8, textDecoration: 'none' }} data-testid="app-version">{label}</a>
+        ) : (
+          <span title={title} style={{ color: '#64748b', marginLeft: 8 }} data-testid="app-version">{label}</span>
+        )}
       </p>
     </div>
   );
