@@ -465,24 +465,19 @@ const Customers = () => {
                   </div>
                   
                   <div className={`space-y-2 text-sm mb-4 ${isInactive ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: 'Inter, sans-serif' }}>
-                    {customer.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
-                        <span>{customer.phone}</span>
-                      </div>
-                    )}
-                    {customer.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
-                        <span>{customer.email}</span>
-                      </div>
-                    )}
-                    {customer.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
-                        <span>{customer.address}</span>
-                      </div>
-                    )}
+                    {/* Lignes toujours présentes (texte vide si absent) pour aligner les cartes */}
+                    <div className="flex items-center gap-2 min-h-[20px]" data-testid={`customer-phone-${customer.id}`}>
+                      <Phone className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
+                      <span>{customer.phone || ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2 min-h-[20px]" data-testid={`customer-email-${customer.id}`}>
+                      <Mail className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
+                      <span className="truncate">{customer.email || ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2 min-h-[20px]" data-testid={`customer-address-${customer.id}`}>
+                      <MapPin className="w-4 h-4 text-slate-400" strokeWidth={1.5} />
+                      <span className="truncate">{customer.address || ''}</span>
+                    </div>
                   </div>
                   
                   {/* Informations sur les dettes/crédit */}
