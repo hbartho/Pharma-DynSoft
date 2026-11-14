@@ -1,0 +1,39 @@
+{
+  "summary": "Tested Mobile Money (Orange/MTN) without OTP, in the UI and with a quick backend check. Everything requested works. 1) /sales Orange Money: no OTP section, button or 'En cours de développement' badge. 'N° Destinataire *' and 'Réf. Paiement Marchand *' fields are shown. 2) The sender number fills itself when a customer is selected (Centre de Santé Matam -> +224 624 44 44 44, Christmass Antonia -> +224 627 01 01 01). It clears when the customer is removed, and manual entry works. 3) Submitting without a reference shows an error toast and creates no sale. With a reference, sale VNT-3EE5DA53 was created and the receipt popup appeared. The sale detail shows 'Orange Money' and sale-detail-payment-ref shows '+224 624 44 44 44 · Réf. MP260120.2211.TEST01'. 4) Mixed payment (cash + MTN): second-mode fields marked '*', no OTP. Error toasts 'MTN Money : veuillez saisir N° Destinataire' then '... Réf. Paiement Marchand'. Sale VNT-EEAB67D7 was created and split_payments[1].details was saved. 5) Debts: I created a debt (Christmass Antonia limit set to 5000, credit sale VNT-544C3C5C of 1600). In the repayment dialog with Orange Money: no OTP, Encaisser button enabled, number pre-filled. Error toast 'Veuillez saisir : Réf. Paiement Marchand' when the reference is missing. Repayment of 1600 GNF recorded, receipt popup shown, payment_details saved. 6) /settings: no 'Paiements Mobile Money (OTP)' section and no 'OTP' text. 7) Reports consistent: by_payment_method sums to 7500 = total_revenue (credit 2500, cash 1200, mtn 1300, orange 2500); cash_collected 7500 = 7500 - 2500 + 2500 - 0.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/debts/{debt_id}", "issue": "A debt_id that is not a valid UUID (e.g. GET /api/debts/payments) returns 500 Internal Server Error (ValueError 'badly formed hexadecimal UUID string' in routes/debts.py get_debt, line 433). It should return 404 or 422."},
+      {"endpoint": "POST /api/payments/verify-otp", "issue": "The leftover OTP verification route is still in routes/payment_methods.py (around line 258). The UI no longer uses it; consider removing it for consistency."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Sales detail dialog (mixed payment)", "issue": "For split payments, the detail dialog shows the method and amount but not the Mobile Money number/reference of the split part. sale-detail-payment-ref only renders selectedSale.payment_details, not split_payments[].details. The data is stored and the printed receipt (receipt.js) does show it.", "selector": "[data-testid='sale-detail-payment-ref']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Sales > Nouvelle vente", "issues": ["The error toast for a missing reference reads 'Veuillez saisir: Réf. Paiement Marchand' (generic validatePaymentDetails), not the expected 'Veuillez saisir la référence du paiement marchand'. The check in handleSubmit is never reached. Works fine; wording only.", "The Code Promo placeholder 'PROMO2026' is dark enough to look like an entered value."]},
+      {"screen": "Debts > Enregistrer un Remboursement", "issues": ["The Réf. Paiement Marchand placeholder is cut off ('Ex: MP260120.2211.A0') in the narrow two-column layout."]},
+      {"screen": "Sales / Debts", "issues": ["The 'Ouverture de Caisse' (open shift) modal opens automatically for the admin even though the admin is exempt from shifts. It can be closed with Escape or X."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_mobile_money_reports.py", "/app/test_reports/pytest/pytest_mobile_money.xml"],
+  "action_items": [
+    "Optional: show split_payments[].details (number + reference) in the sale detail dialog for mixed payments",
+    "Optional: validate the UUID in GET /api/debts/{debt_id} and return 404 instead of 500",
+    "Optional: remove the leftover /api/payments/verify-otp route",
+    "Optional: widen or stack the debt dialog Mobile Money fields so the placeholder is not cut off"
+  ],
+  "critical_code_review_comments": [
+    "Sales.js is 3363 lines and Debts.js is 1489 lines. Split them into smaller components (payment fields, mixed payment, sale detail dialog).",
+    "Sales.js handleSubmit: the Mobile Money check (around line 883) duplicates validatePaymentDetails, which runs first. Remove one of them.",
+    "Prefill effect in Sales.js: changing the customer overwrites a number the user typed by hand. This is acceptable, but worth noting."
+  ],
+  "updated_files": ["/app/backend/tests/test_mobile_money_reports.py"],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "Created test sales VNT-3EE5DA53 (Orange Money 1600), VNT-EEAB67D7 (mixed cash 800 + MTN 800) and VNT-544C3C5C (credit 1600, Christmass Antonia), plus a 1600 Orange Money debt repayment (ref MP260120.DEBT.TEST03). Each used product '3HP KIT GEL/2 + CP/4 KIT/14', 3 units of stock in total. Christmass Antonia's max_debt_limit was temporarily set to 5000 and then restored to 0 (current_debt 0).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Admin login opens an 'Ouverture de Caisse' modal on /sales and /debts; press Escape. Product '9 VIT INJ AMP' now has 0 stock; use '3HP KIT' (stock about 87). Mixed payment checkbox: '[data-testid=sale-form] input[type=checkbox]'. Second mode select trigger text: 'Choisir le second mode'. Debt dialog: amount input #amount. Token key in the login response: access_token."
+}
