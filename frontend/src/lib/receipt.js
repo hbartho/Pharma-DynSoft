@@ -47,6 +47,19 @@ const barcodeSvg = (text) => {
   } catch { return ''; }
 };
 
+/** Lignes de référence d'un paiement (Mobile Money : n° et réf. marchand ; chèque ; carte). */
+const detailRows = (details) => {
+  if (!details || typeof details !== 'object') return '';
+  const labels = {
+    sender_number: 'N° Mobile Money', ticket_ref: 'Réf. marchand', check_number: 'N° chèque',
+    bank: 'Banque', last_digits: 'Carte ****', holder_name: 'Titulaire',
+  };
+  return Object.entries(details)
+    .filter(([k, v]) => labels[k] && v)
+    .map(([k, v]) => `<tr><td class="muted">${labels[k]}</td><td></td><td class="r muted">${esc(v)}</td></tr>`)
+    .join('');
+};
+
 /** Construit le HTML d'un ticket 80 mm pour une vente. */
 export const buildReceiptHtml = ({ sale, settings = {}, agentCode, customerName, formatAmount, duplicate = false }) => {
   const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
@@ -60,10 +73,13 @@ export const buildReceiptHtml = ({ sale, settings = {}, agentCode, customerName,
   const change = received != null ? Math.max(0, received - paid) : null;
 
   let payment;
+  let paymentRefs = '';
   if (sale.is_split_payment && sale.split_payments?.length) {
     payment = sale.split_payments.map((p) => `${PAYMENT_LABELS[p.method] || p.method} ${fmt(p.amount)}`).join('<br/>');
+    paymentRefs = sale.split_payments.map((p) => detailRows(p.details)).join('');
   } else {
     payment = PAYMENT_LABELS[sale.payment_method] || sale.payment_method || '';
+    paymentRefs = detailRows(sale.payment_details);
   }
 
   const rows = (sale.items || []).map((i) => {
@@ -92,6 +108,7 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div><hr/>' : ''}
   <tr><td>Rabais${sale.promo_code ? ` (${esc(sale.promo_code)})` : ''}</td><td></td><td class="r">-${fmt(discount)}</td></tr>` : ''}
   <tr class="tot"><td>TOTAL</td><td></td><td class="r">${fmt(total)}</td></tr>
   <tr><td>Paiement</td><td></td><td class="r">${payment}</td></tr>
+  ${paymentRefs}
   ${sale.has_debt && sale.debt_amount > 0 ? `<tr><td>Payé</td><td></td><td class="r">${fmt(paid)}</td></tr>
   <tr><td class="b">Reste à payer (crédit)</td><td></td><td class="r b">${fmt(sale.debt_amount)}</td></tr>` : ''}
   ${received != null ? `<tr><td>Reçu</td><td></td><td class="r">${fmt(received)}</td></tr>
@@ -144,6 +161,7 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
   ${rows}
   <tr class="tot"><td>MONTANT PAYÉ</td><td></td><td class="r">${fmt(payment.total_applied)}</td></tr>
   <tr><td>Mode</td><td></td><td class="r">${esc(PAYMENT_LABELS[payment.payment_method] || payment.payment_method || '')}</td></tr>
+  ${detailRows(payment.payment_details)}
   <tr class="tot"><td>${esc(payment.balance_label || 'SOLDE RESTANT')}</td><td></td><td class="r">${fmt(payment.customer_remaining_debt)}</td></tr>
 </table>
 <div class="c bc">${barcodeSvg(number)}<div class="muted">${esc(number)}</div></div>

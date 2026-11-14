@@ -12,7 +12,7 @@ import {
   CreditCard, Banknote, DollarSign, Clock, CheckCircle2,
   ArrowDownCircle, History, Eye, ChevronRight, Smartphone,
   FileCheck, Loader2, AlertCircle, RefreshCw, Calendar,
-  Shield, Send, CheckCircle, X, CircleDollarSign, XCircle, Trash2, Printer
+  CircleDollarSign, XCircle, Trash2, Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSettings } from '../contexts/SettingsContext';
@@ -91,14 +91,6 @@ const Debts = () => {
     card_last_digits: '',
     card_bank: '',
   });
-  
-  // États pour OTP (Mobile Money)
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(0);
   
   // Debounce search
   useEffect(() => {
@@ -179,27 +171,6 @@ const Debts = () => {
   // Vérifie si le mode de paiement actuel est Mobile Money
   const isMobileMoneyPayment = paymentForm.paymentMethod === 'orange_money' || paymentForm.paymentMethod === 'mtn_money';
   
-  // Obtenir le numéro OTP par défaut des paramètres (pour l'envoi du code OTP)
-  const getDefaultOtpPhone = () => {
-    if (paymentForm.paymentMethod === 'orange_money' && settings?.orange_money_default_phone) {
-      return settings.orange_money_default_phone;
-    }
-    if (paymentForm.paymentMethod === 'mtn_money' && settings?.mtn_money_default_phone) {
-      return settings.mtn_money_default_phone;
-    }
-    return '';
-  };
-  
-  // Réinitialiser l'état OTP
-  const resetOtpState = () => {
-    setOtpCode('');
-    setOtpSent(false);
-    setOtpVerified(false);
-    setOtpLoading(false);
-    setOtpError('');
-    setOtpCountdown(0);
-  };
-  
   // Réinitialiser les détails de paiement
   const resetPaymentDetails = () => {
     setPaymentDetails({
@@ -216,77 +187,12 @@ const Debts = () => {
     });
   };
   
-  // Effet pour le compte à rebours OTP
+  // Pré-remplir le N° destinataire avec le téléphone du client pour Mobile Money
   useEffect(() => {
-    if (otpCountdown > 0) {
-      const timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpCountdown]);
-  
-  // Reset OTP state when payment method changes
-  useEffect(() => {
-    resetOtpState();
-  }, [paymentForm.paymentMethod]);
-  
-  // Demander un code OTP (simulation)
-  const handleRequestOtp = async () => {
-    const otpTargetNumber = getDefaultOtpPhone();
-    
-    if (!otpTargetNumber) {
-      setOtpError('Aucun numéro OTP configuré dans les paramètres');
-      return;
-    }
-    
-    setOtpLoading(true);
-    setOtpError('');
-    
-    try {
-      // Simulation d'envoi OTP - délai de 1.5s
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setOtpSent(true);
-      setOtpCountdown(60);
-      toast.success(`Code OTP envoyé au ${otpTargetNumber}`, {
-        description: 'Pour la démo, utilisez le code: 123456'
-      });
-    } catch (error) {
-      setOtpError('Erreur lors de l\'envoi du code OTP');
-      toast.error('Échec de l\'envoi du code OTP');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-  
-  // Vérifier le code OTP (simulation)
-  const handleVerifyOtp = async () => {
-    if (!otpCode || otpCode.length < 4) {
-      setOtpError('Veuillez saisir le code OTP complet');
-      return;
-    }
-    
-    setOtpLoading(true);
-    setOtpError('');
-    
-    try {
-      // Simulation de vérification - délai de 1s
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Pour la démo, accepter "123456" comme code valide
-      if (otpCode === '123456') {
-        setOtpVerified(true);
-        setOtpError('');
-        toast.success('Code OTP validé avec succès!');
-      } else {
-        setOtpError('Code OTP incorrect. Pour la démo, utilisez: 123456');
-        toast.error('Code OTP incorrect');
-      }
-    } catch (error) {
-      setOtpError('Erreur lors de la vérification du code');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
+    if (!isMobileMoneyPayment || !showPaymentDialog) return;
+    const fieldKey = `${paymentForm.paymentMethod}_sender_number`;
+    setPaymentDetails(prev => ({ ...prev, [fieldKey]: selectedCustomer?.customer_phone || '' }));
+  }, [paymentForm.paymentMethod, selectedCustomer, showPaymentDialog]);
   
   // Filtrer les clients par recherche et trier par dette (plus endettés en premier)
   const filteredCustomers = customersSummary
@@ -318,7 +224,6 @@ const Debts = () => {
       notes: '',
     });
     resetPaymentDetails();
-    resetOtpState();
     setShowPaymentDialog(true);
   };
   
@@ -337,12 +242,6 @@ const Debts = () => {
       return;
     }
     
-    // Validation OTP obligatoire pour Mobile Money
-    if (isMobileMoneyPayment && !otpVerified) {
-      toast.error('Veuillez valider le code OTP pour finaliser le paiement Mobile Money');
-      return;
-    }
-    
     // Préparer les détails de paiement selon le mode
     let paymentDetailsData = null;
     const selectedMethod = availablePaymentMethods.find(m => m.code === paymentForm.paymentMethod);
@@ -351,7 +250,12 @@ const Debts = () => {
       paymentDetailsData = {};
       for (const field of selectedMethod.required_fields) {
         const fieldKey = `${paymentForm.paymentMethod}_${field.name}`;
-        paymentDetailsData[field.name] = paymentDetails[fieldKey] || '';
+        const value = (paymentDetails[fieldKey] || '').toString().trim();
+        if (field.required && !value) {
+          toast.error(`Veuillez saisir : ${field.label}`);
+          return;
+        }
+        paymentDetailsData[field.name] = value;
       }
     }
     
@@ -369,7 +273,6 @@ const Debts = () => {
           setShowPaymentDialog(false);
           setSelectedCustomer(null);
           resetPaymentDetails();
-          resetOtpState();
           refreshAllData();
           if (settings?.receipt_print_prompt === false) {
             handlePrintDebtReceipt(data);
@@ -1337,7 +1240,7 @@ const Debts = () => {
                           </Label>
                           <Input
                             type={field.type || 'text'}
-                            maxLength={field.maxLength}
+                            maxLength={field.type === 'tel' ? undefined : field.maxLength}
                             value={paymentDetails[`${paymentForm.paymentMethod}_${field.name}`] || ''}
                             onChange={(e) => {
                               let value = e.target.value;
@@ -1360,140 +1263,6 @@ const Debts = () => {
                 );
               })()}
               
-              {/* Section OTP pour Mobile Money */}
-              {isMobileMoneyPayment && (
-                <div className={`p-3 rounded-lg border space-y-3 ${
-                  otpVerified 
-                    ? 'bg-green-50 border-green-200' 
-                    : paymentForm.paymentMethod === 'orange_money' 
-                      ? 'bg-orange-50 border-orange-200' 
-                      : 'bg-yellow-50 border-yellow-200'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Shield className={`w-4 h-4 ${otpVerified ? 'text-green-600' : paymentForm.paymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}`} />
-                      <span className={`text-sm font-medium ${otpVerified ? 'text-green-700' : paymentForm.paymentMethod === 'orange_money' ? 'text-orange-700' : 'text-yellow-700'}`}>
-                        Vérification OTP {otpVerified && '✓ Validé'}
-                      </span>
-                    </div>
-                    {otpVerified && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                        <CheckCircle className="w-3 h-3" />
-                        Autorisé
-                      </span>
-                    )}
-                  </div>
-
-                  {!otpVerified && (
-                    <div className="space-y-2">
-                      {!otpSent ? (
-                        <div className="space-y-2">
-                          <p className={`text-xs ${paymentForm.paymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}`}>
-                            Code envoyé au: <strong>{getDefaultOtpPhone() || 'Non configuré'}</strong>
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleRequestOtp}
-                            disabled={otpLoading || !getDefaultOtpPhone()}
-                            className={`w-full ${
-                              paymentForm.paymentMethod === 'orange_money' 
-                                ? 'bg-orange-600 hover:bg-orange-700' 
-                                : 'bg-yellow-600 hover:bg-yellow-700'
-                            } text-white`}
-                            data-testid="debt-request-otp-btn"
-                          >
-                            {otpLoading ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Envoi...
-                              </>
-                            ) : (
-                              <>
-                                <Send className="w-4 h-4 mr-2" />
-                                Demander le code OTP
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div>
-                            <Label className={`text-xs ${paymentForm.paymentMethod === 'orange_money' ? 'text-orange-700' : 'text-yellow-700'}`}>
-                              Code OTP reçu par SMS
-                            </Label>
-                            <div className="flex gap-2 mt-1">
-                              <Input
-                                type="text"
-                                maxLength={6}
-                                value={otpCode}
-                                onChange={(e) => {
-                                  setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
-                                  setOtpError('');
-                                }}
-                                placeholder="Code à 6 chiffres"
-                                className="flex-1 bg-white text-center text-sm tracking-widest font-mono h-9"
-                                data-testid="debt-otp-input"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={handleVerifyOtp}
-                                disabled={otpLoading || otpCode.length < 4}
-                                className={`${
-                                  paymentForm.paymentMethod === 'orange_money' 
-                                    ? 'bg-orange-600 hover:bg-orange-700' 
-                                    : 'bg-yellow-600 hover:bg-yellow-700'
-                                } text-white h-9`}
-                                data-testid="debt-verify-otp-btn"
-                              >
-                                {otpLoading ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle className="w-4 h-4" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {otpError && (
-                            <p className="text-xs text-red-600 flex items-center gap-1">
-                              <X className="w-3 h-3" />
-                              {otpError}
-                            </p>
-                          )}
-                          
-                          <div className="flex items-center justify-between text-xs">
-                            <span className={paymentForm.paymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}>
-                              Code non reçu?
-                            </span>
-                            {otpCountdown > 0 ? (
-                              <span className="text-slate-500">
-                                Renvoyer dans {otpCountdown}s
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={handleRequestOtp}
-                                disabled={otpLoading}
-                                className={`flex items-center gap-1 font-medium ${
-                                  paymentForm.paymentMethod === 'orange_money' 
-                                    ? 'text-orange-700 hover:text-orange-800' 
-                                    : 'text-yellow-700 hover:text-yellow-800'
-                                }`}
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                                Renvoyer
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              
               {/* Notes */}
               <div>
                 <Label htmlFor="notes">Notes (optionnel)</Label>
@@ -1513,7 +1282,7 @@ const Debts = () => {
                 <Button 
                   type="submit" 
                   className="bg-green-600 hover:bg-green-700"
-                  disabled={createBulkPayment.isPending || (isMobileMoneyPayment && !otpVerified)}
+                  disabled={createBulkPayment.isPending}
                   data-testid="debt-submit-payment-btn"
                 >
                   {createBulkPayment.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

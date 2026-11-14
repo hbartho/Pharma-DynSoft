@@ -278,6 +278,7 @@ if DATABASE_TYPE == "postgresql":
                 'total': final_total,
                 'tva_total': round(sale_tva_total, 2),
                 'payment_method': sale_data.payment_method,
+                'payment_details': sale_data.payment_details,
                 'is_split_payment': sale_data.is_split_payment,
                 'split_payments': sale_data.split_payments,
                 'amount_paid': amount_paid,

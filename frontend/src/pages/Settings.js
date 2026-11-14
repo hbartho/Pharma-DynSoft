@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Download, Database, CheckCircle, Loader2, Users, Smartphone, Timer, Bell, BookOpen } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Download, Database, CheckCircle, Loader2, Users, Timer, Bell, BookOpen } from 'lucide-react';
 import { useSettingsQuery, useUpdateSettings, useStockValuation } from '../hooks';
 import { useSettings } from '../contexts/SettingsContext';
 import { useOffline } from '../contexts/OfflineContext';
@@ -625,69 +625,6 @@ const Settings = () => {
                       • 30 minutes avant la fin du shift<br/>
                       • 5 minutes avant la fin du shift<br/>
                       • À l'heure de fin (avec bouton de clôture)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Paramètres Mobile Money OTP */}
-          <div className="p-6 rounded-xl bg-white border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-orange-50 rounded-lg">
-                <Smartphone className="w-5 h-5 text-orange-600" strokeWidth={1.5} />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                Paiements Mobile Money (OTP)
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                Ces numéros seront utilisés par défaut pour la vérification OTP lorsqu'un client n'a pas de numéro de téléphone enregistré.
-              </p>
-              
-              <div>
-                <Label htmlFor="orange_money_default_phone" className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-orange-500"></span>
-                  Numéro par défaut Orange Money
-                </Label>
-                <Input
-                  id="orange_money_default_phone"
-                  type="tel"
-                  value={localSettings.orange_money_default_phone}
-                  onChange={(e) => setLocalSettings({ ...localSettings, orange_money_default_phone: e.target.value })}
-                  placeholder="Ex: +224 628 00 00 00"
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="mtn_money_default_phone" className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                  Numéro par défaut MTN Money
-                </Label>
-                <Input
-                  id="mtn_money_default_phone"
-                  type="tel"
-                  value={localSettings.mtn_money_default_phone}
-                  onChange={(e) => setLocalSettings({ ...localSettings, mtn_money_default_phone: e.target.value })}
-                  placeholder="Ex: +224 621 00 00 00"
-                  className="mt-1"
-                />
-              </div>
-
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                <div className="flex items-start gap-3">
-                  <Smartphone className="w-5 h-5 text-orange-600 mt-0.5" strokeWidth={1.5} />
-                  <div>
-                    <p className="text-sm font-medium text-orange-800">
-                      Priorité du numéro OTP
-                    </p>
-                    <p className="text-sm text-orange-700 mt-1">
-                      1. Numéro du client sélectionné (si disponible)<br/>
-                      2. Numéro par défaut configuré ici (si le client n'a pas de numéro)
                     </p>
                   </div>
                 </div>

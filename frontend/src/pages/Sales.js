@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText, RotateCcw, History, Filter, Calendar, ScanLine, WifiOff, CloudOff, Loader2, Smartphone, Percent, DollarSign, CircleDollarSign, Wallet, Send, CheckCircle, RefreshCw, Shield, Clock, LogOut, Pause, Play, Trash2, AlertCircle, CalendarX, Timer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Tag, Zap, Gift, Printer } from 'lucide-react';
+import { Plus, Search, ShoppingCart, X, Eye, CreditCard, Banknote, FileCheck, FileText, RotateCcw, History, Filter, Calendar, ScanLine, WifiOff, CloudOff, Loader2, Smartphone, Percent, DollarSign, CircleDollarSign, Wallet, CheckCircle, RefreshCw, Clock, LogOut, Pause, Play, Trash2, AlertCircle, CalendarX, Timer, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Tag, Zap, Gift, Printer } from 'lucide-react';
 import { addItem, getAllItems, addLocalChange, getDB } from '../services/indexedDB';
 import { useOffline } from '../contexts/OfflineContext';
 import api from '../services/api';
@@ -297,8 +297,6 @@ const Sales = () => {
     setSecondPaymentDetails({ ...EMPTY_PAYMENT_DETAILS });
     setUseDebtPayment(false);
     setDebtAmount('');
-    setOtpCode(''); setOtpSent(false); setOtpVerified(false); setOtpError(''); setOtpCountdown(0);
-    setSecondOtpCode(''); setSecondOtpSent(false); setSecondOtpVerified(false); setSecondOtpError(''); setSecondOtpCountdown(0);
     setPromoCode(''); setPromoCodeValidation(null); setPromoCodeError('');
     setAutomaticDiscounts([]);
     setShowProductDiscount(null);
@@ -308,14 +306,6 @@ const Sales = () => {
     setShowDialog(open);
     if (!open) resetSaleForm();
   };
-  
-  // États pour OTP (Mobile Money) - Premier mode
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(0);
   
   // États pour le code promo
   const [promoCode, setPromoCode] = useState('');
@@ -327,14 +317,6 @@ const Sales = () => {
   const [automaticDiscounts, setAutomaticDiscounts] = useState([]);
   const [automaticDiscountsLoading, setAutomaticDiscountsLoading] = useState(false);
   const [showProductDiscount, setShowProductDiscount] = useState(null); // index du produit à modifier
-  
-  // États pour OTP (Mobile Money) - Second mode (paiement mixte)
-  const [secondOtpCode, setSecondOtpCode] = useState('');
-  const [secondOtpSent, setSecondOtpSent] = useState(false);
-  const [secondOtpVerified, setSecondOtpVerified] = useState(false);
-  const [secondOtpLoading, setSecondOtpLoading] = useState(false);
-  const [secondOtpError, setSecondOtpError] = useState('');
-  const [secondOtpCountdown, setSecondOtpCountdown] = useState(0);
   
   // Vérifie si le mode de paiement actuel est Mobile Money
   const isMobileMoneyPayment = paymentMethod === 'orange_money' || paymentMethod === 'mtn_money';
@@ -351,16 +333,6 @@ const Sales = () => {
     return '';
   };
   
-  // Obtenir le numéro OTP par défaut des paramètres (pour l'envoi du code OTP)
-  const getDefaultOtpPhone = (method = paymentMethod) => {
-    if (method === 'orange_money' && appSettings?.orange_money_default_phone) {
-      return appSettings.orange_money_default_phone;
-    }
-    if (method === 'mtn_money' && appSettings?.mtn_money_default_phone) {
-      return appSettings.mtn_money_default_phone;
-    }
-    return '';
-  };
   
   // Hook pour vérifier le crédit disponible du client sélectionné
   const { data: customerCredit, isLoading: creditLoading } = useCustomerAvailableCredit(selectedCustomer);
@@ -740,16 +712,6 @@ const Sales = () => {
     resetPaymentDetails();
   };
 
-  // Réinitialiser l'état OTP
-  const resetOtpState = () => {
-    setOtpCode('');
-    setOtpSent(false);
-    setOtpVerified(false);
-    setOtpLoading(false);
-    setOtpError('');
-    setOtpCountdown(0);
-  };
-
   // Effet pour pré-remplir le numéro de téléphone du client pour Mobile Money
   React.useEffect(() => {
     if (isMobileMoneyPayment) {
@@ -761,8 +723,6 @@ const Sales = () => {
         [fieldKey]: customerPhone // Vide si pas de client ou client sans téléphone
       }));
     }
-    // Reset OTP state when payment method changes
-    resetOtpState();
   }, [paymentMethod, selectedCustomer]);
 
   // Effet pour pré-remplir le numéro de téléphone pour le second mode de paiement (Mobile Money)
@@ -775,8 +735,6 @@ const Sales = () => {
         ...prev,
         [fieldKey]: customerPhone
       }));
-      // Reset second OTP state when second payment method changes
-      resetSecondOtpState();
     }
   }, [secondPaymentMethod, selectedCustomer, useMixedPayment]);
 
@@ -789,161 +747,6 @@ const Sales = () => {
       setSecondPaymentAmount(remaining.toString());
     }
   }, [firstPaymentAmount, useMixedPayment, cart, discountValue, discountType]);
-
-  // Effet pour le compte à rebours OTP (premier mode)
-  React.useEffect(() => {
-    if (otpCountdown > 0) {
-      const timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpCountdown]);
-
-  // Effet pour le compte à rebours OTP (second mode)
-  React.useEffect(() => {
-    if (secondOtpCountdown > 0) {
-      const timer = setTimeout(() => setSecondOtpCountdown(secondOtpCountdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [secondOtpCountdown]);
-
-  // Réinitialiser l'état OTP du second mode
-  const resetSecondOtpState = () => {
-    setSecondOtpCode('');
-    setSecondOtpSent(false);
-    setSecondOtpVerified(false);
-    setSecondOtpLoading(false);
-    setSecondOtpError('');
-    setSecondOtpCountdown(0);
-  };
-
-  // Demander un code OTP pour le second mode (simulation)
-  const handleRequestSecondOtp = async () => {
-    const otpTargetNumber = getDefaultOtpPhone(secondPaymentMethod);
-    
-    if (!otpTargetNumber) {
-      setSecondOtpError('Aucun numéro OTP configuré dans les paramètres');
-      return;
-    }
-    
-    setSecondOtpLoading(true);
-    setSecondOtpError('');
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setSecondOtpSent(true);
-      setSecondOtpCountdown(60);
-      toast.success(`Code OTP envoyé au ${otpTargetNumber}`, {
-        description: 'Pour la démo, utilisez le code: 123456'
-      });
-    } catch (error) {
-      setSecondOtpError('Erreur lors de l\'envoi du code OTP');
-      toast.error('Échec de l\'envoi du code OTP');
-    } finally {
-      setSecondOtpLoading(false);
-    }
-  };
-
-  // Vérifier le code OTP du second mode (simulation)
-  const handleVerifySecondOtp = async () => {
-    if (!secondOtpCode || secondOtpCode.length < 4) {
-      setSecondOtpError('Veuillez saisir le code OTP complet');
-      return;
-    }
-    
-    setSecondOtpLoading(true);
-    setSecondOtpError('');
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (secondOtpCode === '123456') {
-        setSecondOtpVerified(true);
-        setSecondOtpError('');
-        toast.success('Code OTP validé avec succès!');
-      } else {
-        setSecondOtpError('Code OTP incorrect. Pour la démo, utilisez: 123456');
-        toast.error('Code OTP incorrect');
-      }
-    } catch (error) {
-      setSecondOtpError('Erreur lors de la vérification du code');
-    } finally {
-      setSecondOtpLoading(false);
-    }
-  };
-
-  // Demander un code OTP (simulation)
-  const handleRequestOtp = async () => {
-    // Le code OTP est envoyé au numéro configuré dans les Paramètres
-    const otpTargetNumber = getDefaultOtpPhone();
-    
-    if (!otpTargetNumber) {
-      setOtpError('Aucun numéro OTP configuré dans les paramètres');
-      return;
-    }
-    
-    setOtpLoading(true);
-    setOtpError('');
-    
-    try {
-      // Simulation d'envoi OTP - délai de 1.5s
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // En production, ceci appellerait l'API Mobile Money 
-      //   phone: otpTargetNumber, 
-      //   provider: paymentMethod,
-      //   amount: calculateTotal()
-      // });
-      
-      setOtpSent(true);
-      setOtpCountdown(60); // 60 secondes avant de pouvoir renvoyer
-      toast.success(`Code OTP envoyé au ${otpTargetNumber}`, {
-        description: 'Pour la démo, utilisez le code: 123456'
-      });
-    } catch (error) {
-      setOtpError('Erreur lors de l\'envoi du code OTP');
-      toast.error('Échec de l\'envoi du code OTP');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // Vérifier le code OTP (simulation)
-  const handleVerifyOtp = async () => {
-    if (!otpCode || otpCode.length < 4) {
-      setOtpError('Veuillez saisir le code OTP complet');
-      return;
-    }
-    
-    setOtpLoading(true);
-    setOtpError('');
-    
-    try {
-      // Simulation de vérification - délai de 1s
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // En production: appel API pour vérifier le code
-      // const response = await api.post('/payments/verify-otp', { 
-      //   phone: paymentDetails[`${paymentMethod}_sender_number`],
-      //   code: otpCode,
-      //   provider: paymentMethod
-      // });
-      
-      // Pour la démo, accepter "123456" comme code valide
-      if (otpCode === '123456') {
-        setOtpVerified(true);
-        setOtpError('');
-        toast.success('Code OTP validé avec succès!');
-      } else {
-        setOtpError('Code OTP incorrect. Pour la démo, utilisez: 123456');
-        toast.error('Code OTP incorrect');
-      }
-    } catch (error) {
-      setOtpError('Erreur lors de la vérification du code');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
 
   // ============================================
   // GESTION DES VENTES EN ATTENTE
@@ -1077,13 +880,7 @@ const Sales = () => {
       return;
     }
     
-    // Validation OTP - DÉSACTIVÉE (En cours de développement)
-    // if (isMobileMoneyPayment && !otpVerified) {
-    //   toast.error('Veuillez valider le code OTP pour finaliser le paiement Mobile Money');
-    //   return;
-    // }
-    
-    // Validation des champs obligatoires Mobile Money (OTP désactivé)
+    // Validation des champs obligatoires Mobile Money
     if (isMobileMoneyPayment) {
       const recipientNumber = paymentMethod === 'orange_money' ? paymentDetails.orange_money_sender_number : paymentDetails.mtn_money_sender_number;
       const ticketRef = paymentMethod === 'orange_money' ? paymentDetails.orange_money_ticket_ref : paymentDetails.mtn_money_ticket_ref;
@@ -1112,12 +909,16 @@ const Sales = () => {
         toast.error(`Le total des paiements (${formatAmount(totalPayments)}) ne correspond pas au montant de la vente (${formatAmount(total)})`);
         return;
       }
-      
-      // Validation OTP pour le second mode - DÉSACTIVÉE (En cours de développement)
-      // if (isSecondMobileMoneyPayment && !secondOtpVerified) {
-      //   toast.error('Veuillez valider le code OTP pour le second mode de paiement Mobile Money');
-      //   return;
-      // }
+
+      const secondMethodDef = paymentMethods.find(m => m.code === secondPaymentMethod);
+      for (const field of (secondMethodDef?.required_fields || [])) {
+        if (!field.required) continue;
+        const value = (secondPaymentDetails[`${secondPaymentMethod}_${field.name}`] || '').toString().trim();
+        if (!value) {
+          toast.error(`${secondMethodDef.name} : veuillez saisir ${field.label}`);
+          return;
+        }
+      }
     }
     
     // Validation spéciale pour le paiement par dette
@@ -1275,8 +1076,6 @@ const Sales = () => {
           setUseDebtPayment(false);
           setDebtAmount('');
           resetPaymentDetails();
-          resetOtpState();
-          resetSecondOtpState();
           setProductSearch('');
           // Réinitialiser les nouveaux états de rabais
           setPromoCode('');
@@ -1327,8 +1126,6 @@ const Sales = () => {
         setUseDebtPayment(false);
         setDebtAmount('');
         resetPaymentDetails();
-        resetSecondOtpState();
-        resetOtpState();
         setProductSearch('');
         handleSaleDialogChange(false);
       } catch (offlineError) {
@@ -2068,7 +1865,7 @@ const Sales = () => {
                             </Label>
                             <Input
                               type={field.type || 'text'}
-                              maxLength={field.maxLength}
+                              maxLength={field.type === 'tel' ? undefined : field.maxLength}
                               value={paymentDetails[`${paymentMethod}_${field.name}`] || ''}
                               onChange={(e) => {
                                 let value = e.target.value;
@@ -2092,52 +1889,6 @@ const Sales = () => {
                   );
                 })()}
 
-                {/* Section OTP pour Mobile Money (Orange Money / MTN Money) */}
-                {/* Section OTP Mobile Money - En cours de développement */}
-                {isMobileMoneyPayment && (
-                  <div className={`p-4 rounded-lg border space-y-4 ${
-                    paymentMethod === 'orange_money' 
-                      ? 'bg-orange-50 border-orange-200' 
-                      : 'bg-yellow-50 border-yellow-200'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Shield className={`w-4 h-4 ${paymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}`} />
-                        <span className={`text-sm font-medium ${paymentMethod === 'orange_money' ? 'text-orange-700' : 'text-yellow-700'}`}>
-                          Vérification OTP
-                        </span>
-                      </div>
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
-                        <Clock className="w-3 h-3" />
-                        En cours de développement
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {cart.length === 0 && (
-                        <p className="text-sm text-red-600 font-medium">
-                          ⚠️ Ajoutez au moins un produit au panier avant de demander le code OTP
-                        </p>
-                      )}
-                      <p className={`text-sm ${paymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}`}>
-                        Un code de vérification sera envoyé au numéro: <strong>{getDefaultOtpPhone() || 'Non configuré dans Paramètres'}</strong>
-                      </p>
-                      <Button
-                        type="button"
-                        disabled={true}
-                        className={`w-full ${
-                          paymentMethod === 'orange_money' 
-                            ? 'bg-orange-400 cursor-not-allowed' 
-                            : 'bg-yellow-400 cursor-not-allowed'
-                        } text-white`}
-                        data-testid="request-otp-btn"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        Demander le code OTP
-                      </Button>
-                    </div>
-                  </div>
-                )}
                     {/* Champs Mobile Money supprimés - maintenant dans la section dynamique */}
 
                 {/* Section Paiement Mixte (2 modes de paiement) - visible si au moins 1 produit */}
@@ -2158,7 +1909,6 @@ const Sales = () => {
                               setSecondPaymentMethod('');
                               setFirstPaymentAmount('');
                               setSecondPaymentAmount('');
-                              resetSecondOtpState();
                             } else {
                               // Pré-remplir le premier montant à 50% du total
                               setFirstPaymentAmount(Math.round(calculateTotal() / 2).toString());
@@ -2252,10 +2002,10 @@ const Sales = () => {
                               </p>
                               {method.required_fields.map((field) => (
                                 <div key={field.name}>
-                                  <Label className="text-xs text-slate-600">{field.label}</Label>
+                                  <Label className="text-xs text-slate-600">{field.label} {field.required && <span className="text-red-500">*</span>}</Label>
                                   <Input
                                     type={field.type}
-                                    maxLength={field.maxLength}
+                                    maxLength={field.type === 'tel' ? undefined : field.maxLength}
                                     value={secondPaymentDetails[`${secondPaymentMethod}_${field.name}`] || ''}
                                     onChange={(e) => setSecondPaymentDetails(prev => ({
                                       ...prev,
@@ -2263,6 +2013,7 @@ const Sales = () => {
                                     }))}
                                     placeholder={field.placeholder}
                                     className="mt-1 text-sm"
+                                    data-testid={`second-payment-field-${field.name}`}
                                   />
                                 </div>
                               ))}
@@ -2270,43 +2021,6 @@ const Sales = () => {
                           );
                         })()}
 
-                        {/* Section OTP pour le second mode Mobile Money - En cours de développement */}
-                        {isSecondMobileMoneyPayment && secondPaymentMethod && (
-                          <div className={`p-3 rounded-lg border space-y-2 ${
-                            secondPaymentMethod === 'orange_money' 
-                              ? 'bg-orange-50 border-orange-200' 
-                              : 'bg-yellow-50 border-yellow-200'
-                          }`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Shield className={`w-4 h-4 ${secondPaymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}`} />
-                                <span className={`text-xs font-medium ${secondPaymentMethod === 'orange_money' ? 'text-orange-700' : 'text-yellow-700'}`}>
-                                  Vérification OTP
-                                </span>
-                              </div>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
-                                <Clock className="w-3 h-3" />
-                                En cours de développement
-                              </span>
-                            </div>
-                            <p className={`text-xs ${secondPaymentMethod === 'orange_money' ? 'text-orange-600' : 'text-yellow-600'}`}>
-                              Code envoyé au: <strong>{getDefaultOtpPhone(secondPaymentMethod) || 'Non configuré'}</strong>
-                            </p>
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={true}
-                              className={`w-full text-xs ${
-                                secondPaymentMethod === 'orange_money' 
-                                  ? 'bg-orange-400 cursor-not-allowed' 
-                                  : 'bg-yellow-400 cursor-not-allowed'
-                              } text-white`}
-                            >
-                              <Send className="w-3 h-3 mr-1" />
-                              Demander OTP
-                            </Button>
-                          </div>
-                        )}
 
                         {/* Résumé du paiement mixte */}
                         {secondPaymentMethod && (
@@ -3056,6 +2770,11 @@ const Sales = () => {
                     <p className="font-medium flex items-center gap-2">
                       {getPaymentIcon(selectedSale.payment_method)}
                       {getPaymentLabel(selectedSale.payment_method)}
+                    </p>
+                  )}
+                  {selectedSale.payment_details?.ticket_ref && (
+                    <p className="text-xs text-slate-500 mt-1" data-testid="sale-detail-payment-ref">
+                      {selectedSale.payment_details.sender_number} · Réf. {selectedSale.payment_details.ticket_ref}
                     </p>
                   )}
                 </div>

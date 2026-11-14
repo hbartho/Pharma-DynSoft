@@ -516,6 +516,7 @@ if DATABASE_TYPE == "postgresql":
                 "id": str(uuid.uuid4()),
                 "amount": payment_data.amount,
                 "payment_method": payment_data.payment_method,
+                "payment_details": payment_data.payment_details,
                 "notes": payment_data.notes,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "created_by": current_user.get("employee_code", "N/A")
@@ -634,6 +635,7 @@ if DATABASE_TYPE == "postgresql":
                     "id": str(uuid.uuid4()),
                     "amount": amount_to_apply,
                     "payment_method": request.payment_method,
+                    "payment_details": request.payment_details,
                     "notes": request.notes,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "created_by": current_user.get("employee_code", "N/A")
@@ -673,6 +675,7 @@ if DATABASE_TYPE == "postgresql":
                 "debts_updated": debts_updated,
                 "receipt_number": f"RBT-{uuid.uuid4().hex[:8].upper()}",
                 "payment_method": request.payment_method,
+                "payment_details": request.payment_details,
                 "customer_id": request.customer_id,
                 "customer_name": customer.name if customer else None,
                 "customer_phone": customer.phone if customer else None,

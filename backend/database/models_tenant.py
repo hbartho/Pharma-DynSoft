@@ -258,6 +258,7 @@ class Sale(Base, UUIDMixin, TimestampMixin):
     
     # Paiement
     payment_method = Column(Enum(PaymentMethod), nullable=False)
+    payment_details = Column(JSON, nullable=True)  # Réf. Mobile Money / chèque / carte (paiement unique)
     status = Column(Enum(SaleStatus), default=SaleStatus.COMPLETED, nullable=False)
     
     # Paiement mixte (split payment)
