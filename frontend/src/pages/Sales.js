@@ -273,6 +273,41 @@ const Sales = () => {
   // États pour la dette (en plus du paiement mixte)
   const [useDebtPayment, setUseDebtPayment] = useState(false);
   const [debtAmount, setDebtAmount] = useState('');
+
+  const EMPTY_PAYMENT_DETAILS = {
+    orange_sender_number: '', orange_ticket_ref: '', mtn_sender_number: '', mtn_ticket_ref: '',
+    check_holder_name: '', check_number: '', check_bank: '', card_holder_name: '', card_last_digits: '', card_bank: '',
+  };
+
+  // Remet le formulaire « Nouvelle vente » à zéro (appelé à chaque fermeture du dialogue)
+  const resetSaleForm = () => {
+    setCart([]);
+    setSelectedCustomer('');
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
+    setProductSearch('');
+    setPaymentMethod('cash');
+    setPaymentDetails({ ...EMPTY_PAYMENT_DETAILS });
+    setDiscountType('percent');
+    setDiscountValue('');
+    setUseMixedPayment(false);
+    setSecondPaymentMethod('');
+    setFirstPaymentAmount('');
+    setSecondPaymentAmount('');
+    setSecondPaymentDetails({ ...EMPTY_PAYMENT_DETAILS });
+    setUseDebtPayment(false);
+    setDebtAmount('');
+    setOtpCode(''); setOtpSent(false); setOtpVerified(false); setOtpError(''); setOtpCountdown(0);
+    setSecondOtpCode(''); setSecondOtpSent(false); setSecondOtpVerified(false); setSecondOtpError(''); setSecondOtpCountdown(0);
+    setPromoCode(''); setPromoCodeValidation(null); setPromoCodeError('');
+    setAutomaticDiscounts([]);
+    setShowProductDiscount(null);
+  };
+
+  const handleSaleDialogChange = (open) => {
+    setShowDialog(open);
+    if (!open) resetSaleForm();
+  };
   
   // États pour OTP (Mobile Money) - Premier mode
   const [otpCode, setOtpCode] = useState('');
@@ -1879,7 +1914,7 @@ const Sales = () => {
               <History className="w-4 h-4 sm:mr-2" strokeWidth={1.5} />
               <span className="hidden sm:inline">Historique</span>
             </Button>
-            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <Dialog open={showDialog} onOpenChange={handleSaleDialogChange}>
               <DialogTrigger asChild>
                 <Button 
                   data-testid="new-sale-button" 
