@@ -175,7 +175,7 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
 export const printDebtPaymentReceipt = (args) => openPrintWindow(buildDebtPaymentReceiptHtml(args));
 
 /** Ticket de clôture de caisse : shift = réponse de POST /shifts/close ou GET /shifts/details/:id */
-export const buildShiftReceiptHtml = ({ shift, settings = {}, formatAmount, paymentLabel, duplicate = false }) => {
+export const buildShiftReceiptHtml = ({ shift, settings = {}, formatAmount, paymentLabel, duplicate = false, hideExpected = false }) => {
   const fmt = formatAmount || ((n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`);
   const label = (m) => (paymentLabel && paymentLabel(m)) || PAYMENT_LABELS[m] || m || '';
   const dt = (v) => (v ? new Date(v).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '-');
@@ -210,9 +210,9 @@ ${duplicate ? '<div class="c b">*** DUPLICATA ***</div>' : ''}
 </table>
 <hr/>
 <table>
-  <tr class="tot"><td>ATTENDU EN CAISSE</td><td></td><td class="r">${fmt(expected)}</td></tr>
+  ${hideExpected ? '' : `<tr class="tot"><td>ATTENDU EN CAISSE</td><td></td><td class="r">${fmt(expected)}</td></tr>`}
   <tr class="tot"><td>COMPTÉ</td><td></td><td class="r">${fmt(counted)}</td></tr>
-  <tr class="tot"><td>ÉCART</td><td></td><td class="r">${diff > 0 ? '+' : ''}${fmt(diff)}</td></tr>
+  ${hideExpected ? (diff < -0.01 ? '<tr class="tot"><td>MANQUE DE CAISSE</td><td></td><td class="r">signalé</td></tr>' : '') : `<tr class="tot"><td>ÉCART</td><td></td><td class="r">${diff > 0 ? '+' : ''}${fmt(diff)}</td></tr>`}
 </table>
 ${shift.closing_notes ? `<div class="muted">Note : ${esc(shift.closing_notes)}</div>` : ''}
 <hr/>

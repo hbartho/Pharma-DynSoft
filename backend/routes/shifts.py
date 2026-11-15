@@ -344,6 +344,8 @@ if DATABASE_TYPE == "postgresql":
             "user_name": current_user.get('name'),
             "expected_amount": expected_amount,
             "difference": difference,
+            "has_discrepancy": abs(difference) > 0.01,
+            "has_shortage": difference < -0.01,
             "difference_percentage": round((difference / expected_amount * 100), 2) if expected_amount else 0,
         }
     

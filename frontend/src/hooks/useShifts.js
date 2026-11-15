@@ -65,14 +65,12 @@ export function useCloseShift() {
       queryClient.invalidateQueries({ queryKey: ['currentShift'] });
       queryClient.invalidateQueries({ queryKey: ['shiftsHistory'] });
       
-      if (data.has_discrepancy) {
-        toast.warning('Shift clôturé avec un écart détecté', {
-          description: `Écart: ${data.difference?.toLocaleString('fr-FR')} GNF`
+      if (data.has_shortage) {
+        toast.warning('Shift clôturé avec un manque de caisse', {
+          description: 'Le manque et votre explication ont été enregistrés'
         });
       } else {
-        toast.success('Shift clôturé avec succès', {
-          description: 'Caisse équilibrée'
-        });
+        toast.success('Shift clôturé avec succès');
       }
     },
     onError: (error) => {

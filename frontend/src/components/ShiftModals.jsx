@@ -281,7 +281,13 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
   const paymentLabel = (code) => paymentMethods.find((m) => m.code === code)?.name;
   const formatAmount = (n) => `${Math.round(n || 0).toLocaleString('fr-FR')} GNF`;
 
-  const printClosed = (shift) => printShiftReceipt({ shift, settings: appSettings, formatAmount, paymentLabel });
+  const printClosed = (shift) => printShiftReceipt({ shift, settings: appSettings, formatAmount, paymentLabel, hideExpected: !isAdmin });
+
+  // Fin de la clôture : le shift se rafraîchit (et le modal d'ouverture peut apparaître) seulement après le choix d'impression
+  const finishClose = () => {
+    setClosedShift(null);
+    onSuccess?.();
+  };
 
   // Charger les données attendues à l'ouverture de la modal
   useEffect(() => {
@@ -315,17 +321,20 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
         setActualAmount('');
         setClosingNotes('');
         setExpectedData(null);
-        onSuccess?.();
         onClose();
-        if (appSettings?.receipt_print_prompt === false) printClosed(data);
-        else setClosedShift(data);
+        if (appSettings?.receipt_print_prompt === false) {
+          printClosed(data);
+          onSuccess?.();
+        } else {
+          setClosedShift(data);
+        }
       }
     });
   };
 
   if (closedShift) {
     return (
-      <Dialog open onOpenChange={(o) => !o && setClosedShift(null)}>
+      <Dialog open onOpenChange={(o) => !o && finishClose()}>
         <DialogContent className="max-w-sm z-[70]" data-testid="shift-receipt-prompt">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Printer className="w-5 h-5 text-teal-700" /> Imprimer le ticket de clôture ?</DialogTitle>
@@ -334,8 +343,8 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setClosedShift(null)} data-testid="shift-receipt-no"><X className="w-4 h-4 mr-1" /> Non</Button>
-            <Button className="bg-teal-700 hover:bg-teal-800" onClick={() => { printClosed(closedShift); setClosedShift(null); }} data-testid="shift-receipt-print">
+            <Button variant="outline" onClick={finishClose} data-testid="shift-receipt-no"><X className="w-4 h-4 mr-1" /> Non</Button>
+            <Button className="bg-teal-700 hover:bg-teal-800" onClick={() => { printClosed(closedShift); finishClose(); }} data-testid="shift-receipt-print">
               <Printer className="w-4 h-4 mr-1" /> Imprimer
             </Button>
           </DialogFooter>
