@@ -5,7 +5,7 @@ Application de gestion de pharmacies (multi-pharmacies, un schéma PostgreSQL pa
 | Dossier | Contenu |
 |---|---|
 | `backend/` | API FastAPI + SQLAlchemy (PostgreSQL), migrations Alembic (`migrations/`), scripts d'exploitation (`scripts/`), manuel PDF (`static/`) |
-| `frontend/` | Application React (PWA, React Query, Shadcn UI) |
+| `frontend/` | Application React (PWA, React Query, Shadcn UI) — **Node ≥ 20** requis en développement (`yarn install`) |
 | `deploy/local/` | Installation locale Docker d'une pharmacie (compose, sauvegarde, import cloud, guide PDF) |
 | `deploy/windows/` | Installateur Windows `.exe` (Inno Setup, compilé par GitHub Actions) |
 | `memory/` | PRD, journal des évolutions, identifiants de test |
