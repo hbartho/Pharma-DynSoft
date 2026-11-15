@@ -86,13 +86,13 @@ const Layout = ({ children }) => {
   // Pour les admins: optionnel (ils peuvent fermer le modal et continuer sans shift)
   // Pour les autres: requis pour effectuer des opérations
   useEffect(() => {
-    if (!shiftLoading && !currentShift && isOnline && user) {
+    if (!shiftLoading && !currentShift && isOnline && user && !showCloseShiftModal) {
       if (user.role === 'admin' && sessionStorage.getItem('adminShiftModalDismissed') === '1') {
         return;
       }
       setShowOpenShiftModal(true);
     }
-  }, [currentShift, shiftLoading, isOnline, user]);
+  }, [currentShift, shiftLoading, isOnline, user, showCloseShiftModal]);
   
   // Timer pour les alertes de fin de shift - GLOBAL sur toutes les pages
   useEffect(() => {

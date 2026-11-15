@@ -287,6 +287,7 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
   const finishClose = () => {
     setClosedShift(null);
     onSuccess?.();
+    onClose();
   };
 
   // Charger les données attendues à l'ouverture de la modal
@@ -321,10 +322,10 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
         setActualAmount('');
         setClosingNotes('');
         setExpectedData(null);
-        onClose();
         if (appSettings?.receipt_print_prompt === false) {
           printClosed(data);
           onSuccess?.();
+          onClose();
         } else {
           setClosedShift(data);
         }
