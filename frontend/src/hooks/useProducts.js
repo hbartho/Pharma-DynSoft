@@ -95,6 +95,7 @@ export const useProductsInfinite = (params = {}, options = {}) => {
       return undefined;
     },
     initialPageParam: 1,
+    placeholderData: (prev) => prev,
     staleTime: 30 * 1000,
     retry: navigator.onLine ? 1 : 0,
     ...options,

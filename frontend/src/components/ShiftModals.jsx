@@ -274,6 +274,8 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
   const [loadingExpected, setLoadingExpected] = useState(false);
   const [closedShift, setClosedShift] = useState(null);
   const closeShift = useCloseShift();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { data: appSettings } = useSettingsQuery();
   const { data: paymentMethods = [] } = usePaymentMethods();
   const paymentLabel = (code) => paymentMethods.find((m) => m.code === code)?.name;
@@ -328,7 +330,7 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Printer className="w-5 h-5 text-teal-700" /> Imprimer le ticket de clôture ?</DialogTitle>
             <DialogDescription>
-              Caisse clôturée — attendu <strong>{formatAmount(closedShift.expected_amount)}</strong>, compté <strong>{formatAmount(closedShift.closing_amount ?? closedShift.actual_closing_amount)}</strong>.
+              Caisse clôturée — {isAdmin && <>attendu <strong>{formatAmount(closedShift.expected_amount)}</strong>, </>}compté <strong>{formatAmount(closedShift.closing_amount ?? closedShift.actual_closing_amount)}</strong>.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -349,7 +351,7 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
   };
 
   const difference = calculateDifference();
-  const hasDifference = Math.abs(difference) > 0.01;
+  const hasShortage = difference < -0.01;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -371,8 +373,9 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
           </div>
         ) : expectedData ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Résumé du shift */}
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
+            {/* Résumé du shift (montants attendus réservés à l'administrateur) */}
+            {isAdmin ? (
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3" data-testid="shift-expected-summary">
               <h4 className="font-medium text-slate-700 text-sm uppercase tracking-wide">Résumé du shift</h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -406,6 +409,12 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
                 </div>
               </div>
             </div>
+            ) : (
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm flex items-center justify-between" data-testid="shift-cashier-summary">
+              <span className="text-slate-500">Nombre de ventes du shift</span>
+              <span className="font-semibold text-slate-800">{expectedData.total_sales_count}</span>
+            </div>
+            )}
             
             {/* Saisie du montant compté */}
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
@@ -429,49 +438,31 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
             
-            {/* Affichage de l'écart */}
-            {actualAmount && (
-              <div className={`p-4 rounded-lg border ${
-                hasDifference 
-                  ? 'bg-red-50 border-red-200' 
-                  : 'bg-green-50 border-green-200'
-              }`}>
+            {/* Manque de caisse uniquement : alerte + explication obligatoire (excédent : rien à signaler) */}
+            {actualAmount && hasShortage && (
+              <div className="p-4 rounded-lg border bg-red-50 border-red-200" data-testid="shift-shortage-alert">
                 <div className="flex items-center gap-2">
-                  {hasDifference ? (
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                  ) : (
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  )}
-                  <span className={`font-medium ${hasDifference ? 'text-red-700' : 'text-green-700'}`}>
-                    {hasDifference ? 'Écart détecté' : 'Caisse équilibrée'}
-                  </span>
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                  <span className="font-medium text-red-700">Manque de caisse</span>
                 </div>
-                {hasDifference && (
-                  <div className="mt-2">
-                    <p className={`text-2xl font-bold ${difference > 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      {difference > 0 ? '+' : ''}{formatAmount(difference)}
-                    </p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {difference > 0 
-                        ? 'Excédent de caisse (argent en trop)' 
-                        : 'Manque de caisse (argent manquant)'}
-                    </p>
-                  </div>
+                {isAdmin ? (
+                  <p className="text-2xl font-bold text-red-700 mt-2">{formatAmount(difference)}</p>
+                ) : (
+                  <p className="text-sm text-slate-600 mt-1">Le montant compté est inférieur au montant attendu.</p>
                 )}
               </div>
             )}
             
-            {/* Notes en cas d'écart - OBLIGATOIRE */}
-            {hasDifference && actualAmount && (
+            {actualAmount && hasShortage && (
               <div>
                 <Label htmlFor="closing-notes" className="text-slate-700">
-                  Explication de l'écart <span className="text-red-500">*</span>
+                  Explication du manque <span className="text-red-500">*</span>
                 </Label>
                 <textarea
                   id="closing-notes"
                   value={closingNotes}
                   onChange={(e) => setClosingNotes(e.target.value)}
-                  placeholder="Expliquez la raison de l'écart..."
+                  placeholder="Expliquez la raison du manque..."
                   className={`mt-1 w-full p-3 border rounded-lg resize-none h-20 text-sm ${
                     !closingNotes.trim() ? 'border-red-300 bg-red-50' : 'border-slate-300'
                   }`}
@@ -480,7 +471,7 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
                 />
                 {!closingNotes.trim() && (
                   <p className="text-xs text-red-500 mt-1">
-                    Une explication est requise en cas d'écart de caisse
+                    Une explication est requise en cas de manque de caisse
                   </p>
                 )}
               </div>
@@ -497,8 +488,8 @@ export function CloseShiftModal({ isOpen, onClose, onSuccess }) {
               </Button>
               <Button
                 type="submit"
-                disabled={closeShift.isPending || !actualAmount || (hasDifference && !closingNotes.trim())}
-                className={hasDifference ? 'bg-amber-600 hover:bg-amber-700' : 'bg-teal-600 hover:bg-teal-700'}
+                disabled={closeShift.isPending || !actualAmount || (hasShortage && !closingNotes.trim())}
+                className={hasShortage ? "bg-amber-600 hover:bg-amber-700" : "bg-teal-600 hover:bg-teal-700"}
                 data-testid="close-shift-btn"
               >
                 {closeShift.isPending ? (

@@ -2211,6 +2211,35 @@ const Supplies = () => {
                 </div>
               </div>
               
+              {/* Changements de prix public induits par la validation */}
+              {(() => {
+                const changes = (supplyToValidate.items || []).filter((it) =>
+                  it.selling_price > 0 && it.current_price != null && it.current_price > 0 && Math.round(it.selling_price) !== Math.round(it.current_price)
+                );
+                if (changes.length === 0) return null;
+                return (
+                  <div className="p-3 bg-red-50 border border-red-300 rounded-lg" data-testid="validate-price-change-alert">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-semibold text-red-800">
+                          Attention : {changes.length} prix public{changes.length > 1 ? 's' : ''} de vente ser{changes.length > 1 ? 'ont' : 'a'} modifié{changes.length > 1 ? 's' : ''} à la validation
+                        </p>
+                        <ul className="mt-1 space-y-0.5 text-red-700">
+                          {changes.map((it) => (
+                            <li key={it.id || it.product_id} data-testid="validate-price-change-row">
+                              <span className="font-medium">{it.product_name}</span> : {formatAmount(it.current_price)} → <span className="font-semibold">{formatAmount(it.selling_price)}</span>
+                              {it.selling_price < it.current_price && <span className="ml-1 text-xs">(baisse)</span>}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-1 text-xs text-red-600">Utilisez « Modifier d'abord » pour conserver le prix actuel.</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Avertissement */}
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-start gap-2">

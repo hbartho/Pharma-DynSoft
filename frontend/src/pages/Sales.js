@@ -740,10 +740,10 @@ const Sales = () => {
 
   // Effet pour calculer automatiquement le second montant en paiement mixte
   React.useEffect(() => {
-    if (useMixedPayment && firstPaymentAmount) {
+    if (useMixedPayment) {
       const total = calculateTotal();
       const first = parseFloat(firstPaymentAmount) || 0;
-      const remaining = Math.max(0, total - first);
+      const remaining = Math.max(0, Math.round((total - first) * 100) / 100);
       setSecondPaymentAmount(remaining.toString());
     }
   }, [firstPaymentAmount, useMixedPayment, cart, discountValue, discountType]);

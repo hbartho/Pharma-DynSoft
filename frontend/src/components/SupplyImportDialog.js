@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { FileSpreadsheet, Download, Upload, CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { FileSpreadsheet, Download, Upload, CheckCircle2, AlertCircle, AlertTriangle, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../services/api';
 
@@ -66,6 +66,7 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
   };
 
   const ok = preview?.summary?.ok || 0;
+  const priceChanges = (preview?.rows || []).filter((r) => r.status === 'ok' && r.selling_price > 0 && r.current_price > 0 && Math.round(r.selling_price) !== Math.round(r.current_price));
   const metaValid = !!meta.supplier_id && meta.invoice_number.trim().length > 0;
 
   return (
@@ -125,7 +126,19 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
               <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {ok} ligne(s) prête(s)</span>
               {preview.summary.errors > 0 && <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {preview.summary.errors} ligne(s) ignorée(s)</span>}
               <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700">Total cession : <strong>{fmt(preview.summary.total_amount)} GNF</strong></span>
+              {priceChanges.length > 0 && <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 flex items-center gap-1" data-testid="supply-import-price-changes"><AlertTriangle className="w-4 h-4" /> {priceChanges.length} changement(s) de prix public</span>}
             </div>
+            {priceChanges.length > 0 && (
+              <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-sm" data-testid="supply-import-price-alert">
+                <p className="font-semibold text-red-800">Le prix public de ces produits sera modifié à la validation de l'approvisionnement :</p>
+                <ul className="mt-1 space-y-0.5 text-red-700">
+                  {priceChanges.map((r) => (
+                    <li key={r.line}>Ligne {r.line} — <span className="font-medium">{r.product_name}</span> : {fmt(r.current_price)} → <strong>{fmt(r.selling_price)}</strong> GNF{r.selling_price < r.current_price ? ' (baisse)' : ''}</li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-xs text-red-600">Corrigez la colonne « Prix public » du fichier (ou laissez-la vide pour conserver le prix actuel) si ce n'est pas voulu.</p>
+              </div>
+            )}
 
             <div className="border rounded-lg overflow-auto max-h-[45vh]">
               <table className="w-full text-xs">
@@ -145,7 +158,14 @@ export const SupplyImportDialog = ({ open, onOpenChange, suppliers = [], onCreat
                       </td>
                       <td className="px-2 py-1.5 text-right">{r.quantity ?? '—'}</td>
                       <td className="px-2 py-1.5 text-right">{r.unit_price != null ? fmt(r.unit_price) : '—'}</td>
-                      <td className="px-2 py-1.5 text-right">{r.selling_price != null ? fmt(r.selling_price) : <span className="text-slate-400">{r.current_price != null ? `${fmt(r.current_price)} (actuel)` : '—'}</span>}</td>
+                      <td className="px-2 py-1.5 text-right">
+                        {r.selling_price != null ? (
+                          <span className={r.current_price > 0 && Math.round(r.selling_price) !== Math.round(r.current_price) ? 'text-red-700 font-semibold' : ''}>
+                            {fmt(r.selling_price)}
+                            {r.current_price > 0 && Math.round(r.selling_price) !== Math.round(r.current_price) && <span className="block text-[10px] font-normal text-red-500">actuel : {fmt(r.current_price)}</span>}
+                          </span>
+                        ) : <span className="text-slate-400">{r.current_price != null ? `${fmt(r.current_price)} (actuel)` : '—'}</span>}
+                      </td>
                       <td className="px-2 py-1.5">{r.date_peremption || '—'}</td>
                       <td className="px-2 py-1.5">{r.lot_number || <span className="text-slate-400">auto</span>}</td>
                       <td className="px-2 py-1.5">

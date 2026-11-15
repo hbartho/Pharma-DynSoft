@@ -71,6 +71,7 @@ if DATABASE_TYPE == "postgresql":
                     "purchase_price": item.purchase_price,
                     "selling_price": item.selling_price,
                     "prix_public_modifie": item.selling_price,
+                    "current_price": item.product.price if item.product else None,
                     "total_price": item.subtotal or (item.purchase_price * item.quantity if item.purchase_price and item.quantity else 0),
                     "subtotal": item.subtotal,
                     "lot_number": item.lot_number,
