@@ -294,3 +294,5 @@ deploy/local/backups/
 /test_reports/
 /test_result.md
 .emergent/testing/.runtime/
+/tests/
+/backend/tests/
