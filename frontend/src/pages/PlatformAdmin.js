@@ -13,7 +13,7 @@ import {
 } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy, RotateCcw,
+  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy, RotateCcw, Search,
 } from 'lucide-react';
 import { PharmacyResetDialog } from '../components/PharmacyResetDialog';
 
@@ -113,6 +113,16 @@ export default function PlatformAdmin() {
     try {
       await api.put(`/platform/pharmacies/${pharmacy.slug}`, { is_active: !pharmacy.is_active });
       toast.success(pharmacy.is_active ? 'Pharmacie désactivée' : 'Pharmacie activée');
+      loadPharmacies();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Erreur');
+    }
+  };
+
+  const togglePublicSearch = async (pharmacy) => {
+    try {
+      await api.put(`/platform/pharmacies/${pharmacy.slug}`, { public_search_enabled: !pharmacy.public_search_enabled });
+      toast.success(pharmacy.public_search_enabled ? 'Pharmacie retirée de la recherche publique' : 'Pharmacie visible dans la recherche publique');
       loadPharmacies();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Erreur');
@@ -306,6 +316,10 @@ export default function PlatformAdmin() {
                     <div className="flex items-center gap-2">
                       <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} data-testid={`toggle-active-${p.slug}`} />
                       <span className="text-xs text-slate-500">Active</span>
+                    </div>
+                    <div className="flex items-center gap-2" title="Apparaît dans la recherche publique de produits (page de connexion)">
+                      <Switch checked={p.public_search_enabled !== false} onCheckedChange={() => togglePublicSearch(p)} data-testid={`toggle-public-search-${p.slug}`} />
+                      <span className="text-xs text-slate-500 flex items-center gap-1"><Search className="w-3 h-3" /> Recherche</span>
                     </div>
                     {p.slug !== 'pharmacie_centrale' && (
                       <Button variant="outline" size="sm" className={p.sync?.mode === 'mirror' ? 'text-sky-700 border-sky-200 bg-sky-50 hover:bg-sky-100' : ''} onClick={() => { setSyncTarget(p); setSyncToken(''); }} title="Synchronisation serveur local" data-testid={`sync-token-${p.slug}`}>

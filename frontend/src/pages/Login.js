@@ -9,6 +9,7 @@ import { Building2, KeyRound, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../services/api';
 import logoImage from '../images/logo.jpg';
+import { PharmacyFinder } from '../components/PharmacyFinder';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -131,18 +132,21 @@ const Login = () => {
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-teal-900/90 to-emerald-900/90"></div>
-        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
+        <div className="relative z-10 flex flex-col justify-center px-16 py-12 text-white w-full">
           <h1 className="text-5xl font-bold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
             DynSoft Pharma
           </h1>
           <p className="text-xl text-teal-50">
             Gestion moderne de pharmacie avec fonctionnement offline
           </p>
+          <div className="mt-10 pt-8 border-t border-white/15 max-w-lg">
+            <PharmacyFinder variant="dark" />
+          </div>
         </div>
       </div>
 
       {/* Right side - Form */}
-      <div className="flex-1 flex items-center justify-center px-8 bg-white">
+      <div className="flex-1 flex items-center justify-center px-8 py-10 bg-white">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
@@ -218,6 +222,10 @@ const Login = () => {
             </Button>
           </form>
 
+          {/* Recherche publique sur mobile/tablette (le panneau vert est masqué) */}
+          <div className="lg:hidden mt-10 pt-8 border-t border-slate-200" data-testid="pharmacy-finder-mobile">
+            <PharmacyFinder variant="light" />
+          </div>
         </div>
       </div>
 

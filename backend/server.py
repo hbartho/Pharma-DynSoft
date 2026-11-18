@@ -44,6 +44,7 @@ from routes.discounts import router as discounts_router
 from routes.manual import router as manual_router
 from routes.platform import router as platform_router
 from routes.cloud_sync import router as cloud_sync_router
+from routes.public_search import router as public_search_router
 from services.cloud_sync import start_scheduler as start_cloud_sync_scheduler
 
 # Configure logging
@@ -132,6 +133,7 @@ app.include_router(discounts_router, prefix="/api")
 app.include_router(manual_router, prefix="/api")
 app.include_router(platform_router, prefix="/api")
 app.include_router(cloud_sync_router, prefix="/api")
+app.include_router(public_search_router, prefix="/api")
 
 
 @app.on_event("startup")

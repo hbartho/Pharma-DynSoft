@@ -60,6 +60,7 @@ class PharmacyUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     is_active: Optional[bool] = None
+    public_search_enabled: Optional[bool] = None  # visible dans la recherche publique de produits
 
 
 class AdminPasswordReset(BaseModel):
@@ -102,6 +103,7 @@ def _tenant_to_dict(t: Tenant) -> dict:
         "phone": t.phone,
         "email": t.email,
         "is_active": t.is_active,
+        "public_search_enabled": (t.settings or {}).get("public_search_enabled", True),
         "schema": t.database_name,
         "created_at": t.created_at.isoformat() if t.created_at else None,
     }
@@ -387,6 +389,8 @@ def update_pharmacy(slug: str, payload: PharmacyUpdate, current_user: dict = Dep
         if not tenant:
             raise HTTPException(status_code=404, detail="Pharmacie non trouvée")
         data = payload.model_dump(exclude_none=True)
+        if "public_search_enabled" in data:
+            tenant.settings = {**(tenant.settings or {}), "public_search_enabled": data.pop("public_search_enabled")}
         for key, value in data.items():
             setattr(tenant, key, value)
         session.commit()
