@@ -289,3 +289,8 @@ credentials.json
 # Installation locale (secrets et sauvegardes)
 deploy/local/.env
 deploy/local/backups/
+
+# Rapports de tests générés
+/test_reports/
+/test_result.md
+.emergent/testing/.runtime/
