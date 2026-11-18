@@ -19,6 +19,7 @@ router = APIRouter(prefix="/cloud-sync", tags=["Cloud Sync"])
 
 class BeginPayload(BaseModel):
     full: bool = False
+    schema: Optional[str] = None  # schéma local annoncé (doit être t_<slug>)
 
 
 class PushPayload(BaseModel):
@@ -45,6 +46,7 @@ def local_status(current_user: dict = Depends(require_admin)):
         "slug": cloud_sync.CLOUD_SYNC_SLUG,
         "sync_hour": cloud_sync.CLOUD_SYNC_HOUR,
         "running": cloud_sync._lock.locked(),
+        **cloud_sync.attempts_status(),
         **{k: state.get(k) for k in ("last_success_at", "last_attempt_at", "last_full_at", "last_error", "last_stats", "needs_full")},
     }
 
@@ -92,14 +94,17 @@ def cloud_export(slug: str, tenant: Tenant = Depends(verify_sync_token)):
 
 @router.post("/{slug}/begin")
 def cloud_begin(slug: str, payload: BeginPayload, tenant: Tenant = Depends(verify_sync_token)):
-    return cloud_sync.cloud_begin(slug, tenant_schema_name(slug), payload.full)
+    try:
+        return cloud_sync.cloud_begin(slug, tenant_schema_name(slug), payload.full, payload.schema)
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 @router.post("/{slug}/push")
 def cloud_push(slug: str, payload: PushPayload, tenant: Tenant = Depends(verify_sync_token)):
     try:
         n = cloud_sync.cloud_push(slug, tenant_schema_name(slug), payload.session_id, payload.table, payload.rows)
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=409, detail=str(e))
     return {"table": payload.table, "upserted": n}
 
@@ -108,5 +113,5 @@ def cloud_push(slug: str, payload: PushPayload, tenant: Tenant = Depends(verify_
 def cloud_finish(slug: str, payload: FinishPayload, tenant: Tenant = Depends(verify_sync_token)):
     try:
         return cloud_sync.cloud_finish(slug, tenant_schema_name(slug), payload.session_id, payload.cursor, payload.stats)
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=409, detail=str(e))

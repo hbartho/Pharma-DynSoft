@@ -47,7 +47,7 @@ export const CloudSyncCard = () => {
           <div className="p-2 bg-sky-50 rounded-lg"><CloudUpload className="w-5 h-5 text-sky-600" strokeWidth={1.5} /></div>
           <div>
             <h2 className="text-lg font-semibold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>Synchronisation vers DynSoft cloud</h2>
-            <p className="text-sm text-slate-600">Chaque nuit à {status.sync_hour}h, dès qu'Internet est disponible · pharmacie <span className="font-mono">{status.slug}</span></p>
+            <p className="text-sm text-slate-600">Chaque nuit à {status.sync_hour}h, dès qu'Internet est disponible ({status.max_attempts} tentatives max par nuit) · schéma <span className="font-mono">t_{status.slug}</span> → cloud <span className="font-mono">t_{status.slug}</span></p>
             <div className="mt-2 text-sm flex flex-wrap gap-x-4 gap-y-1">
               <span className="flex items-center gap-1" data-testid="cloud-sync-last-success">
                 {ok ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
@@ -57,6 +57,12 @@ export const CloudSyncCard = () => {
               <span className="text-slate-500">Dernière tentative : {fmt(status.last_attempt_at)}</span>
             </div>
             {status.last_error && <p className="text-xs text-red-600 mt-1" data-testid="cloud-sync-error">Erreur : {status.last_error}</p>}
+            {status.attempts_today > 0 && (
+              <p className={`text-xs mt-1 ${status.gave_up_today ? 'text-amber-700' : 'text-slate-500'}`} data-testid="cloud-sync-attempts">
+                Tentatives automatiques cette nuit : {status.attempts_today}/{status.max_attempts}
+                {status.gave_up_today && !status.last_success_at?.startsWith(new Date().toISOString().slice(0, 10)) && ' — abandon jusqu\'à la nuit prochaine (vous pouvez lancer manuellement)'}
+              </p>
+            )}
             {status.running && <p className="text-xs text-sky-700 mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Synchronisation en cours…</p>}
           </div>
         </div>

@@ -3,6 +3,7 @@ Côté local (émetteur) : CloudSyncClient + scheduler nocturne. Côté cloud (r
 Le schéma public n'est jamais synchronisé.
 """
 import os
+import re
 import uuid
 import enum
 import logging
@@ -30,7 +31,18 @@ CLOUD_SYNC_HOUR = min(23, max(0, int(os.environ.get("CLOUD_SYNC_HOUR", "2") or 2
 FULL_EVERY_DAYS = 7
 CHUNK = 300
 CURSOR_OVERLAP = timedelta(minutes=5)
+MAX_ATTEMPTS_PER_NIGHT = 3   # sans connexion : 3 essais max (espacés de RETRY_AFTER), puis on attend la nuit suivante
 LOCAL_ENABLED = bool(CLOUD_SYNC_URL and CLOUD_SYNC_TOKEN and CLOUD_SYNC_SLUG)
+
+
+def assert_tenant_schema(schema: str, slug: str):
+    """Seul le schéma propre à la pharmacie (t_<slug>) est synchronisé : jamais public ni un autre schéma."""
+    from database.tenant_context import DEFAULT_TENANT
+    if not schema or schema == "public" or slug in (DEFAULT_TENANT, "default", ""):
+        raise RuntimeError("Le schéma public (pharmacie centrale) n'est jamais synchronisé")
+    expected = "t_" + re.sub(r"[^a-z0-9_]", "_", slug.lower().strip())
+    if schema != expected:
+        raise RuntimeError(f"Schéma '{schema}' incohérent avec la pharmacie '{slug}' (attendu : {expected})")
 
 
 def tenant_tables() -> List[Table]:
@@ -125,7 +137,10 @@ def staging_schema(schema: str) -> str:
     return f"{schema}__staging"
 
 
-def cloud_begin(slug: str, schema: str, full: bool) -> Dict[str, Any]:
+def cloud_begin(slug: str, schema: str, full: bool, source_schema: Optional[str] = None) -> Dict[str, Any]:
+    assert_tenant_schema(schema, slug)
+    if source_schema and source_schema != schema:
+        raise RuntimeError(f"Le schéma local '{source_schema}' ne correspond pas au schéma cloud '{schema}' de cette pharmacie")
     session_id = uuid.uuid4().hex
     target = staging_schema(schema) if full else schema
     engine = db_manager.schema_engine("public")
@@ -139,6 +154,7 @@ def cloud_begin(slug: str, schema: str, full: bool) -> Dict[str, Any]:
 
 
 def cloud_push(slug: str, schema: str, session_id: str, table_name: str, rows: List[Dict[str, Any]]) -> int:
+    assert_tenant_schema(schema, slug)
     state = get_state(slug)
     if state.get("active_session_id") != session_id:
         raise ValueError("Session de synchronisation invalide ou expirée")
@@ -162,6 +178,7 @@ def cloud_push(slug: str, schema: str, session_id: str, table_name: str, rows: L
 
 
 def cloud_finish(slug: str, schema: str, session_id: str, cursor: Optional[str], stats: Dict[str, Any]) -> Dict[str, Any]:
+    assert_tenant_schema(schema, slug)
     state = get_state(slug)
     if state.get("active_session_id") != session_id:
         raise ValueError("Session de synchronisation invalide ou expirée")
@@ -269,7 +286,10 @@ class CloudSyncClient:
         new_cursor = now
         update_state(CLOUD_SYNC_SLUG, last_attempt_at=now)
         try:
-            begin = self._post("begin", {"full": full})
+            assert_tenant_schema(self.schema, CLOUD_SYNC_SLUG)
+            begin = self._post("begin", {"full": full, "schema": self.schema})
+            if begin.get("schema", "").replace("__staging", "") != self.schema:
+                raise RuntimeError(f"Le cloud cible le schéma '{begin.get('schema')}' au lieu de '{self.schema}'")
             session_id = begin["session_id"]
             stats = {"full": full, "tables": {}}
             for table in tenant_tables():
@@ -299,7 +319,14 @@ class CloudSyncClient:
 _lock = threading.Lock()
 _run_now = threading.Event()
 _last_fail_at: Optional[datetime] = None
+_attempts: Dict[str, Any] = {"date": None, "count": 0}   # tentatives automatiques de la nuit en cours
 RETRY_AFTER = timedelta(minutes=15)
+
+
+def attempts_status() -> Dict[str, Any]:
+    today = datetime.now().date()
+    count = _attempts["count"] if _attempts["date"] == today else 0
+    return {"attempts_today": count, "max_attempts": MAX_ATTEMPTS_PER_NIGHT, "gave_up_today": count >= MAX_ATTEMPTS_PER_NIGHT}
 
 
 def run_sync(force_full: bool = False) -> Dict[str, Any]:
@@ -325,6 +352,10 @@ def _due(state: Dict[str, Any]) -> bool:
     synced_today = bool(last_ok) and datetime.fromisoformat(last_ok).astimezone().date() == now.date()
     if synced_today or now.hour < CLOUD_SYNC_HOUR:
         return False
+    if _attempts["date"] != now.date():
+        _attempts["date"], _attempts["count"] = now.date(), 0
+    if _attempts["count"] >= MAX_ATTEMPTS_PER_NIGHT:
+        return False  # 3 échecs cette nuit : on réessaiera la nuit prochaine
     if _last_fail_at and datetime.now(timezone.utc) - _last_fail_at < RETRY_AFTER:
         return False  # Internet absent : nouvelle tentative dans 15 min
     return True
@@ -338,8 +369,12 @@ def _loop():
             forced = _run_now.wait(timeout=60)
             _run_now.clear()
             if forced or _due(get_state(CLOUD_SYNC_SLUG)):
+                if not forced:
+                    _attempts["count"] += 1
                 result = run_sync()
                 _last_fail_at = None if result.get("ok") else datetime.now(timezone.utc)
+                if not result.get("ok") and not forced and _attempts["count"] >= MAX_ATTEMPTS_PER_NIGHT:
+                    logger.warning(f"Synchro cloud : {MAX_ATTEMPTS_PER_NIGHT} tentatives échouées, prochaine tentative la nuit prochaine")
         except Exception as e:
             logger.warning(f"Scheduler synchro : {e}")
             _last_fail_at = datetime.now(timezone.utc)
@@ -349,4 +384,4 @@ def start_scheduler():
     if not LOCAL_ENABLED:
         return
     threading.Thread(target=_loop, name="cloud-sync", daemon=True).start()
-    logger.info(f"Synchro cloud activée : {CLOUD_SYNC_SLUG} → {CLOUD_SYNC_URL} (chaque nuit à {CLOUD_SYNC_HOUR}h)")
+    logger.info(f"Synchro cloud activée : {CLOUD_SYNC_SLUG} → {CLOUD_SYNC_URL} (chaque nuit à {CLOUD_SYNC_HOUR}h, {MAX_ATTEMPTS_PER_NIGHT} tentatives max)")
