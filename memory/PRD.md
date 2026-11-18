@@ -167,6 +167,8 @@ Après: subtotal=11000, discount_total=2500, total_stocké=8500, paid=8500 → d
 ### P2 - Priorité moyenne
 - Intégration réelle Mobile Money API (actuellement **MOCKED**)
 - Export PDF/Excel
+- Recherche publique : horaires d'ouverture + statut « de garde » renseignés par chaque pharmacie (Paramètres) et affichés dans les résultats
+- Recherche publique : bouton « Itinéraire » ouvrant Google Maps sur l'adresse de chaque pharmacie trouvée
 - Refactoring de `Sales.js` (extraction de hooks personnalisés pour améliorer la maintenabilité)
 - Déploiement mobile avec Capacitor
 - Rappels automatiques SMS/email pour dettes
@@ -721,6 +723,8 @@ Application de gestion de pharmacie multi-tenant, offline-first avec PWA React e
 
 ### P2 - Souhaitable
 - [ ] Intégration réelle API Mobile Money (remplacer simulation OTP)
+- [ ] Recherche publique : horaires + statut « de garde » par pharmacie, affichés dans les résultats
+- [ ] Recherche publique : bouton « Itinéraire » (Google Maps) sur chaque pharmacie trouvée
 - [ ] Déploiement mobile (Capacitor)
 - [ ] Rappels automatiques dettes en retard
 - [ ] Notifications expiration ventes en attente
