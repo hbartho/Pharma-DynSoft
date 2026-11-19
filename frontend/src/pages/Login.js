@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Building2, KeyRound, Eye, EyeOff, AlertCircle, Mail, Lock, LogIn, Zap, Wifi, MapPin, Pill } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../services/api';
-import logoImage from '../images/logo.jpg';
 import loginBg from '../images/pharmacy-login-bg.jpg';
 import { PharmacyFinder } from '../components/PharmacyFinder';
 
@@ -19,10 +18,20 @@ const FEATURES = [
   { icon: Pill, title: 'Disponibilité', text: 'Vérifiez le stock en temps réel dans les pharmacies.' },
 ];
 
+// Croix de pharmacie (page de connexion uniquement ; le logo DynSoft reste utilisé dans l'application)
+const PharmacyCross = ({ className = '' }) => (
+  <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+    <path
+      d="M24 6h16a4 4 0 0 1 4 4v10h10a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H44v10a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V44H10a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4h10V10a4 4 0 0 1 4-4z"
+      fill="#16a34a"
+    />
+  </svg>
+);
+
 const Brand = ({ size = 'lg' }) => (
   <div className="flex items-center gap-4">
-    <div className={`${size === 'lg' ? 'w-20 h-20 rounded-3xl' : 'w-16 h-16 rounded-2xl'} bg-white shadow-lg flex items-center justify-center shrink-0 overflow-hidden`}>
-      <img src={logoImage} alt="DynSoft Pharma" className={`${size === 'lg' ? 'w-14 h-14' : 'w-11 h-11'} object-contain`} />
+    <div className={`${size === 'lg' ? 'w-20 h-20 rounded-3xl' : 'w-16 h-16 rounded-2xl'} bg-white shadow-lg flex items-center justify-center shrink-0`} data-testid="login-brand-cross">
+      <PharmacyCross className={size === 'lg' ? 'w-14 h-14' : 'w-11 h-11'} />
     </div>
     <div>
       <h1 className={`${size === 'lg' ? 'text-4xl sm:text-5xl lg:text-6xl text-white' : 'text-4xl sm:text-5xl text-slate-900'} font-extrabold leading-none tracking-tight`} style={{ fontFamily: 'Manrope, sans-serif' }}>
