@@ -125,3 +125,45 @@ def search_pharmacies(
             pharmacies.append(hit)
 
     return {"product": product, "location": location, "count": len(pharmacies), "pharmacies": pharmacies}
+
+
+@router.get("/pharmacies")
+def list_pharmacies(
+    request: Request,
+    name: Optional[str] = Query(None, max_length=100, description="Nom (ou partie du nom) de la pharmacie"),
+    location: Optional[str] = Query(None, max_length=100, description="Ville, commune ou quartier"),
+):
+    """Annuaire public : pharmacies par nom et/ou par ville/quartier (toutes celles du lieu si seul le lieu est renseigné)."""
+    _rate_limit(request)
+    name = (name or "").strip()
+    location = (location or "").strip()
+    if len(name) < 2 and len(location) < 2:
+        raise HTTPException(status_code=422, detail="Indiquez un nom de pharmacie ou une ville / un quartier")
+
+    if FORCED_SCHEMA and CLOUD_SYNC_URL:
+        try:
+            r = requests.get(f"{CLOUD_SYNC_URL}/api/public/pharmacies", params={"name": name, "location": location}, timeout=8)
+            if r.ok:
+                return r.json()
+        except Exception as exc:
+            logger.warning(f"Annuaire public cloud indisponible : {exc}")
+
+    pharmacies = []
+    for tenant in _local_tenants():
+        info = {}
+        try:
+            info = SettingsRepository(tenant.slug).get_all()
+        except Exception:
+            pass
+        display_name = tenant.name or info.get("pharmacy_name") or tenant.slug
+        if name and _norm(name) not in _norm(display_name):
+            continue
+        if location and not _location_matches(location, tenant.address, info.get("pharmacy_address")):
+            continue
+        pharmacies.append({
+            "name": display_name,
+            "address": tenant.address or info.get("pharmacy_address") or "",
+            "phone": tenant.phone or info.get("pharmacy_phone") or "",
+        })
+
+    return {"name": name or None, "location": location or None, "count": len(pharmacies), "pharmacies": pharmacies}
