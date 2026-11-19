@@ -8,12 +8,13 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Switch } from '../components/ui/switch';
 import { Checkbox } from '../components/ui/checkbox';
+import { OpeningHoursEditor, defaultOpeningHours } from '../components/OpeningHoursEditor';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy, RotateCcw, Search,
+  Building2, Plus, Users, LogOut, Trash2, ShieldCheck, KeyRound, Loader2, Store, TrendingUp, CloudUpload, Copy, RotateCcw, Search, MapPin, UserRound, Database, Eye, EyeOff, X, Save,
 } from 'lucide-react';
 import { PharmacyResetDialog } from '../components/PharmacyResetDialog';
 
@@ -23,6 +24,7 @@ const emptyForm = {
   name: '', slug: '', address: '', phone: '', email: '',
   admin_first_name: '', admin_last_name: '', admin_email: '', admin_password: '',
   import_products: false, source_slug: 'pharmacie_centrale',
+  opening_hours: defaultOpeningHours(),
 };
 
 export default function PlatformAdmin() {
@@ -38,6 +40,7 @@ export default function PlatformAdmin() {
   const [resetTarget, setResetTarget] = useState(null);
   const [resetForm, setResetForm] = useState({ email: '', new_password: '' });
   const [showOwnPassword, setShowOwnPassword] = useState(false);
+  const [showAdminPw, setShowAdminPw] = useState(false);
   const [ownPwForm, setOwnPwForm] = useState({ current_password: '', new_password: '' });
   const [stats, setStats] = useState(null);
   const [syncTarget, setSyncTarget] = useState(null);
@@ -394,91 +397,125 @@ CLOUD_SYNC_HOUR=2`}</div>
 
       {/* Dialog création */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nouvelle pharmacie</DialogTitle>
-            <DialogDescription>
-              Un espace de données isolé sera créé, avec son compte administrateur.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <Label htmlFor="ph-name">Nom de la pharmacie *</Label>
-              <Input id="ph-name" value={form.name} onChange={set('name')} required data-testid="pharmacy-name-input" placeholder="Pharmacie du Marché" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="ph-phone">Téléphone</Label>
-                <Input id="ph-phone" value={form.phone} onChange={set('phone')} placeholder="+224..." />
+        <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto p-0">
+          <form onSubmit={handleCreate}>
+            <div className="px-6 pt-6 pb-4 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center shrink-0">
+                <Store className="w-6 h-6 text-white" />
               </div>
-              <div>
-                <Label htmlFor="ph-email">Email pharmacie</Label>
-                <Input id="ph-email" type="email" value={form.email} onChange={set('email')} />
-              </div>
+              <DialogHeader className="text-left space-y-0.5">
+                <DialogTitle className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>Nouvelle pharmacie</DialogTitle>
+                <DialogDescription>Renseignez les informations de la pharmacie et ses horaires d'ouverture.</DialogDescription>
+              </DialogHeader>
             </div>
-            <div>
-              <Label htmlFor="ph-address">Adresse</Label>
-              <Input id="ph-address" value={form.address} onChange={set('address')} placeholder="Conakry, ..." />
-            </div>
-            <div className="pt-2 border-t border-slate-100">
-              <p className="text-sm font-medium text-slate-700 mb-3">Compte administrateur de la pharmacie</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="ad-fn">Prénom *</Label>
-                  <Input id="ad-fn" value={form.admin_first_name} onChange={set('admin_first_name')} required data-testid="admin-firstname-input" />
+
+            <div className="px-6 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-5">
+              {/* Colonne gauche */}
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50 rounded-t-xl text-slate-800 font-semibold">
+                  <Building2 className="w-5 h-5 text-teal-700" /> Informations générales
                 </div>
-                <div>
-                  <Label htmlFor="ad-ln">Nom *</Label>
-                  <Input id="ad-ln" value={form.admin_last_name} onChange={set('admin_last_name')} required data-testid="admin-lastname-input" />
+                <div className="p-4 space-y-3">
+                  <div>
+                    <Label htmlFor="ph-name">Nom de la pharmacie *</Label>
+                    <Input id="ph-name" value={form.name} onChange={set('name')} required data-testid="pharmacy-name-input" placeholder="Pharmacie du Marché" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="ph-phone">Téléphone *</Label>
+                      <Input id="ph-phone" value={form.phone} onChange={set('phone')} required placeholder="+224 622 12 34 56" data-testid="pharmacy-phone-input" />
+                    </div>
+                    <div>
+                      <Label htmlFor="ph-email">Email pharmacie</Label>
+                      <Input id="ph-email" type="email" value={form.email} onChange={set('email')} placeholder="contact@pharmaciedumarche.com" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="ph-address">Adresse *</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      <Input id="ph-address" value={form.address} onChange={set('address')} required className="pl-9" placeholder="Conakry, ..." data-testid="pharmacy-address-input" />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 text-slate-800 font-semibold text-sm mb-3">
+                      <UserRound className="w-4 h-4 text-teal-700" /> Compte administrateur de la pharmacie
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="ad-fn">Prénom *</Label>
+                        <Input id="ad-fn" value={form.admin_first_name} onChange={set('admin_first_name')} required data-testid="admin-firstname-input" placeholder="Mamadou" />
+                      </div>
+                      <div>
+                        <Label htmlFor="ad-ln">Nom *</Label>
+                        <Input id="ad-ln" value={form.admin_last_name} onChange={set('admin_last_name')} required data-testid="admin-lastname-input" placeholder="Diallo" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Label htmlFor="ad-email">Email admin *</Label>
+                      <Input id="ad-email" type="email" value={form.admin_email} onChange={set('admin_email')} required data-testid="admin-email-input" placeholder="admin@pharmaciedumarche.com" />
+                    </div>
+                    <div className="mt-3">
+                      <Label htmlFor="ad-pw">Mot de passe admin * <span className="font-normal text-slate-500">(min. 6 caractères)</span></Label>
+                      <div className="relative">
+                        <Input id="ad-pw" type={showAdminPw ? 'text' : 'password'} value={form.admin_password} onChange={set('admin_password')} required minLength={6} className="pr-10" data-testid="admin-password-input" />
+                        <button type="button" onClick={() => setShowAdminPw(!showAdminPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="Afficher le mot de passe">
+                          {showAdminPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 text-slate-800 font-semibold text-sm mb-3">
+                      <Database className="w-4 h-4 text-teal-700" /> Données initiales
+                    </div>
+                    <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors">
+                      <Checkbox
+                        checked={form.import_products}
+                        onCheckedChange={(v) => setForm({ ...form, import_products: !!v })}
+                        data-testid="import-products-checkbox"
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm">
+                        <span className="font-medium text-slate-800">Importer le catalogue produits</span>
+                        <span className="block text-xs text-slate-500 mt-0.5">
+                          Copie les fiches produits, catégories et unités (avec les prix) — <strong>stock à zéro</strong> — ainsi que les règles de rabais et codes promo, <strong>importés désactivés</strong>. Ventes, stocks et autres données démarrent vides.
+                        </span>
+                      </span>
+                    </label>
+                    {form.import_products && (
+                      <div className="mt-3">
+                        <Label htmlFor="source-slug">Pharmacie source du catalogue</Label>
+                        <select
+                          id="source-slug"
+                          value={form.source_slug}
+                          onChange={(e) => setForm({ ...form, source_slug: e.target.value })}
+                          data-testid="source-pharmacy-select"
+                          className="mt-1 w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm"
+                        >
+                          {pharmacies.map((p) => (
+                            <option key={p.slug} value={p.slug}>{p.name} ({p.slug})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="mt-3">
-                <Label htmlFor="ad-email">Email admin *</Label>
-                <Input id="ad-email" type="email" value={form.admin_email} onChange={set('admin_email')} required data-testid="admin-email-input" />
-              </div>
-              <div className="mt-3">
-                <Label htmlFor="ad-pw">Mot de passe admin * (min. 6 caractères)</Label>
-                <Input id="ad-pw" type="password" value={form.admin_password} onChange={set('admin_password')} required minLength={6} data-testid="admin-password-input" />
-              </div>
+
+              {/* Colonne droite : horaires */}
+              <OpeningHoursEditor value={form.opening_hours} onChange={(v) => setForm({ ...form, opening_hours: v })} />
             </div>
-            <div className="pt-2 border-t border-slate-100">
-              <p className="text-sm font-medium text-slate-700 mb-2">Données initiales</p>
-              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors">
-                <Checkbox
-                  checked={form.import_products}
-                  onCheckedChange={(v) => setForm({ ...form, import_products: !!v })}
-                  data-testid="import-products-checkbox"
-                  className="mt-0.5"
-                />
-                <span className="text-sm">
-                  <span className="font-medium text-slate-800">Importer le catalogue produits</span>
-                  <span className="block text-xs text-slate-500 mt-0.5">
-                    Copie les fiches produits, catégories et unités (avec les prix) — <strong>stock à zéro</strong> — ainsi que les règles de rabais et codes promo, <strong>importés désactivés</strong>. Ventes, stocks et autres données démarrent vides.
-                  </span>
-                </span>
-              </label>
-              {form.import_products && (
-                <div className="mt-3">
-                  <Label htmlFor="source-slug">Pharmacie source du catalogue</Label>
-                  <select
-                    id="source-slug"
-                    value={form.source_slug}
-                    onChange={(e) => setForm({ ...form, source_slug: e.target.value })}
-                    data-testid="source-pharmacy-select"
-                    className="mt-1 w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm"
-                  >
-                    {pharmacies.map((p) => (
-                      <option key={p.slug} value={p.slug}>{p.name} ({p.slug})</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Annuler</Button>
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={saving} data-testid="submit-create-pharmacy">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                Créer la pharmacie
+
+            <DialogFooter className="px-6 py-5 mt-2 flex-row justify-between sm:justify-between">
+              <Button type="button" variant="outline" onClick={() => setShowCreate(false)} data-testid="cancel-create-pharmacy">
+                <X className="w-4 h-4 mr-2" /> Annuler
+              </Button>
+              <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={saving} data-testid="submit-create-pharmacy">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                Enregistrer la pharmacie
               </Button>
             </DialogFooter>
           </form>

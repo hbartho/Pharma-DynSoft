@@ -52,6 +52,7 @@ class PharmacyCreate(BaseModel):
     admin_password: str
     import_products: bool = False
     source_slug: Optional[str] = None  # pharmacie source du catalogue (défaut: pharmacie centrale)
+    opening_hours: Optional[dict] = None  # {"enabled": bool, "days": {"mon": {"open","close","closed"}, ...}}
 
 
 class PharmacyUpdate(BaseModel):
@@ -61,6 +62,7 @@ class PharmacyUpdate(BaseModel):
     email: Optional[str] = None
     is_active: Optional[bool] = None
     public_search_enabled: Optional[bool] = None  # visible dans la recherche publique de produits
+    opening_hours: Optional[dict] = None
 
 
 class AdminPasswordReset(BaseModel):
@@ -94,6 +96,22 @@ def change_own_password(payload: ChangeOwnPassword, current_user: dict = Depends
     return {"message": "Mot de passe modifié avec succès"}
 
 
+DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _clean_hours(raw: dict) -> dict:
+    """Valide/normalise les horaires : 7 jours, HH:MM, fermé."""
+    days = {}
+    for key in DAY_KEYS:
+        d = (raw.get("days") or {}).get(key) or {}
+        open_, close = str(d.get("open") or "08:00"), str(d.get("close") or "20:00")
+        if not _TIME_RE.match(open_) or not _TIME_RE.match(close):
+            raise HTTPException(status_code=422, detail=f"Horaire invalide pour {key} (format HH:MM attendu)")
+        days[key] = {"open": open_, "close": close, "closed": bool(d.get("closed", False))}
+    return {"enabled": bool(raw.get("enabled", True)), "days": days}
+
+
 def _tenant_to_dict(t: Tenant) -> dict:
     return {
         "id": str(t.id),
@@ -104,6 +122,7 @@ def _tenant_to_dict(t: Tenant) -> dict:
         "email": t.email,
         "is_active": t.is_active,
         "public_search_enabled": (t.settings or {}).get("public_search_enabled", True),
+        "opening_hours": (t.settings or {}).get("opening_hours"),
         "schema": t.database_name,
         "created_at": t.created_at.isoformat() if t.created_at else None,
     }
@@ -351,7 +370,7 @@ def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(requir
             phone=payload.phone,
             email=payload.email,
             is_active=True,
-            settings={},
+            settings={"opening_hours": _clean_hours(payload.opening_hours)} if payload.opening_hours else {},
             database_name=schema,
         )
         session.add(tenant)
@@ -391,6 +410,8 @@ def update_pharmacy(slug: str, payload: PharmacyUpdate, current_user: dict = Dep
         data = payload.model_dump(exclude_none=True)
         if "public_search_enabled" in data:
             tenant.settings = {**(tenant.settings or {}), "public_search_enabled": data.pop("public_search_enabled")}
+        if "opening_hours" in data:
+            tenant.settings = {**(tenant.settings or {}), "opening_hours": _clean_hours(data.pop("opening_hours"))}
         for key, value in data.items():
             setattr(tenant, key, value)
         session.commit()

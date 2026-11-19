@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Search, MapPin, Phone, Loader2, PackageCheck, Store, Pill, LocateFixed } from 'lucide-react';
+import { Search, MapPin, Phone, Loader2, PackageCheck, Store, Pill, LocateFixed, Clock } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -221,6 +221,17 @@ export const PharmacyFinder = ({ variant = 'dark' }) => {
                     )}
                   </div>
                   {ph.address && <p className="text-sm mt-1 flex items-center gap-1.5 text-slate-600"><MapPin className="w-3.5 h-3.5 shrink-0" />{ph.address}</p>}
+                  {ph.hours_today && (
+                    <p className="text-sm mt-0.5 flex items-center gap-1.5 text-slate-600" data-testid="pharmacy-finder-hours">
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                      <span>Aujourd'hui : {ph.hours_today}</span>
+                      {ph.is_open_now != null && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${ph.is_open_now ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600'}`}>
+                          {ph.is_open_now ? 'Ouvert' : 'Fermé'}
+                        </span>
+                      )}
+                    </p>
+                  )}
                   {ph.phone && (
                     <a href={`tel:${ph.phone.replace(/\s+/g, '')}`} className="text-sm mt-0.5 flex items-center gap-1.5 text-green-700 hover:underline">
                       <Phone className="w-3.5 h-3.5 shrink-0" />{ph.phone}
