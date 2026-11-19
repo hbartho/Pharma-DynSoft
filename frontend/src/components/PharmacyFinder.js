@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Search, MapPin, Phone, Loader2, PackageCheck, Store, Pill, LocateFixed, Clock } from 'lucide-react';
+import { Search, MapPin, Phone, Loader2, PackageCheck, Store, Pill, LocateFixed, Clock, CalendarDays, Moon } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -20,6 +20,85 @@ const COPY = {
     subtitle: 'Cherchez par nom, ou indiquez seulement une ville / un quartier pour voir toutes ses pharmacies.',
     placeholder: 'Nom de la pharmacie (optionnel si lieu renseigné)',
   },
+};
+
+const CrossIcon = ({ className = '' }) => (
+  <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+    <path d="M24 6h16a4 4 0 0 1 4 4v10h10a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H44v10a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V44H10a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4h10V10a4 4 0 0 1 4-4z" fill="#16a34a" />
+  </svg>
+);
+
+// Carte résultat : identité + contact à gauche, statut et horaires à droite (produits masqués pour l'annuaire)
+const PharmacyResultCard = ({ ph, showProducts }) => {
+  const hasStatus = ph.is_open_now != null;
+  const extra = ph.total_matches > (ph.products?.length || 0) ? ph.total_matches - ph.products.length : 0;
+  return (
+    <div className="relative rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 text-white p-4 sm:p-5 shadow-lg" data-testid="pharmacy-finder-result">
+      {showProducts && (
+        <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-600/80 border border-emerald-300/40 text-emerald-50" data-testid="pharmacy-result-available">
+          <PackageCheck className="w-3.5 h-3.5" /> Disponible
+        </span>
+      )}
+      {ph.on_duty && (
+        <span className={`absolute top-3 ${showProducts ? 'right-32' : 'right-3'} inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400 text-amber-950`} data-testid="pharmacy-result-on-duty">
+          <Moon className="w-3.5 h-3.5" /> De garde
+        </span>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1.1fr] gap-4 md:gap-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0 shadow">
+              <CrossIcon className="w-8 h-8" />
+            </div>
+            <p className="text-xl font-extrabold leading-tight truncate" style={{ fontFamily: 'Manrope, sans-serif' }}>{ph.name}</p>
+          </div>
+          <div className="mt-3 space-y-1.5 text-sm">
+            {ph.address && <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-200 shrink-0" />{ph.address}</p>}
+            {ph.phone && (
+              <a href={`tel:${ph.phone.replace(/\s+/g, '')}`} className="flex items-center gap-2 text-emerald-200 hover:text-white hover:underline">
+                <Phone className="w-4 h-4 shrink-0" />{ph.phone}
+              </a>
+            )}
+            {showProducts && ph.products?.length > 0 && (
+              <p className="flex items-start gap-2" data-testid="pharmacy-result-products">
+                <Pill className="w-4 h-4 text-emerald-200 shrink-0 mt-0.5" />
+                <span className="uppercase">{ph.products.join(' · ')}{extra > 0 ? ` · +${extra}` : ''}</span>
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="hidden md:block w-px bg-emerald-400/40 self-stretch" />
+        <div className="min-w-0">
+          {hasStatus ? (
+            <div className={`inline-flex items-center gap-3 rounded-xl px-4 py-2 font-bold ${ph.is_open_now ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`} data-testid="pharmacy-result-status">
+              <span className={`w-3.5 h-3.5 rounded-full ${ph.is_open_now ? 'bg-green-500' : 'bg-rose-500'}`} />
+              <span className="text-lg">{ph.is_open_now ? 'Ouverte' : 'Fermée'}</span>
+              {ph.status_label && <span className="h-5 w-px bg-current/30" />}
+              {ph.status_label && <span className="font-medium text-base">{ph.status_label}</span>}
+            </div>
+          ) : (
+            <p className="text-sm text-emerald-100/80 italic" data-testid="pharmacy-result-no-hours">Horaires non renseignés</p>
+          )}
+          {ph.hours_groups?.length > 0 && (
+            <div className="mt-3">
+              <p className="flex items-center gap-2 text-sm font-semibold"><Clock className="w-4 h-4" /> Horaires d'ouverture :</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2" data-testid="pharmacy-result-hours">
+                <CalendarDays className="w-4 h-4 text-emerald-200" />
+                {ph.hours_groups.map((g, i) => (
+                  <span
+                    key={i}
+                    className={`text-sm px-3 py-1 rounded-lg border ${g.hours === 'Fermé' ? 'bg-rose-700/80 border-rose-300/50' : 'bg-emerald-700/50 border-emerald-300/40'}`}
+                  >
+                    {g.days} : {g.hours}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // Recherche publique (sans connexion) : produits en stock ou annuaire des pharmacies
@@ -209,40 +288,9 @@ export const PharmacyFinder = ({ variant = 'dark' }) => {
         {result && !error && (
           <div className="mt-5" data-testid="pharmacy-finder-results">
             <p className="text-sm font-medium text-slate-700 mb-2" data-testid="pharmacy-finder-count">{countText()}</p>
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
               {result.pharmacies.map((ph, i) => (
-                <div key={i} className="rounded-xl border border-slate-200 bg-slate-50 hover:border-green-300 p-3 transition-colors" data-testid="pharmacy-finder-result">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-slate-900">{ph.name}</p>
-                    {result.tab === 'product' && (
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-green-100 text-green-800">
-                        <PackageCheck className="w-3 h-3" /> Disponible
-                      </span>
-                    )}
-                  </div>
-                  {ph.address && <p className="text-sm mt-1 flex items-center gap-1.5 text-slate-600"><MapPin className="w-3.5 h-3.5 shrink-0" />{ph.address}</p>}
-                  {ph.hours_today && (
-                    <p className="text-sm mt-0.5 flex items-center gap-1.5 text-slate-600" data-testid="pharmacy-finder-hours">
-                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                      <span>Aujourd'hui : {ph.hours_today}</span>
-                      {ph.is_open_now != null && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${ph.is_open_now ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600'}`}>
-                          {ph.is_open_now ? 'Ouvert' : 'Fermé'}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  {ph.phone && (
-                    <a href={`tel:${ph.phone.replace(/\s+/g, '')}`} className="text-sm mt-0.5 flex items-center gap-1.5 text-green-700 hover:underline">
-                      <Phone className="w-3.5 h-3.5 shrink-0" />{ph.phone}
-                    </a>
-                  )}
-                  {ph.products && (
-                    <p className="text-xs mt-1.5 text-slate-500">
-                      {ph.products.join(' · ')}{ph.total_matches > ph.products.length ? ` · +${ph.total_matches - ph.products.length}` : ''}
-                    </p>
-                  )}
-                </div>
+                <PharmacyResultCard key={i} ph={ph} showProducts={result.tab === 'product'} />
               ))}
             </div>
           </div>

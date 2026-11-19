@@ -1,7 +1,7 @@
 """
 Routes - PostgreSQL Implementation
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
 from auth import require_role, get_current_user
 from models.settings import Settings, SettingsUpdate
@@ -78,6 +78,12 @@ if DATABASE_TYPE == "postgresql":
         """Update application settings (Admin only)"""
         repo = SettingsRepository()
         update_data = {k: v for k, v in settings_data.model_dump().items() if v is not None}
+        if "opening_hours" in update_data:
+            from services.opening_hours import clean_hours
+            try:
+                update_data["opening_hours"] = clean_hours(update_data["opening_hours"])
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
         
         for key, value in update_data.items():
             repo.set(key, value)

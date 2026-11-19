@@ -6,6 +6,8 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Settings as SettingsIcon, Save, Package, Calculator, Building2, Coins, RotateCcw, Clock, Calendar, AlertTriangle, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Download, Database, CheckCircle, Loader2, Users, Timer, Bell, BookOpen } from 'lucide-react';
 import { useSettingsQuery, useUpdateSettings, useStockValuation } from '../hooks';
+import { OpeningHoursEditor, defaultOpeningHours } from '../components/OpeningHoursEditor';
+import { Switch } from '../components/ui/switch';
 import { useSettings } from '../contexts/SettingsContext';
 import { useOffline } from '../contexts/OfflineContext';
 import { formatCurrency } from '../services/currencyService';
@@ -47,6 +49,8 @@ const Settings = () => {
     receipt_footer: 'Merci de votre visite',
     receipt_print_prompt: true,
     receipt_logo: '',
+    opening_hours: defaultOpeningHours(),
+    on_duty: false,
   });
   
   const [offlineStats, setOfflineStats] = useState(null);
@@ -76,6 +80,8 @@ const Settings = () => {
         receipt_footer: settingsData.receipt_footer ?? 'Merci de votre visite',
         receipt_print_prompt: settingsData.receipt_print_prompt !== false,
         receipt_logo: settingsData.receipt_logo || '',
+        opening_hours: settingsData.opening_hours || defaultOpeningHours(),
+        on_duty: settingsData.on_duty === true,
       });
     }
   }, [settingsData]);
@@ -630,6 +636,23 @@ const Settings = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Fiche publique : horaires + pharmacie de garde */}
+          <div className="p-6 rounded-xl bg-white border border-slate-100" data-testid="settings-public-profile">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              <Clock className="w-5 h-5 text-teal-700" />
+              Fiche publique : horaires et garde
+            </h3>
+            <p className="text-sm text-slate-500 mb-4">Affichés aux clients dans la recherche de pharmacies sur la page de connexion.</p>
+            <div className={`flex items-center justify-between rounded-lg border p-3 mb-4 ${localSettings.on_duty ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}>
+              <div>
+                <Label htmlFor="on_duty" className="font-medium">Pharmacie de garde</Label>
+                <p className="text-xs text-slate-500">Affiche « De garde — ouverte 24h/24 » et vous classe comme ouverte quel que soit l'horaire</p>
+              </div>
+              <Switch id="on_duty" checked={localSettings.on_duty} onCheckedChange={(v) => setLocalSettings({ ...localSettings, on_duty: !!v })} data-testid="settings-on-duty" />
+            </div>
+            <OpeningHoursEditor value={localSettings.opening_hours} onChange={(v) => setLocalSettings({ ...localSettings, opening_hours: v })} idPrefix="settings-oh" />
           </div>
 
           {/* Méthode de valorisation du stock */}

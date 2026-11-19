@@ -8,8 +8,6 @@ from collections import defaultdict, deque
 from typing import Optional
 
 import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import or_
 
@@ -18,6 +16,7 @@ from database.models_master import Tenant
 from database.models_tenant import Product
 from database.tenant_context import tenant_schema_name, FORCED_SCHEMA
 from database.repositories import SettingsRepository
+from services.opening_hours import hours_status
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/public", tags=["Public"])
@@ -44,22 +43,10 @@ def _rate_limit(request: Request):
     q.append(now)
 
 
-DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-TZ = ZoneInfo("Africa/Conakry")
-
-
-def _hours_info(settings: dict) -> dict:
-    """Horaires du jour + statut ouvert/fermé (fuseau Conakry) à partir de Tenant.settings['opening_hours']."""
-    hours = (settings or {}).get("opening_hours")
-    if not hours or not hours.get("enabled"):
-        return {"hours_today": None, "is_open_now": None}
-    now = datetime.now(TZ)
-    day = (hours.get("days") or {}).get(DAY_KEYS[now.weekday()]) or {}
-    if day.get("closed"):
-        return {"hours_today": "Fermé aujourd'hui", "is_open_now": False}
-    open_, close = day.get("open", ""), day.get("close", "")
-    current = now.strftime("%H:%M")
-    return {"hours_today": f"{open_} – {close}", "is_open_now": open_ <= current < close if open_ and close else None}
+def _hours_info(tenant_settings: dict, info: dict) -> dict:
+    """Horaires : paramètres de la pharmacie (synchronisés depuis le local) en priorité, sinon ceux saisis par la plateforme."""
+    hours = (info or {}).get("opening_hours") or (tenant_settings or {}).get("opening_hours")
+    return hours_status(hours, bool((info or {}).get("on_duty", False)))
 
 
 def _location_matches(location: str, *addresses: str) -> bool:
@@ -96,7 +83,7 @@ def _search_tenant(tenant: Tenant, product: str, location: Optional[str]):
         "phone": phone,
         "products": names,
         "total_matches": total,
-        **_hours_info(tenant.settings),
+        **_hours_info(tenant.settings, info),
     }
 
 
@@ -185,7 +172,7 @@ def list_pharmacies(
             "name": display_name,
             "address": tenant.address or info.get("pharmacy_address") or "",
             "phone": tenant.phone or info.get("pharmacy_phone") or "",
-            **_hours_info(tenant.settings),
+            **_hours_info(tenant.settings, info),
         })
 
     return {"name": name or None, "location": location or None, "count": len(pharmacies), "pharmacies": pharmacies}

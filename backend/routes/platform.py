@@ -96,20 +96,12 @@ def change_own_password(payload: ChangeOwnPassword, current_user: dict = Depends
     return {"message": "Mot de passe modifié avec succès"}
 
 
-DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-_TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
-
-
 def _clean_hours(raw: dict) -> dict:
-    """Valide/normalise les horaires : 7 jours, HH:MM, fermé."""
-    days = {}
-    for key in DAY_KEYS:
-        d = (raw.get("days") or {}).get(key) or {}
-        open_, close = str(d.get("open") or "08:00"), str(d.get("close") or "20:00")
-        if not _TIME_RE.match(open_) or not _TIME_RE.match(close):
-            raise HTTPException(status_code=422, detail=f"Horaire invalide pour {key} (format HH:MM attendu)")
-        days[key] = {"open": open_, "close": close, "closed": bool(d.get("closed", False))}
-    return {"enabled": bool(raw.get("enabled", True)), "days": days}
+    from services.opening_hours import clean_hours
+    try:
+        return clean_hours(raw)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 def _tenant_to_dict(t: Tenant) -> dict:
@@ -345,6 +337,13 @@ def create_pharmacy(payload: PharmacyCreate, current_user: dict = Depends(requir
     from database.repositories import SettingsRepository, UserRepository
     settings_repo = SettingsRepository(slug)
     settings_repo.set("pharmacy_name", payload.name, "Nom de la pharmacie")
+    if payload.address:
+        settings_repo.set("pharmacy_address", payload.address, "Adresse de la pharmacie")
+    if payload.phone:
+        settings_repo.set("pharmacy_phone", payload.phone, "Téléphone de la pharmacie")
+    if payload.opening_hours:
+        settings_repo.set("opening_hours", _clean_hours(payload.opening_hours), "Horaires d'ouverture (fiche publique)")
+        settings_repo.set("on_duty", False, "Pharmacie de garde")
     settings_repo.set("currency", "GNF", "Devise")
     settings_repo.set("timezone", "Africa/Conakry", "Fuseau horaire")
     settings_repo.set("low_stock_threshold", 10, "Seuil de stock faible")

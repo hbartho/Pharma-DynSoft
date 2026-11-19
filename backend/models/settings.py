@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 import uuid
 
@@ -47,3 +47,6 @@ class SettingsUpdate(BaseModel):
     receipt_footer: Optional[str] = None
     receipt_print_prompt: Optional[bool] = None
     receipt_logo: Optional[str] = None  # data URL réduite, vide = logo par défaut
+    # Fiche publique (recherche sur la page de connexion)
+    opening_hours: Optional[Dict[str, Any]] = None  # {"enabled", "days": {mon..sun: {open, close, closed}}}
+    on_duty: Optional[bool] = None  # pharmacie « de garde »
